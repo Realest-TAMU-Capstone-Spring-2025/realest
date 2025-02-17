@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class RealtorLoginScreen extends StatefulWidget {
+  const RealtorLoginScreen({super.key});
+
   @override
   _RealtorLoginScreenState createState() => _RealtorLoginScreenState();
 }

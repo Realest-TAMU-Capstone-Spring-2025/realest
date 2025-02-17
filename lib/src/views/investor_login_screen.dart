@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class InvestorLoginScreen extends StatefulWidget {
+  const InvestorLoginScreen({super.key});
+
   @override
   _InvestorLoginScreenState createState() => _InvestorLoginScreenState();
 }

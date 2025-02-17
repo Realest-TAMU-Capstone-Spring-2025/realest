@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class InvestorHomeScreen extends StatelessWidget {
+  const InvestorHomeScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
