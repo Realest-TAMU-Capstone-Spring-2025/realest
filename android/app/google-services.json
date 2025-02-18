@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "930964686687",
+    "project_id": "realest-3a0d2",
+    "storage_bucket": "realest-3a0d2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:930964686687:android:a06eccd6a61ebf627658ea",
+        "android_client_info": {
+          "package_name": "com.example.realest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAze4JrdsICIomZfTP4pzneXQYSLwKVFfA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
