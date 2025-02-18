@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -10,8 +11,16 @@ class HomeScreen extends StatelessWidget {
       body: Center(
         child: Column(
           children: [
-            Image.asset('dash.png'),
-            Text('Welcome!', style: Theme.of(context).textTheme.displaySmall),
+            Image.asset('logo.png'),
+            Text('wow!', style: Theme.of(context).textTheme.displaySmall),
+          //sign out button
+          //floating action button
+          FloatingActionButton(
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+            },
+            child: const Icon(Icons.logout),
+          ),
           ],
         ),
       ),

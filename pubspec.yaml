@@ -1,5 +1,5 @@
 name: realest
-description: "A new Flutter project."
+description: ""
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -42,6 +42,7 @@ dependencies:
   firebase_core: ^3.11.0
   firebase_auth: ^5.4.2
   firebase_ui_auth: ^1.16.1
+  cloud_firestore: ^5.6.3
 
 dev_dependencies:
   flutter_test:
@@ -66,8 +67,8 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/logo.png
-    - assets/lottie/building.json
+    - assets/images/
+    # - assets/lottie/building.json
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

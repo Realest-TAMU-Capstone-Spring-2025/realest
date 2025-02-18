@@ -12,7 +12,12 @@
           "package_name": "com.example.realest"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "930964686687-uhkjoru77a82kugro9obel2h61g7h1ap.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAze4JrdsICIomZfTP4pzneXQYSLwKVFfA"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "930964686687-uhkjoru77a82kugro9obel2h61g7h1ap.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "930964686687-qofvkcei21t7e7n9rt77g75ae3bcilot.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.realest"
+              }
+            }
+          ]
         }
       }
     }
