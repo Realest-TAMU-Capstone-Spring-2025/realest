@@ -43,6 +43,7 @@ dependencies:
   firebase_auth: ^5.4.2
   firebase_ui_auth: ^1.16.1
   cloud_firestore: ^5.6.3
+  google_sign_in: ^6.2.2
 
 dev_dependencies:
   flutter_test:
@@ -68,7 +69,7 @@ flutter:
 
   assets:
     - assets/images/
-    # - assets/lottie/building.json
+    - assets/lottie/
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

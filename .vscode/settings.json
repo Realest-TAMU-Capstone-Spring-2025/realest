@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "/home/silvhr/Projects/realest/linux/flutter"
+    "cmake.sourceDirectory": "/home/silvhr/Projects/realest/linux/flutter",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }

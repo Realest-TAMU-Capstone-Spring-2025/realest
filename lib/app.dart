@@ -4,7 +4,6 @@
 // import 'src/views/investor_login_screen.dart';
 // import 'src/views/realtor_home_screen.dart';
 // import 'src/views/investor_home_screen.dart';
-
 import 'package:flutter/material.dart';
 import 'auth_gate.dart';
 
@@ -13,23 +12,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      title: 'Property Investment App',
+      theme: ThemeData(primarySwatch: Colors.indigo),
       home: const AuthGate(),
     );
   }
 }
 
-
-// class MyApp extends StatelessWidget {
 //   const MyApp({super.key});
 
 //   @override
 //   Widget build(BuildContext context) {
 //     return MaterialApp(
-//       title: 'Property Investment App',
-//       theme: ThemeData(primarySwatch: Colors.blue),
 //       // The first screen the user sees is the role selection screen.
 //       home: RoleSelectionScreen(),
 //       routes: {

@@ -150,3 +150,6 @@ app.*.symbols
 .python-version
 .gclient_previous_custom_vars
 .gclient_previous_sync_commits
+
+#ignore all google-services.json files
+**/google-services.json

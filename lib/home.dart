@@ -11,8 +11,8 @@ class HomeScreen extends StatelessWidget {
       body: Center(
         child: Column(
           children: [
-            Image.asset('logo.png'),
-            Text('wow!', style: Theme.of(context).textTheme.displaySmall),
+            // Image.asset('logo.png'),
+            Text('Welcome to Realest!', style: Theme.of(context).textTheme.displaySmall),
           //sign out button
           //floating action button
           FloatingActionButton(
