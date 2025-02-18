@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "930964686687",
+    "project_id": "realest-3a0d2",
+    "storage_bucket": "realest-3a0d2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:930964686687:android:a06eccd6a61ebf627658ea",
+        "android_client_info": {
+          "package_name": "com.example.realest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "930964686687-qb073f6ebitcpkbk7lvfa5alprvncmro.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.realest",
+            "certificate_hash": "3c9569637acf9310719b94a9a351d3a24be0144f"
+          }
+        },
+        {
+          "client_id": "930964686687-uhkjoru77a82kugro9obel2h61g7h1ap.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAze4JrdsICIomZfTP4pzneXQYSLwKVFfA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "930964686687-uhkjoru77a82kugro9obel2h61g7h1ap.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "930964686687-qofvkcei21t7e7n9rt77g75ae3bcilot.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.realest"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
