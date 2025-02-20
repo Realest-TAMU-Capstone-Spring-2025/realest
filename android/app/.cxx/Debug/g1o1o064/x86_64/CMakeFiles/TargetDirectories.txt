@@ -1,2 +1,0 @@
-D:/School/Spring 2025/Capstone/realest/android/app/.cxx/Debug/g1o1o064/x86_64/CMakeFiles/edit_cache.dir
-D:/School/Spring 2025/Capstone/realest/android/app/.cxx/Debug/g1o1o064/x86_64/CMakeFiles/rebuild_cache.dir
