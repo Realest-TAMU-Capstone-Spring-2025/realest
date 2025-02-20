@@ -139,4 +139,4 @@ env.g.dart
 /.fvmrc
 .fvm
 
-.cxx/
+android/app/.cxx/
