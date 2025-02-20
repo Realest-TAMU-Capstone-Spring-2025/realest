@@ -2,7 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_signin_button/flutter_signin_button.dart';
 import 'home.dart';
+import '../config/global_variables.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -12,9 +14,9 @@ class AuthGate extends StatelessWidget {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) return;
 
-      final GoogleSignInAuthentication googleAuth = 
+      final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
-      
+
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -104,24 +106,16 @@ class _ThirdPartyAuthButtons extends StatelessWidget {
       children: [
         const Text('Or continue with'),
         const SizedBox(height: 16),
-        Row(
+        Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            IconButton(
-              icon: Image.asset(
-                'assets/images/google.png', // Add Google logo asset
-                width: 24,
-                height: 24,
-              ),
+            SignInButton(
+              Buttons.GoogleDark,
               onPressed: onGooglePressed,
             ),
             const SizedBox(width: 24),
-            IconButton(
-              icon: Image.asset(
-                'assets/images/apple.png', // Add Apple logo asset
-                width: 24,
-                height: 24,
-              ),
+            SignInButton(
+              Buttons.Apple,
               onPressed: onApplePressed,
             ),
           ],

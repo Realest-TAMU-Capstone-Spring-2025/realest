@@ -138,3 +138,5 @@ env.g.dart
 /.fvm/versions/3.16.0
 /.fvmrc
 .fvm
+
+android/app/.cxx/
