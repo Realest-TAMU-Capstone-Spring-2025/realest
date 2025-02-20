@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app.dart';
-import 'firebase_options.dart';
+import 'src/config/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {

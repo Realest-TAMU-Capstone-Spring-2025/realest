@@ -184,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
+              Navigator.pushReplacementNamed(context, '/customLogin');
             },
           ),
         ],
