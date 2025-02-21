@@ -1,11 +1,9 @@
-// import 'package:flutter/material.dart';
-// import 'src/views/role_selection_screen.dart';
-// import 'src/views/realtor_login_screen.dart';
-// import 'src/views/investor_login_screen.dart';
-// import 'src/views/realtor_home_screen.dart';
-// import 'src/views/investor_home_screen.dart';
 import 'package:flutter/material.dart';
-import 'auth_gate.dart';
+import 'src/views/role_selection_screen.dart';
+import 'src/views/auth_gate.dart';
+import 'src/views/custom_login_page.dart';
+import 'src/views/enter_invitation_code.dart';
+import 'src/views/home.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -13,25 +11,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Property Investment App',
-      theme: ThemeData(primarySwatch: Colors.indigo),
-      home: const AuthGate(),
+      home: const RoleSelectionScreen(),
+      routes: {
+        '/roleSelection': (context) => RoleSelectionScreen(),
+        '/authGate': (context) => AuthGate(),
+        '/customLogin': (context) => CustomLoginPage(),
+        '/enterInvitationCode': (context) => EnterInvitationCodeScreen(),
+        '/home': (context) => HomeScreen(),
+      },
     );
   }
 }
-
-//   const MyApp({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       // The first screen the user sees is the role selection screen.
-//       home: RoleSelectionScreen(),
-//       routes: {
-//         '/realtorLogin': (context) => RealtorLoginScreen(),
-//         '/investorLogin': (context) => InvestorLoginScreen(),
-//         '/realtor': (context) => RealtorHomeScreen(),
-//         '/investor': (context) => InvestorHomeScreen(),
-//       },
-//     );
-//   }
-// }

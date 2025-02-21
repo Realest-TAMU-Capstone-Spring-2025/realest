@@ -1,9 +1,3 @@
-# Do not remove or rename entries in this file, only add new ones
-# See https://github.com/flutter/flutter/issues/128635 for more context.
-
-# This is dynamic in a monorepo
-bin/internal/engine.version
-
 # Miscellaneous
 *.class
 *.lock
@@ -22,55 +16,41 @@ bin/internal/engine.version
 *.iws
 .idea/
 
+# Fleet related
+.fleet/
+
 # Visual Studio Code related
 .classpath
 .project
 .settings/
-.vscode/*
-.ccls-cache
-
-# Flutter repo-specific
-/bin/cache/
-/bin/internal/bootstrap.bat
-/bin/internal/bootstrap.sh
-/bin/mingit/
-/dev/benchmarks/mega_gallery/
-/dev/bots/.recipe_deps
-/dev/bots/android_tools/
-/dev/devicelab/ABresults*.json
-/dev/docs/doc/
-/dev/docs/api_docs.zip
-/dev/docs/flutter.docs.zip
-/dev/docs/lib/
-/dev/docs/pubspec.yaml
-/dev/integration_tests/**/xcuserdata
-/dev/integration_tests/**/Pods
-/packages/flutter/coverage/
-version
-analysis_benchmark.json
+.vscode/
 
 # packages file containing multi-root paths
 .packages.generated
 
 # Flutter/Dart/Pub related
+# Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
+**/pubspec.lock
+# https://melos.invertase.dev/configuration/overview#commandbootstrapusepubspecoverrides
+**/pubspec_overrides.yaml
 **/doc/api/
 .dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
 **/generated_plugin_registrant.dart
-.packages
-.pub-preload-cache/
-.pub-cache/
-.pub/
-build/
-flutter_*.png
-linked_*.ds
-unlinked.ds
-unlinked_spec.ds
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/build/
+**/flutter_*.png
+**/linked_*.ds
+**/unlinked.ds
+**/unlinked_spec.ds
 
 # Android related
 **/android/**/gradle-wrapper.jar
 .gradle/
+**/android/app/.cxx/
 **/android/captures/
 **/android/gradlew
 **/android/gradlew.bat
@@ -117,16 +97,12 @@ unlinked_spec.ds
 **/xcuserdata/
 
 # Windows
-**/windows/flutter/ephemeral/
 **/windows/flutter/generated_plugin_registrant.cc
 **/windows/flutter/generated_plugin_registrant.h
-**/windows/flutter/generated_plugins.cmake
+**/windows/flutter/ephemeral/
 
 # Linux
 **/linux/flutter/ephemeral/
-**/linux/flutter/generated_plugin_registrant.cc
-**/linux/flutter/generated_plugin_registrant.h
-**/linux/flutter/generated_plugins.cmake
 
 # Coverage
 coverage/
@@ -141,21 +117,26 @@ app.*.symbols
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+!/pubspec.lock
 
-# Monorepo
-.cipd
-.gclient
-.gclient_entries
-.python-version
-.gclient_previous_custom_vars
-.gclient_previous_sync_commits
+# Environment Variables
+.env
+env.g.dart
 
-#ignore all google-services.json files
-**/google-services.json
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Fastlane specific
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots
+**/fastlane/test_output
+/video-buddy-session.json
+/docusaurus/shared
+/docusaurus/docusaurus
+/.fvm/flutter_sdk
+/.fvm/fvm_config.json
+/.fvm/release
+/.fvm/version
+/.fvm/versions/3.16.0
+/.fvmrc
+.fvm
 
-# FVM Version Cache
-.fvm/
+android/app/.cxx/

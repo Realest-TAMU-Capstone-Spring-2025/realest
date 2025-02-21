@@ -1,2 +1,0 @@
-/home/silvhr/Projects/realest/android/app/.cxx/Debug/2x1h1y1c/x86/CMakeFiles/edit_cache.dir
-/home/silvhr/Projects/realest/android/app/.cxx/Debug/2x1h1y1c/x86/CMakeFiles/rebuild_cache.dir
