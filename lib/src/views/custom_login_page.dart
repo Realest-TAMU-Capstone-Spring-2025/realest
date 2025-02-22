@@ -128,7 +128,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
             if (_justRegistered && userRole == "Investor") {
               Navigator.pushReplacementNamed(context, "/enterInvitationCode");
             } else {
-              Navigator.pushReplacementNamed(context, "/home");
+              Navigator.pushReplacementNamed(context, "/realtorHome");
             }
           });
           // Return an empty container while navigation is pending.
