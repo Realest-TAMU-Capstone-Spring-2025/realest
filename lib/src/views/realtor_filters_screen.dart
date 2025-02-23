@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class FiltersPage extends StatefulWidget {
-  const FiltersPage({Key? key}) : super(key: key);
+  final List<String> initialFilters;
+
+  const FiltersPage({Key? key, required this.initialFilters}) : super(key: key);
 
   @override
   _FiltersPageState createState() => _FiltersPageState();
@@ -44,8 +46,13 @@ class _FiltersPageState extends State<FiltersPage> {
     ],
   };
 
-  // Set to store selected filters.
-  final Set<String> _selectedFilters = {};
+  late Set<String> _selectedFilters;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedFilters = widget.initialFilters.toSet();
+  }
 
   void _toggleFilter(String filter) {
     setState(() {
@@ -67,7 +74,7 @@ class _FiltersPageState extends State<FiltersPage> {
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Image.asset(
-            'assets/images/logo.png', // Your logo asset.
+            'assets/images/logo.png',
             fit: BoxFit.contain,
           ),
         ),
@@ -76,7 +83,7 @@ class _FiltersPageState extends State<FiltersPage> {
             padding: const EdgeInsets.all(8.0),
             child: CircleAvatar(
               backgroundImage: AssetImage(
-                'assets/images/profile.jpg', // Realtor's profile image.
+                'assets/images/profile.jpg',
               ),
             ),
           ),
@@ -115,7 +122,7 @@ class _FiltersPageState extends State<FiltersPage> {
                           label: Text(option),
                           selected: isSelected,
                           onSelected: (selected) => _toggleFilter(option),
-                          selectedColor: Colors.lightBlue,
+                          selectedColor: const Color(0xFF212834),
                           backgroundColor: Colors.grey[200],
                           labelStyle: TextStyle(
                             color: isSelected ? Colors.white : Colors.black,
@@ -127,6 +134,7 @@ class _FiltersPageState extends State<FiltersPage> {
                   ],
                 );
               }).toList(),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -134,7 +142,6 @@ class _FiltersPageState extends State<FiltersPage> {
       // Custom bottom bar with "Apply" and "Clear All" buttons.
       bottomNavigationBar: Container(
         color: Colors.white,
-        // Use MediaQuery to include any bottom safe area padding.
         padding: EdgeInsets.only(
           top: 16,
           left: 16,
@@ -149,16 +156,10 @@ class _FiltersPageState extends State<FiltersPage> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  // Process selected filters here (e.g., show a SnackBar) and then pop the page.
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Filters applied: ${_selectedFilters.join(', ')}"),
-                    ),
-                  );
-                  Navigator.pop(context);
+                  Navigator.pop(context, _selectedFilters.toList());
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF212834),
+                  backgroundColor: const Color(0xFF212834),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
@@ -181,7 +182,7 @@ class _FiltersPageState extends State<FiltersPage> {
                   });
                 },
                 style: TextButton.styleFrom(
-                  foregroundColor: Color(0xFF212834),
+                  foregroundColor: const Color(0xFF212834),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 child: Text(
