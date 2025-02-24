@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'home.dart';
+import 'investor_home_screen.dart';
 
 class EnterInvitationCodeScreen extends StatefulWidget {
   const EnterInvitationCodeScreen({Key? key}) : super(key: key);
@@ -14,7 +14,7 @@ class _EnterInvitationCodeScreenState extends State<EnterInvitationCodeScreen> {
 
   void _onCodeCompleted(String code) {
     // For now, ignore the code and redirect to HomeScreen.
-    Navigator.pushReplacementNamed(context, '/home');
+    Navigator.pushReplacementNamed(context, '/investorHome');
   }
 
   @override
@@ -73,7 +73,7 @@ class _EnterInvitationCodeScreenState extends State<EnterInvitationCodeScreen> {
                 onPressed: () {
                   // In this example, we rely on the segmented input's completion.
                   // But you can also add manual submission logic here.
-                  Navigator.pushReplacementNamed(context, '/home');
+                  Navigator.pushReplacementNamed(context, '/investorHome');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF212834),

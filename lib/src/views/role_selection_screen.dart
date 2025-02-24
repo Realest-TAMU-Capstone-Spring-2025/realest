@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lottie/lottie.dart';
 import '../config/global_variables.dart';
-import 'home.dart'; // Adjust this import to match your home screen file.
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});

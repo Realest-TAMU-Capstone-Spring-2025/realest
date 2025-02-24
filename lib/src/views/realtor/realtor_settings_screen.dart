@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../widgets/bottom_nav_item.dart';
+import '../../widgets/bottom_nav_item.dart';
 import 'realtor_home_screen.dart';
 import 'realtor_clients_screen.dart';
 import 'realtor_dashboard_screen.dart';

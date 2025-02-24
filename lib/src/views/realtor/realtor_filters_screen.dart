@@ -96,9 +96,18 @@ class _FiltersPageState extends State<FiltersPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Page title.
-              Text(
-                'Filters',
-                style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, size: 30),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 8), // Spacing between icon and text
+                  Text(
+                    'Filters',
+                    style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               // Display each filter group.
