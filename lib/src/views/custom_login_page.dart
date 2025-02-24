@@ -4,7 +4,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_signin_button/flutter_signin_button.dart';
 import '../config/global_variables.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'home.dart';
 
 class CustomLoginPage extends StatefulWidget {
   const CustomLoginPage({Key? key}) : super(key: key);
@@ -76,6 +75,12 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
       setState(() {
         _justRegistered = true;
       });
+      // Directly navigate based on user role.
+      if (userRole == "Investor") {
+        Navigator.pushReplacementNamed(context, "/enterInvitationCode");
+      } else {
+        Navigator.pushReplacementNamed(context, "/realtorHome");
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error creating account: ${e.toString()}')),
@@ -83,7 +88,6 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     } finally {
       setState(() {
         _isLoading = false;
-        // Clear fields and revert to sign-in mode.
         _isRegister = false;
       });
       _emailController.clear();
@@ -91,6 +95,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
       _confirmPasswordController.clear();
     }
   }
+
 
   Future<void> _signInWithGoogle() async {
     try {
@@ -125,10 +130,14 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
         if (snapshot.hasData && !_hasNavigated) {
           _hasNavigated = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_justRegistered && userRole == "Investor") {
-              Navigator.pushReplacementNamed(context, "/enterInvitationCode");
+            if (userRole == "Investor") {
+              if (_justRegistered) {
+                Navigator.pushReplacementNamed(context, "/enterInvitationCode");
+              } else {
+                Navigator.pushReplacementNamed(context, "/investorHome");
+              }
             } else {
-              Navigator.pushReplacementNamed(context, "/home");
+              Navigator.pushReplacementNamed(context, "/realtorHome");
             }
           });
           // Return an empty container while navigation is pending.
