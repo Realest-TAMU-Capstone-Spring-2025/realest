@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:realest/firebase_options.dart';
+import 'package:realest/src/views/realtor/realtor_home_search.dart';
+import 'package:realest/src/views/realtor/realtor_settings.dart';
 import 'src/views/custom_login_page.dart';
 import 'src/views/investor/investor_home.dart';
 import 'src/views/realtor/realtor_home.dart';
@@ -36,6 +38,8 @@ class MyApp extends StatelessWidget {
         '/realtorCalculators': (context) => const RealtorCalculators(),
         '/realtorClients': (context) => const RealtorClients(),
         '/realtorReports': (context) => const RealtorReports(),
+        '/realtorHomeSearch': (context) => const RealtorHomeSearch(),
+        '/realtorSettings': (context) => const RealtorSettings(),
       },
     );
   }
