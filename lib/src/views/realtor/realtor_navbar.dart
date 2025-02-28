@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RealtorNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -35,14 +36,13 @@ class RealtorNavBar extends StatelessWidget {
           _buildNavItem(Icons.calculate, "Calculators", 1),
           _buildNavItem(Icons.people, "Clients", 2),
           _buildNavItem(Icons.assessment, "Reports", 3),
-          _buildNavItem(Icons.search, "Home Search", 3),
-          _buildNavItem(Icons.settings, "Settings", 3),
-
+          _buildNavItem(Icons.search, "Home Search", 4),
+          _buildNavItem(Icons.settings, "Settings", 5),
 
           const Spacer(),
 
           // Logout Button
-          _buildNavItem(Icons.logout, "Logout", -1, isLogout: true),
+          _buildNavItem(Icons.logout, "Logout", -1, isLogout: true, context: context),
 
           const SizedBox(height: 30),
         ],
@@ -50,12 +50,13 @@ class RealtorNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, int index, {bool isLogout = false}) {
+  Widget _buildNavItem(IconData icon, String label, int index, {bool isLogout = false, BuildContext? context}) {
     bool isSelected = selectedIndex == index;
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         if (isLogout) {
-          // Handle Logout
+          await FirebaseAuth.instance.signOut();
+          Navigator.pushReplacementNamed(context!, '/login'); // Redirect to login
         } else {
           onItemTapped(index);
         }
