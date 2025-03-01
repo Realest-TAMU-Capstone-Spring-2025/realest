@@ -8,7 +8,10 @@ import 'realtor_reports.dart';
 import 'realtor_navbar.dart';
 
 class RealtorHomePage extends StatefulWidget {
-  const RealtorHomePage({Key? key}) : super(key: key);
+  final VoidCallback toggleTheme;
+  final bool isDarkMode;
+
+  const RealtorHomePage({Key? key, required this.toggleTheme, required this.isDarkMode}) : super(key: key);
 
   @override
   _RealtorHomePageState createState() => _RealtorHomePageState();
@@ -17,14 +20,20 @@ class RealtorHomePage extends StatefulWidget {
 class _RealtorHomePageState extends State<RealtorHomePage> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [
-    const RealtorDashboard(),
-    const RealtorCalculators(),
-    const RealtorClients(),
-    const RealtorReports(),
-    const RealtorHomeSearch(),
-    const RealtorSettings(),
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const RealtorDashboard(),
+      const RealtorCalculators(),
+      const RealtorClients(),
+      const RealtorReports(),
+      const RealtorHomeSearch(),
+      RealtorSettings(toggleTheme: widget.toggleTheme, isDarkMode: widget.isDarkMode),
+    ];
+  }
 
   void _onNavItemTapped(int index) {
     setState(() {
@@ -35,7 +44,7 @@ class _RealtorHomePageState extends State<RealtorHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Row(
         children: [
           // Left-Side Navigation Bar

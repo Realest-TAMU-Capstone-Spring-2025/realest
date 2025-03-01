@@ -12,7 +12,7 @@ class RealtorDashboard extends StatefulWidget {
 class _RealtorDashboardState extends State<RealtorDashboard> {
   final MapController _mapController = MapController();
 
-  /// Hardcoded real estate properties in **College Station, TX**
+  /// Hardcoded real estate properties in College Station, TX
   final List<Map<String, dynamic>> recentProperties = [
     {
       "latitude": 30.6280,
@@ -30,30 +30,6 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
       "status": "Pending",
       "lastUpdated": "2024-02-24",
     },
-    {
-      "latitude": 30.6215,
-      "longitude": -96.3418,
-      "address": "700 Holleman Dr, College Station, TX",
-      "price": 295000,
-      "status": "Sold",
-      "lastUpdated": "2024-02-23",
-    },
-    {
-      "latitude": 30.6184,
-      "longitude": -96.3361,
-      "address": "1801 Harvey Mitchell Pkwy, College Station, TX",
-      "price": 385000,
-      "status": "For Sale",
-      "lastUpdated": "2024-02-22",
-    },
-    {
-      "latitude": 30.6015,
-      "longitude": -96.3140,
-      "address": "2500 Earl Rudder Fwy, College Station, TX",
-      "price": 515000,
-      "status": "Pending",
-      "lastUpdated": "2024-02-21",
-    },
   ];
 
   /// Hardcoded investor notifications
@@ -63,18 +39,6 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
       "investorEmail": "john@example.com",
       "status": "approved",
       "timestamp": "2024-02-25",
-    },
-    {
-      "message": "Investor Jane Smith rejected 4500 Carter Creek Pkwy",
-      "investorEmail": "jane@example.com",
-      "status": "rejected",
-      "timestamp": "2024-02-24",
-    },
-    {
-      "message": "Investor Alex Brown showed interest in 700 Holleman Dr",
-      "investorEmail": "alex@example.com",
-      "status": "interested",
-      "timestamp": "2024-02-23",
     },
   ];
 
@@ -86,7 +50,6 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
     });
   }
 
-  /// Moves the map to the first property (only if the map is rendered)
   void _moveMapToFirstProperty() {
     if (recentProperties.isNotEmpty) {
       _mapController.move(
@@ -103,7 +66,7 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
       child: FlutterMap(
         mapController: _mapController,
         options: MapOptions(
-          initialCenter: LatLng(30.6280, -96.3344), // College Station
+          initialCenter: LatLng(30.6280, -96.3344),
           initialZoom: 12,
         ),
         children: [
@@ -130,7 +93,18 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
     );
   }
 
-  /// Builds property cards
+  Widget _buildModernCard(Widget child) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 3,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        child: child,
+      ),
+    );
+  }
+
   Widget _buildPropertyCards() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,62 +114,29 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 180,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: recentProperties.length,
-            itemBuilder: (context, index) {
-              final property = recentProperties[index];
-              return _buildPropertyCard(property);
-            },
+        _buildModernCard(
+          Column(
+            children: recentProperties.map((property) {
+              return ListTile(
+                title: Text(property['address']),
+                subtitle: Text("Price: \$${property['price']}"),
+                trailing: Text(
+                  property['status'],
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: property['status'] == "For Sale"
+                        ? Colors.green
+                        : Colors.orange,
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         ),
       ],
     );
   }
 
-  /// Builds a single property card
-  Widget _buildPropertyCard(Map<String, dynamic> property) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      elevation: 3,
-      child: Container(
-        width: 250,
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              property['address'],
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              "Price: \$${property['price']}",
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              "Status: ${property['status']}",
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const Spacer(),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Text(
-                "Updated: ${property['lastUpdated']}",
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Builds notification overview
   Widget _buildNotifications() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,32 +146,20 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: notifications.length,
-          itemBuilder: (context, index) {
-            final notification = notifications[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 5),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              child: ListTile(
+        _buildModernCard(
+          Column(
+            children: notifications.map((notification) {
+              return ListTile(
                 leading: Icon(
                   notification['status'] == 'approved' ? Icons.check_circle : Icons.cancel,
                   color: notification['status'] == 'approved' ? Colors.green : Colors.red,
                 ),
                 title: Text(notification['message']),
-                subtitle: Text(
-                  "Investor: ${notification['investorEmail']}",
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                trailing: Text(
-                  notification['timestamp'],
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ),
-            );
-          },
+                subtitle: Text(notification['investorEmail']),
+                trailing: Text(notification['timestamp']),
+              );
+            }).toList(),
+          ),
         ),
       ],
     );
@@ -239,33 +168,24 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Padding(
         padding: const EdgeInsets.all(24.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Realtor Dashboard",
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-
-              // Map showing property changes
-              _buildMap(),
-
-              const SizedBox(height: 20),
-
-              // Recent Properties Section
-              _buildPropertyCards(),
-
-              const SizedBox(height: 20),
-
-              // Notifications Section
-              _buildNotifications(),
-            ],
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Realtor Dashboard", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildMap(),
+            const SizedBox(height: 20),
+            _buildPropertyCards(),
+            const SizedBox(height: 20),
+            _buildNotifications(),
+          ],
         ),
       ),
     );
