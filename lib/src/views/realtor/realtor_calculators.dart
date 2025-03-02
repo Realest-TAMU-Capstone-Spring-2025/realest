@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'calculators/rental_property_calculator.dart';
+
 
 class RealtorCalculators extends StatefulWidget {
   const RealtorCalculators({Key? key}) : super(key: key);
@@ -47,6 +49,8 @@ class _RealtorCalculatorsState extends State<RealtorCalculators> {
                     // Navigation Items
                     _buildNavItem("PITI Calculator", 0),
                     _buildNavItem("Affordability Calculator", 1),
+                    _buildNavItem("Rental Property Calc", 2)
+
                   ],
                 ),
               ),
@@ -58,9 +62,13 @@ class _RealtorCalculatorsState extends State<RealtorCalculators> {
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
+
               child: _selectedCalculator == 0
                   ? _buildPITICalculator()
-                  : _buildAffordabilityCalculator(),
+                  : _selectedCalculator == 1
+                  ? _buildAffordabilityCalculator()
+                  : const RentalPropertyCalculator(),
+
             ),
           ),
         ],
@@ -71,6 +79,8 @@ class _RealtorCalculatorsState extends State<RealtorCalculators> {
   /// Sidebar Navigation Item
   Widget _buildNavItem(String label, int index) {
     bool isSelected = _selectedCalculator == index;
+    final theme = Theme.of(context);
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -86,15 +96,12 @@ class _RealtorCalculatorsState extends State<RealtorCalculators> {
         ),
         child: Row(
           children: [
-            Icon(
-              isSelected ? Icons.check_circle : Icons.circle_outlined,
-            ),
-            const SizedBox(width: 10),
             Text(
               label,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
+                color: isSelected ? theme.colorScheme.primary : theme.primaryColor, // Black for Selected
               ),
             ),
           ],
