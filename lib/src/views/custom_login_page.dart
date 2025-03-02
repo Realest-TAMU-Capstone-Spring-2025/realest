@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import '../../user_provider.dart';
 import '../config/global_variables.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -56,17 +58,22 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
         password: _passwordController.text.trim(),
       );
 
-      // Fetch user role from Firestore and store it
-      DocumentSnapshot userDoc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
+      String uid = userCredential.user!.uid; // Get user UID
+
+      // Fetch user role from Firestore
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
 
       if (userDoc.exists) {
         _selectedRole = userDoc['role']; // Store role locally
 
-        // Redirect based on role
-        if (_selectedRole == "investor") {
-          Navigator.pushNamedAndRemoveUntil(context, "/investorHome", (route) => false);
-        } else {
+        if (_selectedRole == "realtor") {
+          // ✅ Trigger Provider to fetch user details
+          Provider.of<UserProvider>(context, listen: false).fetchRealtorData();
+
+          // Navigate to Realtor Dashboard
           Navigator.pushNamedAndRemoveUntil(context, "/realtorHome", (route) => false);
+        } else {
+          Navigator.pushNamedAndRemoveUntil(context, "/investorHome", (route) => false);
         }
       } else {
         setState(() {
@@ -134,74 +141,92 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(26.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400.0),
-            child: Column(
-              children: [
-                const Icon(Icons.real_estate_agent, size: 200, color: Colors.black),
-                //Realest text
-                Text(
-                  'Realest',
-                  style: GoogleFonts.poppins(fontSize: 40, color: Colors.black, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  _isRegister ? 'Please Sign Up' : 'Please Sign In',
-                  style: GoogleFonts.poppins(fontSize: 20, color: Colors.grey, fontWeight: FontWeight.bold),
-                ),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 14),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                const SizedBox(height: 40),
-                _buildTextField(_emailController, 'Email', false),
-                const SizedBox(height: 16),
-                _buildTextField(_passwordController, 'Password', true),
-                if (_isRegister) ...[
-                  const SizedBox(height: 16),
-                  _buildTextField(_confirmPasswordController, 'Confirm Password', true),
-                  const SizedBox(height: 16),
-                  ToggleButtons(
-                    borderRadius: BorderRadius.circular(30),
-                    constraints: const BoxConstraints(minHeight: 40, minWidth: 100),
-                    isSelected: [
-                      _selectedRole == 'investor',
-                      _selectedRole == 'realtor',
-                    ],
-                    onPressed: (int index) {
-                      setState(() {
-                        _selectedRole = index == 0 ? 'investor' : 'realtor';
-                      });
-                    },
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text('Investor'),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text('Realtor'),
-                      ),
-                    ],
-                  ),
-                ],
-
-                const SizedBox(height: 16),
-                _buildActionButton(),
-                const SizedBox(height: 16),
-                _buildToggleAuthText(),
-                if (_isLoading) const Padding(padding: EdgeInsets.only(top: 16.0), child: CircularProgressIndicator()),
-              ],
+      body: Stack(
+        children: [
+          // Background image
+          Positioned.fill(
+            child: Image.asset(
+              'images/background/modern-home-2.png', // Make sure to add the image to your assets folder and update pubspec.yaml
+              fit: BoxFit.cover,
             ),
           ),
-        ),
+
+          // Semi-transparent white overlay
+          Positioned.fill(
+            child: Container(
+              color: Colors.white.withOpacity(.90), // Adjust opacity as needed
+            ),
+          ),
+
+          // Login form
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(26.0),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400.0),
+                child: Column(
+                  children: [
+                    const Icon(Icons.real_estate_agent, size: 200, color: Colors.black),
+                    Text(
+                      'Realest',
+                      style: GoogleFonts.poppins(fontSize: 40, color: Colors.black, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      _isRegister ? 'Please Sign Up' : 'Please Sign In',
+                      style: GoogleFonts.poppins(fontSize: 20, color: Colors.grey, fontWeight: FontWeight.bold),
+                    ),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    const SizedBox(height: 40),
+                    _buildTextField(_emailController, 'Email', false),
+                    const SizedBox(height: 16),
+                    _buildTextField(_passwordController, 'Password', true),
+                    if (_isRegister) ...[
+                      const SizedBox(height: 16),
+                      _buildTextField(_confirmPasswordController, 'Confirm Password', true),
+                      const SizedBox(height: 16),
+                      ToggleButtons(
+                        borderRadius: BorderRadius.circular(30),
+                        constraints: const BoxConstraints(minHeight: 40, minWidth: 100),
+                        isSelected: [
+                          _selectedRole == 'investor',
+                          _selectedRole == 'realtor',
+                        ],
+                        onPressed: (int index) {
+                          setState(() {
+                            _selectedRole = index == 0 ? 'investor' : 'realtor';
+                          });
+                        },
+                        children: const [
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Text('Investor'),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Text('Realtor'),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    _buildActionButton(),
+                    const SizedBox(height: 16),
+                    _buildToggleAuthText(),
+                    if (_isLoading) const Padding(padding: EdgeInsets.only(top: 16.0), child: CircularProgressIndicator()),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -211,14 +236,22 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
       controller: controller,
       decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.grey[200],
+        fillColor: Colors.grey[200], // Keeps the background color
         hintText: hint,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30.0),
+          borderSide: const BorderSide(color: Colors.purple, width: 1), // Purple border
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30.0),
+          borderSide: const BorderSide(color: Colors.deepPurple, width: 2), // Deeper purple when focused
+        ),
       ),
       obscureText: obscure,
       keyboardType: obscure ? TextInputType.text : TextInputType.emailAddress,
     );
   }
+
 
   Widget _buildActionButton() {
     return SizedBox(
