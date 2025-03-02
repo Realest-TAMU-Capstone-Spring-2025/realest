@@ -13,13 +13,22 @@ import 'src/views/realtor/realtor_setup.dart';
 import 'src/views/realtor/realtor_calculators.dart';
 import 'src/views/realtor/realtor_clients.dart';
 import 'src/views/realtor/realtor_reports.dart';
+import 'package:provider/provider.dart';
+import 'user_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => UserProvider()),
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
