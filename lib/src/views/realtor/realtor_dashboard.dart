@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
+
+import '../../../user_provider.dart';
 
 class RealtorDashboard extends StatefulWidget {
   const RealtorDashboard({Key? key}) : super(key: key);
@@ -10,7 +11,6 @@ class RealtorDashboard extends StatefulWidget {
 }
 
 class _RealtorDashboardState extends State<RealtorDashboard> {
-  final MapController _mapController = MapController();
 
   /// Hardcoded real estate properties in College Station, TX
   final List<Map<String, dynamic>> recentProperties = [
@@ -45,53 +45,11 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _moveMapToFirstProperty();
-    });
+
   }
 
-  void _moveMapToFirstProperty() {
-    if (recentProperties.isNotEmpty) {
-      _mapController.move(
-        LatLng(recentProperties[0]['latitude'], recentProperties[0]['longitude']),
-        13.0,
-      );
-    }
-  }
 
-  /// Builds the map with property markers
-  Widget _buildMap() {
-    return SizedBox(
-      height: 300,
-      child: FlutterMap(
-        mapController: _mapController,
-        options: MapOptions(
-          initialCenter: LatLng(30.6280, -96.3344),
-          initialZoom: 12,
-        ),
-        children: [
-          TileLayer(
-            urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            subdomains: ['a', 'b', 'c'],
-          ),
-          MarkerLayer(
-            markers: recentProperties.map((property) {
-              return Marker(
-                point: LatLng(property['latitude'], property['longitude']),
-                width: 40,
-                height: 40,
-                child: const Icon(
-                  Icons.location_on,
-                  color: Colors.red,
-                  size: 30,
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildModernCard(Widget child) {
     return Card(
@@ -167,6 +125,9 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final userProvider = Provider.of<UserProvider>(context);
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -176,11 +137,12 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text("Realtor Dashboard", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+                Text(
+                    "Welcome, ${userProvider.firstName ?? 'Loading...'}",
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
               ],
             ),
-            const SizedBox(height: 20),
-            _buildMap(),
+
             const SizedBox(height: 20),
             _buildPropertyCards(),
             const SizedBox(height: 20),
@@ -191,3 +153,4 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
     );
   }
 }
+
