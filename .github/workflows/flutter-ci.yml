@@ -14,7 +14,7 @@ on:
 jobs:
   build:
     name: Build & Test Flutter App
-    runs-on: macos-latest  # macOS needed for iOS builds, use ubuntu-latest for Android-only
+    runs-on: ubuntu-latest  # macOS needed for iOS builds, use ubuntu-latest for Android-only
 
     steps:
       - name: Checkout Repository
