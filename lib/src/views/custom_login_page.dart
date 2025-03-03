@@ -145,11 +145,12 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
         children: [
           // Background image
           Positioned.fill(
-            child: Image.asset(
-              'images/background/modern-home-2.png', // Make sure to add the image to your assets folder and update pubspec.yaml
+            child: Image.network(
+              'https://photos.zillowstatic.com/fp/f92e12421954f63424e6788ca770bdc4-cc_ft_1536.webp',
               fit: BoxFit.cover,
             ),
           ),
+
 
           // Semi-transparent white overlay
           Positioned.fill(
