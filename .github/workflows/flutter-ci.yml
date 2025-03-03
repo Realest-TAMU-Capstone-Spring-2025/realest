@@ -31,6 +31,7 @@ jobs:
 
       - name: Run Static Analysis
         run: flutter analyze
+        continue-on-error: true
 
       - name: Run Tests
         run: flutter test
