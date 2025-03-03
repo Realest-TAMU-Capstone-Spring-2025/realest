@@ -77,3 +77,17 @@ jobs:
         with:
           name: ios-build
           path: build/ios/iphoneos
+
+      - name: Build Flutter Web
+        if: github.ref == 'refs/heads/main'
+        run: flutter build web --release
+
+      - name: Deploy to Firebase Hosting
+        if: github.ref == 'refs/heads/main'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+          channelId: live
+          projectId: "realest-3a0d2"
+
