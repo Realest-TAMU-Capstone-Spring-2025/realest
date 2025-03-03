@@ -1,11 +1,14 @@
-name: Flutter CI
+name: Flutter CI/CD
 
 on:
   push:
     branches:
+      - 'REAL-*'  # Matches feature branches named like REAL-1234
+      - develop
       - main
   pull_request:
     branches:
+      - develop
       - main
 
 jobs:
@@ -20,7 +23,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.6.2 # Change this to your Flutter version
+          flutter-version: 3.x  # Update with your Flutter version
           channel: stable
 
       - name: Install Dependencies
@@ -32,6 +35,20 @@ jobs:
       - name: Run Tests
         run: flutter test
 
-      - name: Build APK
+      - name: Build APK (Feature Branch)
+        if: startsWith(github.ref, 'refs/heads/REAL-')
+        run: flutter build apk --debug
+
+      - name: Build APK (Develop)
+        if: github.ref == 'refs/heads/develop'
         run: flutter build apk --release
 
+      - name: Build APK (Main)
+        if: github.ref == 'refs/heads/main'
+        run: flutter build apk --release
+
+      - name: Upload APK as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
