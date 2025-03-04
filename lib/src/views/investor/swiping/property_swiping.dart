@@ -15,7 +15,6 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   final CardSwiperController _controller = CardSwiperController();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   List<Property> _properties = [];
-  // ignore: prefer_final_fields
   List<Property> _swipedProperties = [];
   bool _noMoreProperties = false;
 
@@ -24,6 +23,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     super.initState();
     _loadProperties();
   }
+
   Future<void> _loadProperties() async {
     try {
       final snapshot = await _db.collection('listings')
@@ -32,12 +32,12 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           .get();
 
       if (mounted) {
-      setState(() {
-        _properties = snapshot.docs.map((doc) => Property.fromFirestore(doc)).toList();
-      });
-    }
+        setState(() {
+          _properties = snapshot.docs.map((doc) => Property.fromFirestore(doc)).toList();
+        });
+      }
     } catch (e) {
-      if (mounted) { // Handle errors gracefully
+      if (mounted) {
         setState(() {
           _properties = [];
         });
@@ -46,7 +46,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     }
   }
 
-  bool _handleSwipe(int previousIndex, int? currentIndex, CardSwiperDirection direction) {
+  Future<bool> _handleSwipe(int previousIndex, int? currentIndex, CardSwiperDirection direction) async {
     final property = _properties[previousIndex];
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
@@ -54,12 +54,14 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
     final isLiked = direction == CardSwiperDirection.right;
 
-    // Save swipe decision to Firestore
-    _db.collection('users').doc(userId).collection('decisions').doc(property.id).set({
-      'liked': isLiked,
-      'timestamp': FieldValue.serverTimestamp(),
-      'propertyId': property.id,
-    });
+    if (isLiked || await _wasPropertyPreviouslyLiked(property.id)) {
+      // Save swipe decision to Firestore only if it's a like or if it's undoing a previous like
+      _db.collection('users').doc(userId).collection('decisions').doc(property.id).set({
+        'liked': isLiked,
+        'timestamp': FieldValue.serverTimestamp(),
+        'propertyId': property.id,
+      });
+    }
 
     if (mounted) {
       setState(() {
@@ -67,10 +69,16 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
       });
     }
 
-    return true; // Allow swipe action to proceed
+    return true;
   }
 
+  Future<bool> _wasPropertyPreviouslyLiked(String propertyId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return false;
 
+    final doc = await _db.collection('users').doc(userId).collection('decisions').doc(propertyId).get();
+    return doc.exists && doc.data()?['liked'] == true;
+  }
 
   Future<bool> _handleUndo() async {
     if (_swipedProperties.isEmpty) return false;
@@ -79,10 +87,19 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     
     if (userId != null) {
-      await _db.collection('investors').doc(userId)
-        .collection('decisions')
-        .doc(lastProperty.id)
-        .delete();
+      final docRef = _db.collection('users').doc(userId).collection('decisions').doc(lastProperty.id);
+      final doc = await docRef.get();
+      
+      if (doc.exists && doc.data()?['liked'] == true) {
+        await docRef.delete();
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _properties.insert(0, lastProperty);
+        _noMoreProperties = false;
+      });
     }
 
     return true;
@@ -102,14 +119,14 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
         actions: [
           IconButton(
             icon: const Icon(Icons.undo),
-            onPressed: () async {
+            onPressed: _swipedProperties.isNotEmpty ? () async {
               final success = await _handleUndo();
               if (success) {
                 setState(() {
                   _noMoreProperties = false;
                 });
               }
-            },
+            } : null,
           )
         ],
       ),
@@ -161,7 +178,6 @@ class PropertyCard extends StatelessWidget {
             placeholder: (context, url) => Center(child: CircularProgressIndicator()),
             errorWidget: (context, url, error) => Icon(Icons.error),
           ),
-          // Gradient overlay
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(

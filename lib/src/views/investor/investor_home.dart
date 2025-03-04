@@ -34,7 +34,10 @@ class _InvestorMobileAppState extends State<InvestorMobileApp> {
 
   void _onItemTapped(int index) {
     if (index == 2) {
-      FirebaseAuth.instance.signOut();
+      FirebaseAuth.instance.signOut().then((_) {
+        // Navigate to the login screen after signing out
+        Navigator.pushReplacementNamed(context, '/login');
+      });
       return;
     }
     setState(() => _selectedIndex = index);
@@ -43,6 +46,8 @@ class _InvestorMobileAppState extends State<InvestorMobileApp> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      // backgroundColor: Theme(data: data, child: child),
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
@@ -74,6 +79,7 @@ class WebWarningWidget extends StatelessWidget {
 
   Future<void> _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
+    //force user to login again
     Navigator.pushReplacementNamed(context, '/login');
   }
 
