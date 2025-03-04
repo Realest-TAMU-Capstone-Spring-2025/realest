@@ -3,6 +3,7 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../properties/properties_view.dart';
 
 class PropertySwipingView extends StatefulWidget {
   const PropertySwipingView({super.key});
@@ -167,49 +168,64 @@ class PropertyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CachedNetworkImage(
-            imageUrl: property.primaryPhoto ?? 'https://via.placeholder.com/150',
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Center(child: CircularProgressIndicator()),
-            errorWidget: (context, url, error) => Icon(Icons.error),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.black.withOpacity(0.6), Colors.transparent],
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
+    return GestureDetector(
+        onTap: () => _navigateToPropertyView(context),
+        child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CachedNetworkImage(
+              imageUrl: property.primaryPhoto ?? 'https://via.placeholder.com/150',
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Center(child: CircularProgressIndicator()),
+              errorWidget: (context, url, error) => Icon(Icons.error),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  property.street ?? 'Unknown Address',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    property.street ?? 'Unknown Address',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                SizedBox(height: 8),
-                _buildDetailRow('${property.beds ?? 0} beds', Icons.bed),
-                _buildDetailRow('${property.fullBaths ?? 0} baths', Icons.bathtub),
-                _buildDetailRow('${property.sqft ?? 0} sqft', Icons.square_foot),
-                _buildDetailRow('\$${property.listPrice?.toStringAsFixed(2) ?? 'N/A'}', Icons.attach_money),
-              ],
+                  SizedBox(height: 8),
+                  _buildDetailRow('${property.beds ?? 0} beds', Icons.bed),
+                  _buildDetailRow('${property.fullBaths ?? 0} baths', Icons.bathtub),
+                  _buildDetailRow('${property.sqft ?? 0} sqft', Icons.square_foot),
+                  _buildDetailRow('\$${property.listPrice?.toStringAsFixed(2) ?? 'N/A'}', Icons.attach_money),
+                ],
+              ),
             ),
+          ],
           ),
-        ],
+        )
+    );
+  }
+
+  void _navigateToPropertyView(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PropertiesView(
+          propertyId: property.id, 
+          showSaveIcon: false, 
+        ),
       ),
     );
   }
