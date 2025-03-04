@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../user_provider.dart';
-import '../config/global_variables.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CustomLoginPage extends StatefulWidget {
@@ -58,32 +57,34 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
         password: _passwordController.text.trim(),
       );
 
-      String uid = userCredential.user!.uid; // Get user UID
+      String uid = userCredential.user!.uid;
 
-      // Fetch user role from Firestore
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
 
-      if (userDoc.exists) {
-        _selectedRole = userDoc['role']; // Store role locally
+      if (userDoc.exists && mounted) {
+        setState(() {
+          _selectedRole = userDoc['role'];
+        });
 
         if (_selectedRole == "realtor") {
-          // ✅ Trigger Provider to fetch user details
           Provider.of<UserProvider>(context, listen: false).fetchRealtorData();
 
-          // Navigate to Realtor Dashboard
           Navigator.pushNamedAndRemoveUntil(context, "/realtorHome", (route) => false);
         } else {
           Navigator.pushNamedAndRemoveUntil(context, "/investorHome", (route) => false);
         }
-      } else {
+      } else if (mounted) {
         setState(() {
           _errorMessage = "User role not found. Please contact support.";
         });
       }
     } on FirebaseAuthException catch (e) {
-      setState(() => _errorMessage = _getAuthErrorMessage(e));
+      if (mounted) {
+        setState(() => _errorMessage = _getAuthErrorMessage(e));
+      }
     }
   }
+
 
 
   Future<void> _createAccount() async {
