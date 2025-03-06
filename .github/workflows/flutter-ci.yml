@@ -1,0 +1,93 @@
+name: Flutter CI/CD
+
+on:
+  push:
+    branches:
+      - 'REAL-*'  # Feature branches (REAL-###)
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  build:
+    name: Build & Test Flutter App
+    runs-on: ubuntu-latest  # macOS needed for iOS builds, use ubuntu-latest for Android-only
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.x
+          channel: stable
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # Restore firebase_options.dart from GitHub Secrets
+      - name: Restore firebase_options.dart
+        run: |
+          echo "${{ secrets.FIREBASE_OPTIONS }}" | base64 --decode > lib/firebase_options.dart
+
+      - name: Run Static Analysis (Optional)
+        run: flutter analyze
+        continue-on-error: true  # Won't stop the workflow if analysis fails
+
+      - name: Run Tests
+        run: flutter test
+
+      # Conditionally Build APK Based on Branch
+      # Build APK for feature branches (REAL-###)
+      - name: Build APK for Feature Branches
+        if: startsWith(github.ref, 'refs/heads/REAL-')
+        run: flutter build apk --debug
+
+      # Build APK for the develop branch
+      - name: Build APK for Develop
+        if: github.ref == 'refs/heads/develop'
+        run: flutter build apk --release
+
+      # Build APK for the main branch
+      - name: Build APK for Main
+        if: github.ref == 'refs/heads/main'
+        run: flutter build apk --release
+
+      # Conditionally Upload APK Artifacts
+      - name: Upload APK as Artifact
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/REAL-')
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      # Conditionally Build iOS (Only for Develop/Main)
+      - name: Build iOS (No Code Signing)
+        if: runner.os == 'macOS' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+        run: flutter build ios --no-codesign
+
+      # Conditionally Upload iOS Build
+      - name: Upload iOS Build as Artifact
+        if: runner.os == 'macOS' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: build/ios/iphoneos
+
+      - name: Build Flutter Web
+        if: github.ref == 'refs/heads/main'
+        run: flutter build web --release
+
+      - name: Deploy to Firebase Hosting
+        if: github.ref == 'refs/heads/main'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+          channelId: live
+          projectId: "realest-3a0d2"
+
