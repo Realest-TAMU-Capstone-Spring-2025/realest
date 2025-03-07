@@ -55,51 +55,52 @@ class _RealtorHomePageState extends State<RealtorHomePage> {
             isDarkMode: widget.isDarkMode,
           ),
           // Right side: Header on top of the pages
+          // Expanded(
+          //   child: Column(
+          //     children: [
+          //       // Header with an icon before the text, tappable to set index to 0
+          //       Container(
+          //         width: double.infinity,
+          //         padding: const EdgeInsets.all(16.0),
+          //         color: Colors.black,
+          //         child: GestureDetector(
+          //           onTap: () {
+          //             setState(() {
+          //               _selectedIndex = 0; // Set index to 0 when tapped
+          //             });
+          //           },
+          //           child: Row(
+          //             mainAxisAlignment: MainAxisAlignment.center,
+          //             children: [
+          //               const Icon(
+          //                 Icons.real_estate_agent,
+          //                 color: Colors.white,
+          //                 size: 30,
+          //               ),
+          //               const SizedBox(width: 8),
+          //               Text(
+          //                 'RealEst',
+          //                 textAlign: TextAlign.center,
+          //                 style: Theme.of(context)
+          //                     .textTheme
+          //                     .bodyLarge
+          //                     ?.copyWith(
+          //                   color: Colors.white,
+          //                   fontSize: 24,
+          //                   fontWeight: FontWeight.bold,
+          //                 ),
+          //               ),
+          //             ],
+          //           ),
+          //         ),
+          //       ),
+          //       // Main Content Area for pages
+          //
+          //     ],
+          //   ),
+          // ),
           Expanded(
-            child: Column(
-              children: [
-                // Header with an icon before the text, tappable to set index to 0
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16.0),
-                  color: Colors.black,
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedIndex = 0; // Set index to 0 when tapped
-                      });
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.real_estate_agent,
-                          color: Colors.white,
-                          size: 30,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'RealEst',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyLarge
-                              ?.copyWith(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // Main Content Area for pages
-                Expanded(
-                  child: _pages[_selectedIndex],
-                ),
-              ],
-            ),
+            child: _pages[_selectedIndex],
           ),
         ],
       ),
