@@ -123,6 +123,7 @@ app.*.symbols
 .env
 env.g.dart
 web/index.html
+ios/Runner/GoogleService-Info.plist
 
 # Fastlane specific
 **/fastlane/report.xml
