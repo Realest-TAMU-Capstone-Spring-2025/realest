@@ -122,7 +122,6 @@ app.*.symbols
 # Environment Variables
 .env
 env.g.dart
-web/index.html
 ios/Runner/GoogleService-Info.plist
 lib/firebase_options.dart
 
