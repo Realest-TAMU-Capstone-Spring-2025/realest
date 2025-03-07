@@ -122,6 +122,7 @@ app.*.symbols
 # Environment Variables
 .env
 env.g.dart
+web/index.html
 
 # Fastlane specific
 **/fastlane/report.xml
