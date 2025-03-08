@@ -101,8 +101,9 @@ ThemeData _lightTheme() {
     colorScheme: const ColorScheme.light(
       primary: Colors.deepPurple, // Buttons and selected navbar item
       secondary: Colors.black87, // Secondary elements
+      surface: Colors.white, // Default text color
       surfaceVariant: Colors.black, // Navbar background
-      onSurface: Colors.black, // Default text color
+      onSurface: Colors.black,
     ),
     textTheme: const TextTheme(
       bodyLarge: TextStyle(color: Colors.black),
@@ -110,7 +111,7 @@ ThemeData _lightTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.grey[200], // Input field background
+      fillColor: Colors.grey[100], // Input field background
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide.none,
@@ -142,6 +143,7 @@ ThemeData _darkTheme() {
       primary: Colors.deepPurpleAccent, // Buttons and selected navbar item
       secondary: Colors.white70, // Secondary elements
       surfaceVariant: Colors.black, // Navbar background
+      surface: Colors.black,
       onSurface: Colors.white, // Default text color
     ),
     textTheme: const TextTheme(

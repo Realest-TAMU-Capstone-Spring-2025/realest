@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'realtor_profile_pic.dart';
 import '../../../user_provider.dart';
 
 class RealtorDashboard extends StatefulWidget {

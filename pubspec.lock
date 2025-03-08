@@ -933,6 +933,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.3.1"
+  mailer:
+    dependency: "direct main"
+    description:
+      name: mailer
+      sha256: c6ae65c1d40cfe9c06fa50ff9be6c1cfb18cca60a7bb935e318163bd7f1f0d17
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.4.1"
   matcher:
     dependency: transitive
     description:
