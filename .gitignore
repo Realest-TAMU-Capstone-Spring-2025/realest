@@ -47,6 +47,9 @@
 **/unlinked.ds
 **/unlinked_spec.ds
 
+# Firebase 
+**/lib/firebase_options.dart
+
 # Android related
 **/android/**/gradle-wrapper.jar
 .gradle/
@@ -88,6 +91,7 @@
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Runner/GoogleService-Info.plist
 
 # macOS
 **/Flutter/ephemeral/
