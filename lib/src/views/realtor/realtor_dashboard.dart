@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'realtor_profile_pic.dart';
 import '../../../user_provider.dart';
 
 class RealtorDashboard extends StatefulWidget {
-  const RealtorDashboard({Key? key}) : super(key: key);
+  final VoidCallback toggleTheme;
+  final bool isDarkMode;
+
+  const RealtorDashboard({
+    Key? key,
+    required this.toggleTheme,
+    required this.isDarkMode,
+  }) : super(key: key);
 
   @override
   _RealtorDashboardState createState() => _RealtorDashboardState();
@@ -45,11 +52,8 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
   @override
   void initState() {
     super.initState();
-
+    Provider.of<UserProvider>(context, listen: false).fetchRealtorData();
   }
-
-
-
 
   Widget _buildModernCard(Widget child) {
     return Card(
@@ -136,12 +140,19 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                    "Welcome, ${userProvider.firstName ?? 'Loading...'}",
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                  "Welcome, ${userProvider.firstName ?? 'Loading...'} ${userProvider.lastName}",
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
               ],
             ),
+
 
             const SizedBox(height: 20),
             _buildPropertyCards(),

@@ -25,7 +25,7 @@ class _RealtorCalculatorsState extends State<RealtorCalculators> {
               const SizedBox(height: 30), // White Space Above Sidebar
               Container(
                 width: 250,
-                height: MediaQuery.of(context).size.height - 60, // Adjusted for spacing
+                // height: MediaQuery.of(context).size.height - 100, // Adjusted for spacing
                 decoration: BoxDecoration(
                   color: CupertinoColors.tertiarySystemFill, // White Background
                   borderRadius: const BorderRadius.only(
