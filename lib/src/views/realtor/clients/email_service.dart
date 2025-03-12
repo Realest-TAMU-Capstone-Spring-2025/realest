@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 // email_service.dart
 class EmailService {
-  static const String sendGridApiKey = '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';
+  static const String sendGridApiKey = '[]';
   static const String senderEmail = 'eshwarreddygadi@gmail.com';
 
   static Future<void> sendInviteEmail(
