@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import '../../user_provider.dart';
+import '../../realtor_user_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CustomLoginPage extends StatefulWidget {
@@ -109,7 +109,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   }
   void _navigateAfterRegistration() {
     if (_selectedRole == "investor") {
-      Navigator.pushNamedAndRemoveUntil(context, "/investorHome", (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, "/investorSetup", (route) => false);
     } else {
       Navigator.pushNamedAndRemoveUntil(context, "/realtorSetup", (route) => false);
     }

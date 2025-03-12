@@ -6,6 +6,9 @@ class UserProvider extends ChangeNotifier {
   String? _firstName;
   String? get firstName => _firstName;
 
+  String? _uid;
+  String? get uid => _uid;
+
   String? _lastName;
   String? get lastName => _lastName;
 
@@ -50,6 +53,7 @@ class UserProvider extends ChangeNotifier {
         _address = data['address'];
         _profilePicUrl = data['profilePicUrl'];
         _invitationCode = data['invitationCode'];
+        _uid = user.uid;
 
         notifyListeners(); // Notify UI to update
       }

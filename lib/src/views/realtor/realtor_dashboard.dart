@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../user_provider.dart';
+import '../../../realtor_user_provider.dart';
 
 class RealtorDashboard extends StatefulWidget {
   final VoidCallback toggleTheme;
