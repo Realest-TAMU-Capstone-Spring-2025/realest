@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../realtor_user_provider.dart';
+import 'dart:async';
 import 'package:google_fonts/google_fonts.dart';
 
 class CustomLoginPage extends StatefulWidget {
@@ -20,12 +21,14 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   bool _isLoading = false;
   String? _errorMessage;
   String _selectedRole = 'investor'; // Default role
+  Timer? _errorTimer;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void dispose() {
+     _errorTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -44,7 +47,8 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
         await _signInWithEmail();
       }
     } on FirebaseAuthException catch (e) {
-      setState(() => _errorMessage = _getAuthErrorMessage(e));
+      final message = _getAuthErrorMessage(e);
+      setState(() => _errorMessage = message);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -117,7 +121,15 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
 
 
   String _getAuthErrorMessage(FirebaseAuthException e) {
-    print(e.code);
+    // print(e.code);
+    if(_errorTimer != null) {
+      _errorTimer!.cancel();
+    }
+    _errorTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() => _errorMessage = null);
+      }
+    });
     switch (e.code) {
       case 'invalid-email':
         return 'The email address is not valid.';
@@ -175,17 +187,16 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      _isRegister ? 'Please Sign Up' : 'Please Sign In',
-                      style: GoogleFonts.poppins(fontSize: 20, color: Colors.grey, fontWeight: FontWeight.bold),
+                      _errorMessage ?? (_isRegister ? 'Please Sign Up' : 'Please Sign In'),
+                      style: _errorMessage != null
+                          ? const TextStyle(color: Colors.red, fontSize: 14)
+                          : GoogleFonts.poppins(
+                              fontSize: 20,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      textAlign: TextAlign.center,
                     ),
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        _errorMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 14),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
                     const SizedBox(height: 40),
                     _buildTextField(_emailController, 'Email', false),
                     const SizedBox(height: 16),
