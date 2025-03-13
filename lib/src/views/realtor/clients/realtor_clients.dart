@@ -561,30 +561,39 @@ class _RealtorClientsState extends State<RealtorClients> {
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    if (title == 'Update') ...[
-                      _buildFilterIconButton('Account Created', Icons.account_circle, Colors.green),
-                      const SizedBox(width: 8),
-                      _buildFilterIconButton('Liked a Property', Icons.business, Colors.red),
-                      const SizedBox(width: 8),
-                      _buildFilterIconButton('Responded to Message', Icons.message, Colors.blue),
+                Flexible( // Wrap the right side in Flexible to allow shrinking
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (title == 'Update')
+                        Flexible(
+                          child: Wrap(
+                            spacing: 8, // Horizontal space between icons
+                            runSpacing: 8, // Vertical space if wrapped to next line
+                            children: [
+                              _buildFilterIconButton('Account Created', Icons.account_circle, Colors.green),
+                              _buildFilterIconButton('Liked a Property', Icons.business, Colors.red),
+                              _buildFilterIconButton('Responded to Message', Icons.message, Colors.blue),
+                            ],
+                          ),
+                        ),
                       const SizedBox(width: 16),
-                    ],
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: theme.inputDecorationTheme.fillColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${clients.length} clients',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: theme.inputDecorationTheme.fillColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${clients.length} clients',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),

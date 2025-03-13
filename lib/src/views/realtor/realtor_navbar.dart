@@ -34,104 +34,109 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
-        width: _isExpanded ? 250 : 80, // Increased widths to avoid overflow
-        height: double.infinity,
+        width: _isExpanded ? 195 : 80,
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceVariant,
         ),
-        child: Column(
-          // Removed ClipRect to avoid unnecessary clipping
-          children: [
-            // Logo widget with adjusted padding
-            const SizedBox(height: 20),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: _isExpanded ? 100 : 50,
-              height: _isExpanded ? 100 : 50,
-              child: RealtorProfilePic(
-                toggleTheme: widget.toggleTheme,
-                isDarkMode: widget.isDarkMode,
-                onAccountSettings: () => widget.onItemTapped(5),
-              ),
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height,
             ),
-            const SizedBox(height: 30),
-            _NavItem(
-              icon: Icons.home,
-              label: "Home",
-              index: 0,
-              isSelected: widget.selectedIndex == 0,
-              onTap: widget.onItemTapped,
-              theme: theme,
-              isExpanded: _isExpanded,
-            ),
-            _NavItem(
-              icon: Icons.search,
-              label: "Home Search",
-              index: 1,
-              isSelected: widget.selectedIndex == 1,
-              onTap: widget.onItemTapped,
-              theme: theme,
-              isExpanded: _isExpanded,
-            ),
-            _NavItem(
-              icon: Icons.calculate,
-              label: "Calculators",
-              index: 2,
-              isSelected: widget.selectedIndex == 2,
-              onTap: widget.onItemTapped,
-              theme: theme,
-              isExpanded: _isExpanded,
-            ),
-            _NavItem(
-              icon: Icons.people,
-              label: "Clients",
-              index: 3,
-              isSelected: widget.selectedIndex == 3,
-              onTap: widget.onItemTapped,
-              theme: theme,
-              isExpanded: _isExpanded,
-            ),
-            _NavItem(
-              icon: Icons.assessment,
-              label: "Reports",
-              index: 4,
-              isSelected: widget.selectedIndex == 4,
-              onTap: widget.onItemTapped,
-              theme: theme,
-              isExpanded: _isExpanded,
-            ),
-            const Spacer(),
-            InkWell(
-              onTap: () => widget.onItemTapped(0),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Icon(
-                  Icons.real_estate_agent,
-                  size: 42,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-
-            if (_isExpanded)
-              InkWell(
-                onTap: () => widget.onItemTapped(0),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12.0, 0, 12.0, 12.0), // Reduced top padding
-                  child: Text(
-                    "RealEst",
-                    style: const TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            child: IntrinsicHeight(
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: _isExpanded ? 100 : 50,
+                    height: _isExpanded ? 100 : 50,
+                    child: RealtorProfilePic(
+                      toggleTheme: widget.toggleTheme,
+                      isDarkMode: widget.isDarkMode,
+                      onAccountSettings: () => widget.onItemTapped(5),
                     ),
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
                   ),
-                ),
+                  const SizedBox(height: 30),
+                  _NavItem(
+                    icon: Icons.home,
+                    label: "Home",
+                    index: 0,
+                    isSelected: widget.selectedIndex == 0,
+                    onTap: widget.onItemTapped,
+                    theme: theme,
+                    isExpanded: _isExpanded,
+                  ),
+                  _NavItem(
+                    icon: Icons.search,
+                    label: "Home Search",
+                    index: 1,
+                    isSelected: widget.selectedIndex == 1,
+                    onTap: widget.onItemTapped,
+                    theme: theme,
+                    isExpanded: _isExpanded,
+                  ),
+                  _NavItem(
+                    icon: Icons.calculate,
+                    label: "Calculators",
+                    index: 2,
+                    isSelected: widget.selectedIndex == 2,
+                    onTap: widget.onItemTapped,
+                    theme: theme,
+                    isExpanded: _isExpanded,
+                  ),
+                  _NavItem(
+                    icon: Icons.people,
+                    label: "Clients",
+                    index: 3,
+                    isSelected: widget.selectedIndex == 3,
+                    onTap: widget.onItemTapped,
+                    theme: theme,
+                    isExpanded: _isExpanded,
+                  ),
+                  _NavItem(
+                    icon: Icons.assessment,
+                    label: "Reports",
+                    index: 4,
+                    isSelected: widget.selectedIndex == 4,
+                    onTap: widget.onItemTapped,
+                    theme: theme,
+                    isExpanded: _isExpanded,
+                  ),
+                  const Spacer(),
+                  InkWell(
+                    onTap: () => widget.onItemTapped(0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Icon(
+                        Icons.real_estate_agent,
+                        size: 42,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  if (_isExpanded)
+                    InkWell(
+                      onTap: () => widget.onItemTapped(0),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12.0, 0, 12.0, 12.0),
+                        child: Text(
+                          "RealEst",
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 30),
+                ],
               ),
-            const SizedBox(height: 30),
-          ],
+            ),
+          ),
         ),
       ),
     );
@@ -167,17 +172,6 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
                 style: TextStyle(color: theme.colorScheme.primary),
               ),
             ),
-            // TextButton(
-            //   onPressed: () async {
-            //     Navigator.of(context).pop();
-            //     await FirebaseAuth.instance.signOut();
-            //     Navigator.pushReplacementNamed(context, '/login');
-            //   },
-            //   child: Text(
-            //     "Logout",
-            //     style: TextStyle(color: isDarkMode ? Colors.redAccent : Colors.red),
-            //   ),
-            // ),
           ],
         );
       },

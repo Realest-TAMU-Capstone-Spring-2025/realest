@@ -2,56 +2,23 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
-// email_service.dart
 class EmailService {
-  static const String sendGridApiKey = '[]';
-  static const String senderEmail = 'eshwarreddygadi@gmail.com';
-
   static Future<void> sendInviteEmail(
       String clientEmail,
       String invitationCode,
       BuildContext context,
       ) async {
-    final url = Uri.parse('https://api.sendgrid.com/v3/mail/send');
+    final url = Uri.parse('http://localhost:3000/send-email'); // Node.js server URL
 
     final body = jsonEncode({
-      'personalizations': [
-        {
-          'to': [
-            {'email': clientEmail}
-          ]
-        }
-      ],
-      'from': {'email': senderEmail, 'name': 'Realtor App'},
-      'subject': 'Invitation to Join Realtor App',
-      'content': [
-        {
-          'type': 'text/plain',
-          'value': '''
-Dear Client,
-
-You have been invited to join the Realtor App! Please follow these steps to get started:
-
-1. Download and install the Realtor App from the Google Play Store or Apple App Store.
-2. Create an account using your email address.
-3. Enter the following invitation code to log in and access all features:
-
-Invitation Code: $invitationCode
-
-We look forward to having you on board!
-
-Best regards,
-The Realtor App Team
-'''
-        }
-      ]
+      'clientEmail': clientEmail,
+      'invitationCode': invitationCode,
     });
 
     try {
       final response = await http.post(
         url,
         headers: {
-          'Authorization': 'Bearer $sendGridApiKey',
           'Content-Type': 'application/json',
         },
         body: body,
@@ -62,8 +29,9 @@ The Realtor App Team
           SnackBar(content: Text('Invite successfully sent to $clientEmail')),
         );
       } else {
+        final errorMessage = jsonDecode(response.body)['error'] ?? 'Unknown error';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send invite: ${response.body}')),
+          SnackBar(content: Text('Failed to send invite: $errorMessage')),
         );
       }
     } catch (e) {

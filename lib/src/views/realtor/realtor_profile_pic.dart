@@ -214,7 +214,6 @@ class RealtorProfilePic extends StatelessWidget {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final String profilePicUrl = userProvider.profilePicUrl ?? '';
-    print("Profile Pic URL: $profilePicUrl");
     return GestureDetector(
       onTap: () => _showProfileDialog(context),
       child: CircleAvatar(
