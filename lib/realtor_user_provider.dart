@@ -6,6 +6,9 @@ class UserProvider extends ChangeNotifier {
   String? _firstName;
   String? get firstName => _firstName;
 
+  String? _uid;
+  String? get uid => _uid;
+
   String? _lastName;
   String? get lastName => _lastName;
 
@@ -27,6 +30,9 @@ class UserProvider extends ChangeNotifier {
   String? _profilePicUrl;
   String? get profilePicUrl => _profilePicUrl;
 
+  String? _invitationCode;
+  String? get invitationCode => _invitationCode;
+
   Future<void> fetchRealtorData() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -46,6 +52,8 @@ class UserProvider extends ChangeNotifier {
         _contactPhone = data['contactPhone'];
         _address = data['address'];
         _profilePicUrl = data['profilePicUrl'];
+        _invitationCode = data['invitationCode'];
+        _uid = user.uid;
 
         notifyListeners(); // Notify UI to update
       }

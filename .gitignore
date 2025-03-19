@@ -147,3 +147,10 @@ lib/firebase_options.dart
 .fvm
 
 android/app/.cxx/
+
+#Node.js
+server/node_modules/
+server/npm-debug.log
+server/yarn-error.log
+server/*.log
+server/.env

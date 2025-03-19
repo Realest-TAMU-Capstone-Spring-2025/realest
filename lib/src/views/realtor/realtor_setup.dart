@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:math';
 
 class RealtorSetupPage extends StatefulWidget {
   const RealtorSetupPage({Key? key}) : super(key: key);
@@ -23,15 +24,38 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
   final TextEditingController _contactEmailController = TextEditingController();
   final TextEditingController _contactPhoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _invitationCodeController = TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
-  Uint8List? _profileImageBytes; // For web image bytes
+  Uint8List? _profileImageBytes;
+
+  String _generateInvitationCode() {
+    const String chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    Random random = Random();
+    return String.fromCharCodes(
+      Iterable.generate(
+        8,
+            (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Generate invitation code
+    _invitationCodeController.text = _generateInvitationCode();
+    // Autofill contact email from authenticated user
+    User? currentUser = _auth.currentUser;
+    if (currentUser != null && currentUser.email != null) {
+      _contactEmailController.text = currentUser.email!;
+    }
+  }
 
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      // Read image bytes directly (web only)
       Uint8List bytes = await pickedFile.readAsBytes();
       setState(() {
         _profileImageBytes = bytes;
@@ -50,27 +74,24 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
       String uid = user.uid;
 
       try {
-        // Upload profile image if available
         String profilePicUrl = '';
         if (_profileImageBytes != null) {
           Reference storageRef = FirebaseStorage.instance
               .ref()
-              .child('Profile_Pics') // Folder name in Storage
+              .child('Profile_Pics')
               .child('$uid.jpg');
           UploadTask uploadTask = storageRef.putData(
             _profileImageBytes!,
-            SettableMetadata(contentType: 'image/jpeg'), // or 'image/png'
+            SettableMetadata(contentType: 'image/jpeg'),
           );
           TaskSnapshot snapshot = await uploadTask;
           profilePicUrl = await snapshot.ref.getDownloadURL();
         }
 
-        // Update the user document in 'users' collection
         await _firestore.collection('users').doc(uid).update({
           'completedSetup': true,
         });
 
-        // Create a document in the 'realtors' collection
         await _firestore.collection('realtors').doc(uid).set({
           'uid': uid,
           'firstName': _firstNameController.text.trim(),
@@ -81,6 +102,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
           'contactPhone': _contactPhoneController.text.trim(),
           'address': _addressController.text.trim(),
           'profilePicUrl': profilePicUrl,
+          'invitationCode': _invitationCodeController.text,
           'createdAt': FieldValue.serverTimestamp(),
         });
 
@@ -97,12 +119,12 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     });
   }
 
-  // Reusable text field widget
   Widget _buildTextField(TextEditingController controller, String label,
-      {TextInputType keyboardType = TextInputType.text}) {
+      {TextInputType keyboardType = TextInputType.text, bool readOnly = false}) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      readOnly: readOnly,
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.grey[200],
@@ -118,9 +140,9 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Matches login screen theme
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        automaticallyImplyLeading: false, // Removes back arrow
+        automaticallyImplyLeading: false,
         title: const Text(
           'Set Up Your Account',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
@@ -134,14 +156,11 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Container(
-            // Constrain overall width for three columns
             constraints: const BoxConstraints(maxWidth: 1200),
             child: Row(
-              // Center children vertically in the row
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Left Column: Logo and Company Name (centered)
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -157,7 +176,6 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                   ),
                 ),
                 const SizedBox(width: 100),
-                // Middle Column: Sign Up Form
                 Expanded(
                   flex: 2,
                   child: Container(
@@ -174,7 +192,6 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
                         ),
                         const SizedBox(height: 20),
-                        // Profile Image Picker
                         GestureDetector(
                           onTap: _pickImage,
                           child: CircleAvatar(
@@ -187,7 +204,6 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // First Name & Last Name Fields
                         Row(
                           children: [
                             Expanded(child: _buildTextField(_firstNameController, "First Name")),
@@ -205,6 +221,8 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                         _buildTextField(_contactPhoneController, "Contact Phone Number", keyboardType: TextInputType.phone),
                         const SizedBox(height: 16),
                         _buildTextField(_addressController, "Address"),
+                        const SizedBox(height: 16),
+                        _buildTextField(_invitationCodeController, "Invitation Code", readOnly: true),
                         const SizedBox(height: 24),
                         if (_errorMessage != null)
                           Padding(
@@ -214,9 +232,9 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                               style: const TextStyle(color: Colors.red, fontSize: 16),
                             ),
                           ),
-                        // Save Button with fixed width
                         SizedBox(
-                          width: 200, height: 50,
+                          width: 200,
+                          height: 50,
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _saveRealtorData,
                             style: ElevatedButton.styleFrom(
@@ -235,7 +253,6 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                   ),
                 ),
                 const SizedBox(width: 100),
-                // Right Column: Help Box (centered)
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -247,13 +264,11 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                           border: Border.all(color: Colors.grey),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child:
-                        Text(
+                        child: const Text(
                           'Need help signing in?\nContact our support at support@realest.com',
                           style: TextStyle(fontSize: 20, color: Colors.black),
                           textAlign: TextAlign.center,
                         ),
-
                       ),
                     ],
                   ),

@@ -11,10 +11,11 @@ import 'src/views/investor/investor_home.dart';
 import 'src/views/realtor/realtor_home.dart';
 import 'src/views/realtor/realtor_setup.dart';
 import 'src/views/realtor/realtor_calculators.dart';
-import 'src/views/realtor/realtor_clients.dart';
+import 'src/views/realtor/clients/realtor_clients.dart';
 import 'src/views/realtor/realtor_reports.dart';
+import 'src/views/investor/investor_setup.dart';
 import 'package:provider/provider.dart';
-import 'user_provider.dart';
+import 'realtor_user_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,6 +79,8 @@ class _MyAppState extends State<MyApp> {
             return MaterialPageRoute(builder: (_) => const RealtorReports());
           case '/realtorHomeSearch':
             return MaterialPageRoute(builder: (_) => const RealtorHomeSearch());
+          case '/investorSetup':
+            return MaterialPageRoute(builder: (_) => const InvestorSetupPage());
           case '/realtorSettings':
             return MaterialPageRoute(
                 builder: (_) => RealtorSettings(
@@ -101,8 +104,9 @@ ThemeData _lightTheme() {
     colorScheme: const ColorScheme.light(
       primary: Colors.deepPurple, // Buttons and selected navbar item
       secondary: Colors.black87, // Secondary elements
+      surface: Colors.white, // Default text color
       surfaceVariant: Colors.black, // Navbar background
-      onSurface: Colors.black, // Default text color
+      onSurface: Colors.black,
     ),
     textTheme: const TextTheme(
       bodyLarge: TextStyle(color: Colors.black),
@@ -110,7 +114,7 @@ ThemeData _lightTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.grey[200], // Input field background
+      fillColor: Colors.grey[100], // Input field background
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide.none,
@@ -142,6 +146,7 @@ ThemeData _darkTheme() {
       primary: Colors.deepPurpleAccent, // Buttons and selected navbar item
       secondary: Colors.white70, // Secondary elements
       surfaceVariant: Colors.black, // Navbar background
+      surface: Colors.black,
       onSurface: Colors.white, // Default text color
     ),
     textTheme: const TextTheme(
