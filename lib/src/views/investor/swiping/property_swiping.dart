@@ -280,6 +280,10 @@ class PropertyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String imageUrl = (property.primaryPhoto != null)
+        ? "http://0.0.0.0:8080/${property.primaryPhoto}"
+        : 'https://via.placeholder.com/150';
+
     return GestureDetector(
         onTap: () => _navigateToPropertyView(context),
         child: ClipRRect(
@@ -288,8 +292,7 @@ class PropertyCard extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               CachedNetworkImage(
-                imageUrl:
-                    property.primaryPhoto ?? 'https://via.placeholder.com/150',
+                imageUrl: imageUrl,
                 fit: BoxFit.cover,
                 placeholder: (context, url) =>
                     Center(child: CircularProgressIndicator()),
