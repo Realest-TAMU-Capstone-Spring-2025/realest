@@ -143,7 +143,7 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                  "Welcome, ${userProvider.firstName ?? 'Loading...'} ${userProvider.lastName}",
+                  "Welcome, ${userProvider.firstName ?? 'Loading...'}",
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
