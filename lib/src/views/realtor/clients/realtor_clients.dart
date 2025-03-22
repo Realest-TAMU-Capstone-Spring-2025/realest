@@ -27,6 +27,7 @@ class _RealtorClientsState extends State<RealtorClients> {
   final TextEditingController _searchController = TextEditingController(); // Added search controller
   String _searchQuery = ''; // Added search query state
 
+
   @override
   void initState() {
     super.initState();
@@ -503,13 +504,13 @@ class _RealtorClientsState extends State<RealtorClients> {
     Color titleColor;
     switch (title) {
       case 'Update':
-        titleColor = isLightTheme ? Colors.blue : Colors.blueAccent;
+        titleColor = isLightTheme ? Colors.blue : Color(0xFF1F51FF);
         break;
       case 'Active':
-        titleColor = isLightTheme ? Colors.purple : Colors.purpleAccent;
+        titleColor = isLightTheme ? Colors.purple : Color(0xFFBC13FE);
         break;
       case 'All Clients':
-        titleColor = isLightTheme ? Colors.green : Colors.greenAccent;
+        titleColor = isLightTheme ? Colors.green : Color(0xFF39FF14);
         break;
       default:
         titleColor = theme.colorScheme.onSurface;
@@ -517,7 +518,7 @@ class _RealtorClientsState extends State<RealtorClients> {
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.inputDecorationTheme.fillColor,
+        color: theme.scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -588,7 +589,7 @@ class _RealtorClientsState extends State<RealtorClients> {
                         child: Text(
                           '${clients.length} clients',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),fontWeight: FontWeight.bold
                           ),
                         ),
                       ),

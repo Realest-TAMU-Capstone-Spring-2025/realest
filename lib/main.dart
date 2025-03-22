@@ -99,7 +99,7 @@ class _MyAppState extends State<MyApp> {
 ThemeData _lightTheme() {
   return ThemeData(
     primaryColor: Colors.black, // Main theme color
-    scaffoldBackgroundColor: Colors.white, // Page background
+    scaffoldBackgroundColor: Colors.grey[100], // Page background
     cardColor: Colors.grey[200], // Card background
     colorScheme: const ColorScheme.light(
       primary: Colors.deepPurple, // Buttons and selected navbar item
@@ -114,7 +114,7 @@ ThemeData _lightTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.grey[100], // Input field background
+      fillColor: Colors.white, // Input field background
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide.none,

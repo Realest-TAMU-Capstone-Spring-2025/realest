@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:realest/src/views/realtor/realtor_dashboard.dart';
+import 'package:realest/src/views/realtor/dashboard/realtor_dashboard.dart';
 import 'package:realest/src/views/realtor/realtor_home_search.dart';
 import 'package:realest/src/views/realtor/realtor_settings.dart';
 import 'realtor_calculators.dart';
