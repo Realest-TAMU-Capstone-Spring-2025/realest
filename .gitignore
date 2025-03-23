@@ -11,7 +11,7 @@
 .svn/
 
 # Testing related
-**/mocks/firebase_mocks.mocks.dart
+# **/mocks/firebase_mocks.mocks.dart
 **/Runner/GoogleService-Info.plist
 
 # IntelliJ related
