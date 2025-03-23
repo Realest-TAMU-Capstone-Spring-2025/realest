@@ -10,7 +10,7 @@ import 'src/views/custom_login_page.dart';
 import 'src/views/investor/investor_home.dart';
 import 'src/views/realtor/realtor_home.dart';
 import 'src/views/realtor/realtor_setup.dart';
-import 'src/views/realtor/realtor_calculators.dart';
+import 'src/views/realtor/calculators/realtor_calculators.dart';
 import 'src/views/realtor/realtor_clients.dart';
 import 'src/views/realtor/realtor_reports.dart';
 import 'package:provider/provider.dart';
