@@ -10,6 +10,10 @@
 .history
 .svn/
 
+# Testing related
+**/mocks/firebase_mocks.mocks.dart
+**/Runner/GoogleService-Info.plist
+
 # IntelliJ related
 *.iml
 *.ipr
