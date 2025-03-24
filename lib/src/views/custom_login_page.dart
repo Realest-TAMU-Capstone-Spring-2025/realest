@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../user_provider.dart';
@@ -70,12 +71,12 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
           _selectedRole = userDoc['role'];
         });
 
+        Provider.of<UserProvider>(context, listen: false).fetchUserData();
         if (_selectedRole == "realtor") {
-          Provider.of<UserProvider>(context, listen: false).fetchRealtorData();
 
-          Navigator.pushNamedAndRemoveUntil(context, "/realtorHome", (route) => false);
+          context.go( "/realtorDashboard");
         } else {
-          Navigator.pushNamedAndRemoveUntil(context, "/investorHome", (route) => false);
+          context.go( "/investorHome");
         }
       } else if (mounted) {
         setState(() {
@@ -113,9 +114,9 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   }
   void _navigateAfterRegistration() {
     if (_selectedRole == "investor") {
-      Navigator.pushNamedAndRemoveUntil(context, "/investorHome", (route) => false);
+      context.go('/investorSetup');
     } else {
-      Navigator.pushNamedAndRemoveUntil(context, "/realtorSetup", (route) => false);
+      context.go("/realtorSetup");
     }
   }
 
