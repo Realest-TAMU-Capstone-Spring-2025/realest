@@ -3,9 +3,8 @@ import 'package:realest/src/views/realtor/realtor_dashboard.dart';
 import 'package:realest/src/views/realtor/realtor_home_search.dart';
 import 'package:realest/src/views/realtor/realtor_settings.dart';
 import 'calculators/realtor_calculators.dart';
-import 'realtor_clients.dart';
+import 'package:realest/src/views/realtor/clients/realtor_clients.dart';
 import 'realtor_reports.dart';
-import 'realtor_navbar.dart';
 
 class RealtorHomePage extends StatefulWidget {
   final VoidCallback toggleTheme;
