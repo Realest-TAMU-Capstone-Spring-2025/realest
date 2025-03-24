@@ -129,7 +129,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     _errorTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) {
         setState(() => _errorMessage = null);
-      } 
+      }
     });
     switch (e.code) {
       case 'invalid-email':
@@ -171,19 +171,19 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
             child: Container(
               color: Colors.white.withOpacity(.90), // Adjust opacity as needed
             ),
-            ),
+          ),
 
           // Login form
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(26.0),
-                child: ConstrainedBox(
+              child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 400.0),
                 child: Column(
                   children: [
                     const Icon(Icons.real_estate_agent, size: 200, color: Colors.black),
                     Text(
-                        'Realest',
+                      'Realest',
                       style: GoogleFonts.poppins(fontSize: 40, color: Colors.black, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 20),

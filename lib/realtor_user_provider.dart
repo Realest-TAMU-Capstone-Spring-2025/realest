@@ -11,8 +11,17 @@ class UserProvider extends ChangeNotifier {
   String? _firstName;
   String? get firstName => _firstName;
 
+  String? _uid;
+  String? get uid => _uid;
+
   String? _lastName;
   String? get lastName => _lastName;
+
+  String? _agencyName;
+  String? get agencyName => _agencyName;
+
+  String? _licenseNumber;
+  String? get licenseNumber => _licenseNumber;
 
   String? _contactEmail;
   String? get contactEmail => _contactEmail;
@@ -20,10 +29,16 @@ class UserProvider extends ChangeNotifier {
   String? _contactPhone;
   String? get contactPhone => _contactPhone;
 
+  String? _address;
+  String? get address => _address;
+
   String? _profilePicUrl;
   String? get profilePicUrl => _profilePicUrl;
 
   // Specific to Realtor
+  String? _invitationCode;
+  String? get invitationCode => _invitationCode;
+
   String? _agencyName;
   String? get agencyName => _agencyName;
 
@@ -59,6 +74,7 @@ class UserProvider extends ChangeNotifier {
 
         _contactEmail = data['email']; // Assuming email is stored here
         _userRole = data['role'];
+        _uid = user.uid;
 
         String userRole = data['role']; // "realtor" or "investor"
 
@@ -90,6 +106,8 @@ class UserProvider extends ChangeNotifier {
       _agencyName = data['agencyName'];
       _licenseNumber = data['licenseNumber'];
       _address = data['address'];
+      _invitationCode = data['invitationCode'];
+
     }
   }
 

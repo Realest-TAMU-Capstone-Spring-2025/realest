@@ -3,11 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../user_provider.dart';
+import 'package:flutter/services.dart'; // For clipboard functionality
 
 class ProfilePic extends StatelessWidget {
   final VoidCallback toggleTheme;
   final bool isDarkMode;
-  final VoidCallback onAccountSettings; // New callback to set selected index to 5
+  final VoidCallback onAccountSettings;
 
   const ProfilePic({
     Key? key,
@@ -19,12 +20,11 @@ class ProfilePic extends StatelessWidget {
   void _showProfileDialog(BuildContext context) {
     // Grab user data from the provider.
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final String fullName =
-    '${userProvider.firstName ?? ''} ${userProvider.lastName ?? ''}'.trim();
+    final String fullName = '${userProvider.firstName ?? ''} ${userProvider.lastName ?? ''}'.trim();
     final String contactEmail = userProvider.contactEmail ?? '';
     final String contactPhone = userProvider.contactPhone ?? '';
     final String profilePicUrl = userProvider.profilePicUrl ?? '';
-
+    final String invitationCode = userProvider.invitationCode ?? ''; // Fetch invitation code
 
     showDialog(
       context: context,
@@ -52,8 +52,7 @@ class ProfilePic extends StatelessWidget {
                       backgroundColor: Colors.grey[300],
                       backgroundImage: profilePicUrl.isNotEmpty
                           ? NetworkImage(profilePicUrl)
-                          : const AssetImage('assets/images/profile.png')
-                      as ImageProvider,
+                          : const AssetImage('assets/images/profile.png') as ImageProvider,
                       onBackgroundImageError: (_, __) {
                         debugPrint("Error loading profile picture, showing default.");
                       },
@@ -76,6 +75,34 @@ class ProfilePic extends StatelessWidget {
                       contactPhone.isNotEmpty ? contactPhone : 'No Phone',
                       style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
                       textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 5),
+                    // Invitation Code with Copy Icon
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          invitationCode.isNotEmpty ? 'Invitation Code: $invitationCode' : 'No Invitation Code',
+                          style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (invitationCode.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(Icons.copy, size: 20, color: theme.colorScheme.primary),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: invitationCode));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Invitation code copied to clipboard!'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            tooltip: 'Copy to clipboard',
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 20),
                     const Divider(color: Colors.grey),

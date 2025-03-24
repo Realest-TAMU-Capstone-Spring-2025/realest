@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:math';
 
 class RealtorSetupPage extends StatefulWidget {
   const RealtorSetupPage({Key? key}) : super(key: key);
@@ -24,10 +25,34 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
   final TextEditingController _contactEmailController = TextEditingController();
   final TextEditingController _contactPhoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _invitationCodeController = TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
-  Uint8List? _profileImageBytes; // For web image bytes
+  Uint8List? _profileImageBytes;
+
+  String _generateInvitationCode() {
+    const String chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    Random random = Random();
+    return String.fromCharCodes(
+      Iterable.generate(
+        8,
+            (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Generate invitation code
+    _invitationCodeController.text = _generateInvitationCode();
+    // Autofill contact email from authenticated user
+    User? currentUser = _auth.currentUser;
+    if (currentUser != null && currentUser.email != null) {
+      _contactEmailController.text = currentUser.email!;
+    }
+  }
 
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -82,6 +107,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
           'contactPhone': _contactPhoneController.text.trim(),
           'address': _addressController.text.trim(),
           'profilePicUrl': profilePicUrl,
+          'invitationCode': _invitationCodeController.text,
           'createdAt': FieldValue.serverTimestamp(),
           'cashFlowDefaults' :{
             'useLoan': true,
@@ -108,7 +134,6 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
 
         context.go("/realtorDashboard");
       } catch (e) {
-        print(e);
         setState(() {
           _errorMessage = "Error saving data. Please try again.";
         });
@@ -122,10 +147,11 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
 
   // Reusable text field widget
   Widget _buildTextField(TextEditingController controller, String label,
-      {TextInputType keyboardType = TextInputType.text}) {
+      {TextInputType keyboardType = TextInputType.text, bool readOnly = false}) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      readOnly: readOnly,
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.grey[200],
@@ -212,6 +238,8 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                         _buildTextField(_contactPhoneController, "Contact Phone Number", keyboardType: TextInputType.phone),
                         const SizedBox(height: 16),
                         _buildTextField(_addressController, "Address"),
+                        const SizedBox(height: 16),
+                        _buildTextField(_invitationCodeController, "Invitation Code", readOnly: true),
                         const SizedBox(height: 24),
                         if (_errorMessage != null)
                           Padding(
@@ -221,9 +249,9 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                               style: const TextStyle(color: Colors.red, fontSize: 16),
                             ),
                           ),
-                        // Save Button with fixed width
                         SizedBox(
-                          width: 200, height: 50,
+                          width: 200,
+                          height: 50,
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _saveRealtorData,
                             style: ElevatedButton.styleFrom(

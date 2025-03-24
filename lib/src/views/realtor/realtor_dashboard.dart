@@ -38,7 +38,6 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
     },
   ];
 
-  /// Hardcoded investor notifications
   final List<Map<String, dynamic>> notifications = [
     {
       "message": "Investor John Doe approved 1101 University Dr",
@@ -66,66 +65,6 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
     );
   }
 
-  Widget _buildPropertyCards() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Recent Property Changes",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        _buildModernCard(
-          Column(
-            children: recentProperties.map((property) {
-              return ListTile(
-                title: Text(property['address']),
-                subtitle: Text("Price: \$${property['price']}"),
-                trailing: Text(
-                  property['status'],
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: property['status'] == "For Sale"
-                        ? Colors.green
-                        : Colors.orange,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNotifications() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Investor Notifications",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        _buildModernCard(
-          Column(
-            children: notifications.map((notification) {
-              return ListTile(
-                leading: Icon(
-                  notification['status'] == 'approved' ? Icons.check_circle : Icons.cancel,
-                  color: notification['status'] == 'approved' ? Colors.green : Colors.red,
-                ),
-                title: Text(notification['message']),
-                subtitle: Text(notification['investorEmail']),
-                trailing: Text(notification['timestamp']),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -137,30 +76,157 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              "Welcome, ${userProvider.firstName ?? 'Loading...'} ${userProvider.lastName}",
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // First Row: 4 equal columns
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  "Welcome, ${userProvider.firstName ?? 'Loading...'}",
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
+                Expanded(
+                  child: _buildModernCard(
+                    const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("Total Listings", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 8),
+                        Text("24", style: TextStyle(fontSize: 24)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildModernCard(
+                    const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("Pending Sales", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 8),
+                        Text("5", style: TextStyle(fontSize: 24)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildModernCard(
+                    const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("Active Clients", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 8),
+                        Text("12", style: TextStyle(fontSize: 24)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildModernCard(
+                    const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("Revenue", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 8),
+                        Text("\$1.2M", style: TextStyle(fontSize: 24)),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
 
+            const SizedBox(height: 20),
 
-            const SizedBox(height: 20),
-            _buildPropertyCards(),
-            const SizedBox(height: 20),
-            _buildNotifications(),
+            // Second Row: 2 columns with flexible heights
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: _buildModernCard(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Recent Properties",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: recentProperties.length,
+                              itemBuilder: (context, index) {
+                                final property = recentProperties[index];
+                                return ListTile(
+                                  title: Text(property['address']),
+                                  subtitle: Text("Price: \$${property['price']}"),
+                                  trailing: Text(
+                                    property['status'],
+                                    style: TextStyle(
+                                      color: property['status'] == "For Sale"
+                                          ? Colors.green
+                                          : Colors.orange,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 1,
+                    child: _buildModernCard(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Notifications",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Flexible(
+                            child: ListView.builder(
+                              itemCount: notifications.length,
+                              itemBuilder: (context, index) {
+                                final notification = notifications[index];
+                                return ListTile(
+                                  leading: Icon(
+                                    notification['status'] == 'approved'
+                                        ? Icons.check_circle
+                                        : Icons.cancel,
+                                    color: notification['status'] == 'approved'
+                                        ? Colors.green
+                                        : Colors.red,
+                                  ),
+                                  title: Text(notification['message']),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
-
