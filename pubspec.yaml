@@ -95,8 +95,8 @@ flutter:
     - family: globalFont
       fonts:
         - asset: assets/fonts/noyh-r-medium.ttf
-    - assets/markers/marker_default.png
-    - assets/markers/marker_selected.png
+        - asset: assets/markers/marker_default.png
+        - asset: assets/markers/marker_selected.png
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
