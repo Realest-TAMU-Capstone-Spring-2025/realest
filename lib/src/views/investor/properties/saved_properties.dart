@@ -97,7 +97,7 @@ class SavedProperties extends StatelessWidget {
       child: Row(
         children: [
           property.primaryPhoto != null && property.primaryPhoto!.isNotEmpty
-              ? Image.network("http://0.0.0.0:8080/${property.primaryPhoto!}", width: 120, fit: BoxFit.cover)
+              ? Image.network("http://localhost:8080/${property.primaryPhoto!}", width: 120, fit: BoxFit.cover)
               : Container(width: 120, color: Colors.grey),
 
           Expanded(
