@@ -17,26 +17,18 @@ class UserProvider extends ChangeNotifier {
   String? _lastName;
   String? get lastName => _lastName;
 
-  String? _agencyName;
-  String? get agencyName => _agencyName;
-
-  String? _licenseNumber;
-  String? get licenseNumber => _licenseNumber;
-
   String? _contactEmail;
   String? get contactEmail => _contactEmail;
 
   String? _contactPhone;
   String? get contactPhone => _contactPhone;
 
-  String? _address;
-  String? get address => _address;
-
   String? _profilePicUrl;
   String? get profilePicUrl => _profilePicUrl;
 
   // Specific to Realtor
   String? _invitationCode;
+
   String? get invitationCode => _invitationCode;
 
   String? _agencyName;
