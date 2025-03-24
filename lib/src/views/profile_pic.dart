@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../user_provider.dart';
+import '../../user_provider.dart';
 
-class RealtorProfilePic extends StatelessWidget {
+class ProfilePic extends StatelessWidget {
   final VoidCallback toggleTheme;
   final bool isDarkMode;
   final VoidCallback onAccountSettings; // New callback to set selected index to 5
 
-  const RealtorProfilePic({
+  const ProfilePic({
     Key? key,
     required this.toggleTheme,
     required this.isDarkMode,
@@ -23,9 +24,7 @@ class RealtorProfilePic extends StatelessWidget {
     final String contactEmail = userProvider.contactEmail ?? '';
     final String contactPhone = userProvider.contactPhone ?? '';
     final String profilePicUrl = userProvider.profilePicUrl ?? '';
-    final String agencyName = userProvider.agencyName ?? '';
-    final String licenseNumber = userProvider.licenseNumber ?? '';
-    final String address = userProvider.address ?? '';
+
 
     showDialog(
       context: context,
@@ -152,7 +151,7 @@ class RealtorProfilePic extends StatelessWidget {
                                   onPressed: () async {
                                     Navigator.of(dialogContext).pop();
                                     await FirebaseAuth.instance.signOut();
-                                    Navigator.pushReplacementNamed(context, '/login');
+                                    context.go("/login");
                                   },
                                   child: Text(
                                     "Logout",

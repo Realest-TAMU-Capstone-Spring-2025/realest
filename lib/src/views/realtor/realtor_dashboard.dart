@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'realtor_profile_pic.dart';
 import '../../../user_provider.dart';
 
 class RealtorDashboard extends StatefulWidget {
@@ -52,7 +51,7 @@ class _RealtorDashboardState extends State<RealtorDashboard> {
   @override
   void initState() {
     super.initState();
-    Provider.of<UserProvider>(context, listen: false).fetchRealtorData();
+    Provider.of<UserProvider>(context, listen: false).fetchUserData();
   }
 
   Widget _buildModernCard(Widget child) {

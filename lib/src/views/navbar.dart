@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import '../../../user_provider.dart';
-import 'realtor_profile_pic.dart';
+import '../../user_provider.dart';
+import 'profile_pic.dart';
 
-class RealtorNavBar extends StatefulWidget {
+class NavBar extends StatefulWidget {
   final VoidCallback toggleTheme;
   final bool isDarkMode;
 
-  const RealtorNavBar({
+  const NavBar({
     Key? key,
     required this.toggleTheme,
     required this.isDarkMode,
   }) : super(key: key);
 
   @override
-  _RealtorNavBarState createState() => _RealtorNavBarState();
+  _NavBarState createState() => _NavBarState();
 }
 
-class _RealtorNavBarState extends State<RealtorNavBar> {
+class _NavBarState extends State<NavBar> {
   bool _isExpanded = false;
 
   @override
@@ -32,7 +32,7 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
   @override
   void initState() {
     super.initState();
-    Provider.of<UserProvider>(context, listen: false).fetchRealtorData();
+    Provider.of<UserProvider>(context, listen: false).fetchUserData();
   }
 
   /// **📌 Drawer for Mobile**
@@ -48,10 +48,10 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
               children: [
                 CircleAvatar(
                   radius: 40,
-                  child: RealtorProfilePic(
+                  child: ProfilePic(
                     toggleTheme: widget.toggleTheme,
                     isDarkMode: widget.isDarkMode,
-                    onAccountSettings: () => context.go('/realtorSettings'),
+                    onAccountSettings: () => context.go(userProvider.userRole == "realtor"? "/realtorSettings" : "/investorSettings"),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -72,6 +72,8 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
 
   /// **📌 Sidebar for Large Screens**
   Widget _buildSidebar(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+
     final theme = Theme.of(context);
 
     return MouseRegion(
@@ -99,10 +101,10 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
               duration: const Duration(milliseconds: 300),
               width: _isExpanded ? 100 : 50,
               height: _isExpanded ? 100 : 50,
-              child: RealtorProfilePic(
+              child: ProfilePic(
                 toggleTheme: widget.toggleTheme,
                 isDarkMode: widget.isDarkMode,
-                onAccountSettings: () => context.go('/realtorSettings'),
+                onAccountSettings: () => context.go(userProvider.userRole == "realtor"? "/realtorSettings" : "/investorSettings"),
               ),
             ),
             const SizedBox(height: 30),
@@ -134,13 +136,22 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
 
   /// **📌 Navigation Items**
   List<Widget> _buildNavItems(BuildContext context, bool isDrawer) {
-    return [
+    final userProvider = Provider.of<UserProvider>(context);
+    return userProvider.userRole == "realtor"?
+    //nav items for realtor
+    [
       _NavItem(icon: Icons.dashboard, label: "Dashboard", route: '/realtorDashboard', isDrawer: isDrawer),
       _NavItem(icon: Icons.search, label: "Home Search", route: '/realtorHomeSearch', isDrawer: isDrawer),
       _NavItem(icon: Icons.calculate, label: "Calculators", route: '/realtorCalculators', isDrawer: isDrawer),
       _NavItem(icon: Icons.people, label: "Clients", route: '/realtorClients', isDrawer: isDrawer),
       _NavItem(icon: Icons.assessment, label: "Reports", route: '/realtorReports', isDrawer: isDrawer),
-      _NavItem(icon: Icons.logout, label: "Logout", route: '/logout', isDrawer: isDrawer, onTap: () => _showLogoutDialog(context)),
+    ] :
+    //nav items for investor
+    [
+      _NavItem(icon: Icons.home, label: "Home", route: '/InvestorHome', isDrawer: isDrawer),
+      _NavItem(icon: Icons.calculate, label: "Calculators", route: '/investorCalculators', isDrawer: isDrawer),
+      _NavItem(icon: Icons.favorite, label: "Saved", route: '/investorSavedProperties', isDrawer: isDrawer),
+
     ];
   }
 
@@ -164,7 +175,9 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
               onPressed: () async {
                 Navigator.of(context).pop();
                 await FirebaseAuth.instance.signOut();
-                context.go('/login');
+                if (context.mounted) {
+                  context.go('/login');
+                }
               },
               child: Text("Logout", style: TextStyle(color: Colors.redAccent)),
             ),
@@ -173,6 +186,7 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
       },
     );
   }
+
 }
 class _NavItem extends StatefulWidget {
   final IconData icon;
@@ -201,7 +215,8 @@ class __NavItemState extends State<_NavItem> {
     bool isSelected = GoRouterState.of(context).matchedLocation == widget.route;
 
     // ✅ Get sidebar expansion state
-    bool isSidebarExpanded = context.findAncestorStateOfType<_RealtorNavBarState>()?._isExpanded ?? false;
+    bool isSidebarExpanded = context.findAncestorStateOfType<_NavBarState>()?._isExpanded ?? false;
+    final theme = Theme.of(context);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -238,7 +253,7 @@ class __NavItemState extends State<_NavItem> {
                       color: isSelected
                           ? Colors.deepPurpleAccent
                           : widget.isDrawer
-                          ? Colors.black
+                          ? theme.primaryColor
                           : Colors.white,
                     ),
                   ),
@@ -256,7 +271,7 @@ class __NavItemState extends State<_NavItem> {
                                 : isSelected
                                 ? Colors.deepPurpleAccent
                                 : widget.isDrawer
-                                ? Colors.black
+                                ?  theme.primaryColor
                                 : Colors.white,
                             fontSize: 16,
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
