@@ -1,17 +1,17 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
-import 'calculators/rental_property_calculator.dart';
+import 'realtor/calculators/rental_property_calculator.dart';
 
 
-class RealtorCalculators extends StatefulWidget {
-  const RealtorCalculators({Key? key}) : super(key: key);
+class Calculators extends StatefulWidget {
+  const Calculators({Key? key}) : super(key: key);
 
   @override
-  _RealtorCalculatorsState createState() => _RealtorCalculatorsState();
+  _CalculatorsState createState() => _CalculatorsState();
 }
 
-class _RealtorCalculatorsState extends State<RealtorCalculators> {
+class _CalculatorsState extends State<Calculators> {
   int _selectedCalculator = 0; // Default to PITI Calculator
 
   @override

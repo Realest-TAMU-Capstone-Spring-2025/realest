@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../user_provider.dart';
 import 'package:flutter/services.dart'; // For clipboard functionality
-import '../../../realtor_user_provider.dart';
 
-class RealtorProfilePic extends StatelessWidget {
+class ProfilePic extends StatelessWidget {
   final VoidCallback toggleTheme;
   final bool isDarkMode;
   final VoidCallback onAccountSettings;
 
-  const RealtorProfilePic({
+  const ProfilePic({
     Key? key,
     required this.toggleTheme,
     required this.isDarkMode,
@@ -17,6 +18,7 @@ class RealtorProfilePic extends StatelessWidget {
   }) : super(key: key);
 
   void _showProfileDialog(BuildContext context) {
+    // Grab user data from the provider.
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final String fullName = '${userProvider.firstName ?? ''} ${userProvider.lastName ?? ''}'.trim();
     final String contactEmail = userProvider.contactEmail ?? '';
@@ -26,24 +28,25 @@ class RealtorProfilePic extends StatelessWidget {
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.5),
+      barrierColor: Colors.black.withOpacity(0.5), // Grey overlay
       builder: (BuildContext context) {
         final theme = Theme.of(context);
         return Center(
           child: Material(
             color: Colors.transparent,
             child: Container(
-              width: 300,
+              width: 300, // Fixed width for the dialog
               margin: const EdgeInsets.symmetric(horizontal: 20),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: theme.cardColor,
+                color: theme.cardColor, // Uses your defined cardColor
                 borderRadius: BorderRadius.circular(15),
               ),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Profile Picture at the Top
                     CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.grey[300],
@@ -55,6 +58,7 @@ class RealtorProfilePic extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 15),
+                    // User Details
                     Text(
                       fullName.isNotEmpty ? fullName : 'No Name',
                       style: theme.textTheme.bodyLarge?.copyWith(fontSize: 24),
@@ -102,6 +106,7 @@ class RealtorProfilePic extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     const Divider(color: Colors.grey),
+                    // Account Settings: Instead of navigating, call the callback.
                     ListTile(
                       leading: Icon(Icons.settings, color: theme.colorScheme.onSurface),
                       title: Text(
@@ -114,18 +119,20 @@ class RealtorProfilePic extends StatelessWidget {
                       },
                     ),
                     const Divider(color: Colors.grey),
+                    // Notifications Toggle with Icon
                     SwitchListTile(
                       secondary: Icon(Icons.notifications, color: theme.colorScheme.onSurface),
                       title: Text(
                         "Notifications",
                         style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
                       ),
-                      value: true,
+                      value: true, // Replace with your actual notification state
                       onChanged: (bool value) {
                         // Handle notifications toggle
                       },
                     ),
                     const Divider(color: Colors.grey),
+                    // Dark Mode Toggle with Icon – calls global toggleTheme function.
                     SwitchListTile(
                       secondary: Icon(Icons.dark_mode, color: theme.colorScheme.onSurface),
                       title: Text(
@@ -139,6 +146,7 @@ class RealtorProfilePic extends StatelessWidget {
                     ),
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 10),
+                    // Log Out Button with Icon and Themed Confirmation Dialog
                     InkWell(
                       onTap: () async {
                         showDialog(
@@ -170,7 +178,7 @@ class RealtorProfilePic extends StatelessWidget {
                                   onPressed: () async {
                                     Navigator.of(dialogContext).pop();
                                     await FirebaseAuth.instance.signOut();
-                                    Navigator.pushReplacementNamed(context, '/login');
+                                    context.go("/login");
                                   },
                                   child: Text(
                                     "Logout",
