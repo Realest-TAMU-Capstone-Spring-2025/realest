@@ -1,150 +1,224 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+/// A rental property calculator widget that matches the theming
+/// of your PITI and Affordability calculators.
 class RentalPropertyCalculator extends StatefulWidget {
   const RentalPropertyCalculator({Key? key}) : super(key: key);
 
   @override
-  _RentalPropertyCalculatorState createState() => _RentalPropertyCalculatorState();
+  State<RentalPropertyCalculator> createState() =>
+      _RentalPropertyCalculatorState();
 }
 
 class _RentalPropertyCalculatorState extends State<RentalPropertyCalculator> {
-  // Controllers for user input
-  final TextEditingController purchasePriceController = TextEditingController(text: "200000");
-  final TextEditingController downPaymentController = TextEditingController(text: "20");
-  final TextEditingController interestRateController = TextEditingController(text: "6");
-  final TextEditingController loanTermController = TextEditingController(text: "30");
-  final TextEditingController closingCostController = TextEditingController(text: "6000");
-  final TextEditingController repairCostController = TextEditingController(text: "0");
+  // Purchase-related fields
+  final purchasePriceController = TextEditingController();
+  final downPaymentController = TextEditingController();
+  final interestRateController = TextEditingController();
+  final loanTermController = TextEditingController();
+  final closingCostController = TextEditingController();
+  final repairCostController = TextEditingController();
 
-  final TextEditingController propertyTaxController = TextEditingController(text: "3000");
-  final TextEditingController insuranceController = TextEditingController(text: "1200");
-  final TextEditingController hoaFeeController = TextEditingController(text: "0");
-  final TextEditingController maintenanceController = TextEditingController(text: "2000");
-  final TextEditingController otherCostsController = TextEditingController(text: "500");
+  // Recurring expenses
+  final propertyTaxController = TextEditingController();
+  final insuranceController = TextEditingController();
+  final hoaFeeController = TextEditingController();
+  final maintenanceController = TextEditingController();
+  final otherCostsController = TextEditingController();
 
-  final TextEditingController rentController = TextEditingController(text: "2000");
-  final TextEditingController vacancyRateController = TextEditingController(text: "5");
-  final TextEditingController managementFeeController = TextEditingController(text: "0");
+  // Income
+  final rentController = TextEditingController();
+  final vacancyRateController = TextEditingController();
+  final managementFeeController = TextEditingController();
 
-  final TextEditingController appreciationRateController = TextEditingController(text: "3");
-  final TextEditingController holdingYearsController = TextEditingController(text: "20");
-  final TextEditingController sellingCostController = TextEditingController(text: "0");
+  double _annualCashFlow = 0.0; // net annual income
+  double _roi = 0.0;            // return on investment (%)
 
-  double cashFlow = 0.0;
-  double roi = 0.0;
-
+  /// Main calculation
   void _calculateRentalProperty() {
-    double purchasePrice = double.tryParse(purchasePriceController.text) ?? 0;
-    double downPaymentPercentage = (double.tryParse(downPaymentController.text) ?? 0) / 100;
-    double interestRate = (double.tryParse(interestRateController.text) ?? 0) / 100 / 12;
-    int loanTerm = (int.tryParse(loanTermController.text) ?? 0) * 12;
-    double closingCost = double.tryParse(closingCostController.text) ?? 0;
-    double repairCost = double.tryParse(repairCostController.text) ?? 0;
+    // 1. Parse inputs
+    final purchasePrice = _parseDouble(purchasePriceController.text);
+    final downPaymentPct = _parseDouble(downPaymentController.text) / 100;
+    final annualInterestRate = _parseDouble(interestRateController.text) / 100;
+    final years = _parseInt(loanTermController.text);
+    final closingCost = _parseDouble(closingCostController.text);
+    final repairCost = _parseDouble(repairCostController.text);
 
-    double loanAmount = purchasePrice * (1 - downPaymentPercentage);
-    double monthlyMortgage = (loanAmount * interestRate) /
-        (1 - pow((1 + interestRate), -loanTerm));
+    final propertyTax = _parseDouble(propertyTaxController.text);
+    final insurance = _parseDouble(insuranceController.text);
+    final hoaFee = _parseDouble(hoaFeeController.text);
+    final maintenance = _parseDouble(maintenanceController.text);
+    final otherCosts = _parseDouble(otherCostsController.text);
 
-    double propertyTax = (double.tryParse(propertyTaxController.text) ?? 0) / 12;
-    double insurance = (double.tryParse(insuranceController.text) ?? 0) / 12;
-    double hoaFee = (double.tryParse(hoaFeeController.text) ?? 0) / 12;
-    double maintenance = (double.tryParse(maintenanceController.text) ?? 0) / 12;
-    double otherCosts = (double.tryParse(otherCostsController.text) ?? 0) / 12;
+    final monthlyRent = _parseDouble(rentController.text);
+    final vacancyPct = _parseDouble(vacancyRateController.text) / 100;
+    final mgmtFeePct = _parseDouble(managementFeeController.text) / 100;
 
-    double monthlyExpenses = propertyTax + insurance + hoaFee + maintenance + otherCosts + monthlyMortgage;
+    // 2. Loan
+    final loanAmount = purchasePrice * (1 - downPaymentPct);
+    final monthlyInterestRate = (annualInterestRate / 12).clamp(0.0, double.infinity);
+    final totalMonths = (years * 12).clamp(0, 1000);
 
-    double monthlyRent = double.tryParse(rentController.text) ?? 0;
-    double vacancyLoss = monthlyRent * (double.tryParse(vacancyRateController.text) ?? 0) / 100;
-    double managementFee = monthlyRent * (double.tryParse(managementFeeController.text) ?? 0) / 100;
+    double monthlyMortgage;
+    if (loanAmount <= 0 || monthlyInterestRate <= 0 || totalMonths <= 0) {
+      monthlyMortgage = 0.0;
+    } else {
+      monthlyMortgage = (loanAmount * monthlyInterestRate) /
+          (1 - pow(1 + monthlyInterestRate, -totalMonths));
+    }
 
-    double netMonthlyIncome = monthlyRent - (monthlyExpenses + vacancyLoss + managementFee);
-    double netAnnualIncome = netMonthlyIncome * 12;
+    // 3. Monthly expenses (annual to monthly)
+    final monthlyPropertyTax = propertyTax / 12;
+    final monthlyInsurance = insurance / 12;
+    final monthlyHoaFee = hoaFee / 12;
+    final monthlyMaintenance = maintenance / 12;
+    final monthlyOther = otherCosts / 12;
 
-    double totalInvestment = (purchasePrice * downPaymentPercentage) + closingCost + repairCost;
-    double yearlyROI = (netAnnualIncome / totalInvestment) * 100;
+    final monthlyExpenses = monthlyMortgage +
+        monthlyPropertyTax +
+        monthlyInsurance +
+        monthlyHoaFee +
+        monthlyMaintenance +
+        monthlyOther;
+
+    // 4. Net monthly income
+    final monthlyVacancyLoss = monthlyRent * vacancyPct;
+    final monthlyMgmtFee = monthlyRent * mgmtFeePct;
+    final netMonthlyIncome = monthlyRent - monthlyExpenses - monthlyVacancyLoss - monthlyMgmtFee;
+    final netAnnualIncome = netMonthlyIncome * 12;
+
+    // 5. Total investment (down payment + closing + repairs)
+    final totalInvestment = (purchasePrice * downPaymentPct) + closingCost + repairCost;
+
+    double yearlyROI = 0.0;
+    if (totalInvestment > 0) {
+      yearlyROI = (netAnnualIncome / totalInvestment) * 100;
+    }
 
     setState(() {
-      cashFlow = netAnnualIncome;
-      roi = yearlyROI;
+      _annualCashFlow = netAnnualIncome;
+      _roi = yearlyROI.isFinite ? yearlyROI : 0.0;
     });
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          filled: true,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-        ),
-        keyboardType: TextInputType.number,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Using the same style approach as your other calculators
+    return _buildCalculatorLayout(
+      title: "Rental Property Calculator",
+      inputFields: [
+        // Purchase
+        _buildTextField("Purchase Price (\$)", purchasePriceController, "e.g. 200000"),
+        _buildTextField("Down Payment (%)", downPaymentController, "e.g. 20"),
+        _buildTextField("Interest Rate (%)", interestRateController, "e.g. 6"),
+        _buildTextField("Loan Term (Years)", loanTermController, "e.g. 30"),
+        _buildTextField("Closing Costs (\$)", closingCostController, "e.g. 6000"),
+        _buildTextField("Repairs (\$)", repairCostController, "e.g. 0"),
+
+        const SizedBox(height: 15),
+        const Text(
+          "Recurring Expenses (Annual)",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 15),
+        _buildTextField("Property Tax (\$)", propertyTaxController, "e.g. 3000"),
+        _buildTextField("Insurance (\$)", insuranceController, "e.g. 1200"),
+        _buildTextField("HOA Fees (\$)", hoaFeeController, "e.g. 0"),
+        _buildTextField("Maintenance (\$)", maintenanceController, "e.g. 2000"),
+        _buildTextField("Other Costs (\$)", otherCostsController, "e.g. 500"),
+
+        const SizedBox(height: 15),
+        const Text(
+          "Income",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 15),
+        _buildTextField("Monthly Rent (\$)", rentController, "e.g. 2000"),
+        _buildTextField("Vacancy Rate (%)", vacancyRateController, "e.g. 5"),
+        _buildTextField("Management Fee (%)", managementFeeController, "e.g. 0"),
+      ],
+      onCalculate: _calculateRentalProperty,
+      resultText: "Annual Cash Flow: \$${_annualCashFlow.toStringAsFixed(2)}\n"
+          "ROI: ${_roi.toStringAsFixed(2)}%",
+    );
+  }
+
+  // --------------
+  // Layout Helpers
+  // --------------
+
+  Widget _buildCalculatorLayout({
+    required String title,
+    required List<Widget> inputFields,
+    required VoidCallback onCalculate,
+    required String resultText,
+  }) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Rental Property Calculator", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 15),
-
-          _buildTextField("Purchase Price (\$)", purchasePriceController),
-          _buildTextField("Down Payment (%)", downPaymentController),
-          _buildTextField("Interest Rate (%)", interestRateController),
-          _buildTextField("Loan Term (Years)", loanTermController),
-          _buildTextField("Closing Cost (\$)", closingCostController),
-          _buildTextField("Repairs (\$)", repairCostController),
-
-          const SizedBox(height: 15),
-          const Text("Recurring Expenses", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          SizedBox(height: 15),
-          _buildTextField("Annual Property Tax (\$)", propertyTaxController),
-          _buildTextField("Annual Insurance (\$)", insuranceController),
-          _buildTextField("Annual HOA Fees (\$)", hoaFeeController),
-          _buildTextField("Annual Maintenance (\$)", maintenanceController),
-          _buildTextField("Other Costs (\$)", otherCostsController),
-
-          const SizedBox(height: 15),
-          const Text("Income", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          SizedBox(height: 15),
-          _buildTextField("Monthly Rent (\$)", rentController),
-          _buildTextField("Vacancy Rate (%)", vacancyRateController),
-          _buildTextField("Management Fee (%)", managementFeeController),
-
-          const SizedBox(height: 15),
-          Center(
-            child: ElevatedButton(
-              onPressed: _calculateRentalProperty,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                textStyle: Theme.of(context).textTheme.bodyLarge, // Uses theme text style
-              ),
-              child: Text("Calculate"),
-            ),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
 
+          ...inputFields,
+          const SizedBox(height: 20),
+
+          // "Calculate" button in same style as PITI/Affordability
+          Center(child: _buildModernButton("Calculate", onCalculate)),
+          const SizedBox(height: 20),
+
+          // Show results
           Center(
             child: Text(
-              "Annual Cash Flow: \$${cashFlow.toStringAsFixed(2)}",
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
-            ),
-          ),
-          Center(
-            child: Text(
-              "ROI: ${roi.toStringAsFixed(2)}%",
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue),
+              resultText,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildModernButton(String text, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 5,
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, String hintText) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hintText,
+          filled: true,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        keyboardType: TextInputType.number,
+      ),
+    );
+  }
+
+  double _parseDouble(String? val) => double.tryParse(val?.trim() ?? '') ?? 0;
+  int _parseInt(String? val) => int.tryParse(val?.trim() ?? '') ?? 0;
 }

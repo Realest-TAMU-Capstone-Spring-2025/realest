@@ -199,12 +199,12 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 40),
-                    _buildTextField(_emailController, 'Email', false),
+                    _buildTextField(_emailController, 'Email', false, false),
                     const SizedBox(height: 16),
-                    _buildTextField(_passwordController, 'Password', true),
+                    _buildTextField(_passwordController, 'Password', true, !_isRegister),
                     if (_isRegister) ...[
                       const SizedBox(height: 16),
-                      _buildTextField(_confirmPasswordController, 'Confirm Password', true),
+                      _buildTextField(_confirmPasswordController, 'Confirm Password', true, true),
                       const SizedBox(height: 16),
                       ToggleButtons(
                         borderRadius: BorderRadius.circular(30),
@@ -245,7 +245,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint, bool obscure) {
+  Widget _buildTextField(TextEditingController controller, String hint, bool obscure, bool isLastField) {
     return TextField(
       controller: controller,
       decoration: InputDecoration(
@@ -263,6 +263,15 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
       ),
       obscureText: obscure,
       keyboardType: obscure ? TextInputType.text : TextInputType.emailAddress,
+
+        // If it's the last text field, pressing Enter triggers the login logic
+        textInputAction:
+        isLastField ? TextInputAction.done : TextInputAction.next,
+        onSubmitted: (value) {
+          if (isLastField) {
+            _authenticate();
+          }
+        },
     );
   }
 

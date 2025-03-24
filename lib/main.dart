@@ -5,19 +5,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:realest/firebase_options.dart';
-import 'package:realest/src/views/custom_login_page.dart';
+
+// Views related to the investor
 import 'package:realest/src/views/investor/investor_settings.dart';
 import 'package:realest/src/views/investor/investor_setup.dart';
 import 'package:realest/src/views/investor/properties/saved_properties.dart';
 import 'package:realest/src/views/investor/swiping/property_swiping.dart';
+
+// Views related to the realtor
 import 'package:realest/src/views/realtor/realtor_dashboard.dart';
+import 'package:realest/src/views/realtor/realtor_home_search.dart';
 import 'package:realest/src/views/realtor/realtor_setup.dart';
 import 'package:realest/src/views/calculators.dart';
 import 'package:realest/src/views/realtor/clients/realtor_clients.dart';
 import 'package:realest/src/views/realtor/realtor_reports.dart';
-import 'package:realest/src/views/realtor/realtor_home_search.dart';
 import 'package:realest/src/views/realtor/realtor_settings.dart';
-import 'package:realest/src/views/navbar.dart'; // Import Sidebar
+
+// Common views
+import 'package:realest/src/views/custom_login_page.dart';
+import 'package:realest/src/views/navbar.dart'; // Sidebar navigation
+
+// Provider and user-related imports
 import 'user_provider.dart';
 
 void main() async {
