@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -82,10 +83,32 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
           'address': _addressController.text.trim(),
           'profilePicUrl': profilePicUrl,
           'createdAt': FieldValue.serverTimestamp(),
+          'cashFlowDefaults' :{
+            'useLoan': true,
+            'downPayment': 0.20,
+            'interestRate': 0.06,
+            'loanTerm': 30,
+            'closingCost': 6000,
+            'needsRepair': false,
+            'repairCost': 0,
+            'valueAfterRepair': 0,
+            'propertyTax': 0.015,
+            'insurance': 0.01,
+            'defaultHOA': 50,
+            'maintenance': 0.03,
+            'otherCosts': 500,
+            'vacancyRate': 0.05,
+            'otherIncome': 0,
+            'managementFee': 0.00,
+            'valueAppreciation': 0.03,
+            'holdingLength': 20,
+            'costToSell': 0.08
+          }
         });
 
-        Navigator.pushReplacementNamed(context, '/realtorHome');
+        context.go("/realtorDashboard");
       } catch (e) {
+        print(e);
         setState(() {
           _errorMessage = "Error saving data. Please try again.";
         });
@@ -142,22 +165,6 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Left Column: Logo and Company Name (centered)
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.real_estate_agent, size: 100, color: Colors.black),
-                      SizedBox(height: 8),
-                      Text(
-                        'RealEst',
-                        style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.black),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 100),
-                // Middle Column: Sign Up Form
                 Expanded(
                   flex: 2,
                   child: Container(
@@ -235,29 +242,6 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                   ),
                 ),
                 const SizedBox(width: 100),
-                // Right Column: Help Box (centered)
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child:
-                        Text(
-                          'Need help signing in?\nContact our support at support@realest.com',
-                          style: TextStyle(fontSize: 20, color: Colors.black),
-                          textAlign: TextAlign.center,
-                        ),
-
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
