@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart'; // For Firestore
-import '../../../../realtor_user_provider.dart';
+import '../../../../user_provider.dart';
 import 'client_details_drawer.dart';
 import 'mouse_region_provider.dart';
 import 'email_service.dart';

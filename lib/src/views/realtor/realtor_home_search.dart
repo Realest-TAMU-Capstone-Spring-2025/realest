@@ -16,6 +16,8 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
   late GoogleMapController _mapController;
   bool _isFilterOpen = false;
   String? _selectedPropertyId;
+  bool _showingMap = true; // default to map on small screen
+
 
   // **Pagination Settings**
   final int _perPage = 10;
@@ -83,7 +85,8 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
         "sqft": data["sqft"] ?? 0,
         "mls_id": data["mls_id"] ?? "N/A",
         "image": (data["primary_photo"] != null && data["primary_photo"] != "")
-            ? "http://localhost:3000/proxy-image?url=${Uri.encodeQueryComponent(data["primary_photo"])}"
+            ? "http://localhost"
+            ":8080/${data["primary_photo"]}"
             : "https://bearhomes.com/wp-content/uploads/2019/01/default-featured.png",
       };
     }).toList(); // ✅ Now it's a List<Map<String, dynamic>>
@@ -124,7 +127,6 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     final propertyData = await _fetchPropertyData(propertyId);
 
 
-    print(propertyData);
     showModalBottomSheet(
       context: context,
       constraints: BoxConstraints(
@@ -150,8 +152,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     //convert alt_photos to a list of strings
     List<String> altPhotos = data['alt_photos'].split(', ');
     // add "http://0.0.0.0:8080/" to each alt_photo"
-    altPhotos = altPhotos.map((photo) => "http://localhost:3000/proxy-image?url=${Uri.encodeQueryComponent(photo)}"
-    ).toList();
+    altPhotos = altPhotos.map((photo) => "http://localhost:8080/$photo").toList();
     return {
       'id': propertyId,
       'alt_photos': altPhotos,
@@ -231,13 +232,16 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
 
   @override
   Widget build(BuildContext context) {
+    bool isSmallScreen = MediaQuery.of(context).size.width < 800;
+
+
     return Scaffold(
       body: Stack(
         children: [
           Row(
             children: [
               // **Left Side: Google Map**
-              Expanded(
+              ((_showingMap && isSmallScreen) || !isSmallScreen)? Expanded(
                 flex: 1,
                 child: GoogleMap(
                   initialCameraPosition: const CameraPosition(
@@ -249,10 +253,10 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
                   markers: _createMarkers(),  // Call a function to rebuild markers
                 ),
 
-              ),
+              ) : Container(),
 
               // **Right Side: Listings**
-              Expanded(
+              ((!_showingMap && isSmallScreen) || !isSmallScreen)? Expanded(
                 flex: 1,
                 child: Column(
                   children: [
@@ -313,12 +317,23 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
                     ),
                   ],
                 ),
-              ),
+              ) : Container(),
             ],
           ),
-
           // **Floating Filter Menu**
           _isFilterOpen ? _buildFilters() : Container(),
+          isSmallScreen? Positioned(
+            bottom: 20,
+            left: 20,
+            right: 20,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                setState(() => _showingMap = !_showingMap);
+              },
+              icon: Icon(_showingMap ? Icons.list : Icons.map),
+              label: Text(_showingMap ? "Show List" : "Show Map"),
+            ),
+          ): Container(),
         ],
       ),
     );

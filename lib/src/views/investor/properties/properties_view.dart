@@ -147,7 +147,7 @@ class _PropertiesViewState extends State<PropertiesView> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12.0),
         child: Image.network(
-          "http://0.0.0.0:8080/$url",
+          "http://localhost:8080/$url",
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => Container(
             color: Colors.grey[200],

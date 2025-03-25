@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../realtor_user_provider.dart';
 import 'dart:async';
+import '../../user_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CustomLoginPage extends StatefulWidget {
@@ -70,12 +71,12 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
           _selectedRole = userDoc['role'];
         });
 
+        Provider.of<UserProvider>(context, listen: false).fetchUserData();
         if (_selectedRole == "realtor") {
-          Provider.of<UserProvider>(context, listen: false).fetchRealtorData();
 
-          Navigator.pushNamedAndRemoveUntil(context, "/realtorHome", (route) => false);
+          context.go( "/realtorDashboard");
         } else {
-          Navigator.pushNamedAndRemoveUntil(context, "/investorHome", (route) => false);
+          context.go( "/investorHome");
         }
       } else if (mounted) {
         setState(() {
@@ -113,9 +114,9 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   }
   void _navigateAfterRegistration() {
     if (_selectedRole == "investor") {
-      Navigator.pushNamedAndRemoveUntil(context, "/investorSetup", (route) => false);
+      context.go('/investorSetup');
     } else {
-      Navigator.pushNamedAndRemoveUntil(context, "/realtorSetup", (route) => false);
+      context.go("/realtorSetup");
     }
   }
 
@@ -198,12 +199,12 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 40),
-                    _buildTextField(_emailController, 'Email', false),
+                    _buildTextField(_emailController, 'Email', false, false),
                     const SizedBox(height: 16),
-                    _buildTextField(_passwordController, 'Password', true),
+                    _buildTextField(_passwordController, 'Password', true, !_isRegister),
                     if (_isRegister) ...[
                       const SizedBox(height: 16),
-                      _buildTextField(_confirmPasswordController, 'Confirm Password', true),
+                      _buildTextField(_confirmPasswordController, 'Confirm Password', true, true),
                       const SizedBox(height: 16),
                       ToggleButtons(
                         borderRadius: BorderRadius.circular(30),
@@ -244,7 +245,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint, bool obscure) {
+  Widget _buildTextField(TextEditingController controller, String hint, bool obscure, bool isLastField) {
     return TextField(
       controller: controller,
       decoration: InputDecoration(
@@ -262,6 +263,15 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
       ),
       obscureText: obscure,
       keyboardType: obscure ? TextInputType.text : TextInputType.emailAddress,
+
+        // If it's the last text field, pressing Enter triggers the login logic
+        textInputAction:
+        isLastField ? TextInputAction.done : TextInputAction.next,
+        onSubmitted: (value) {
+          if (isLastField) {
+            _authenticate();
+          }
+        },
     );
   }
 

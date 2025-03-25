@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:math';
@@ -56,6 +57,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      // Read image bytes directly (web only)
       Uint8List bytes = await pickedFile.readAsBytes();
       setState(() {
         _profileImageBytes = bytes;
@@ -74,24 +76,27 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
       String uid = user.uid;
 
       try {
+        // Upload profile image if available
         String profilePicUrl = '';
         if (_profileImageBytes != null) {
           Reference storageRef = FirebaseStorage.instance
               .ref()
-              .child('Profile_Pics')
+              .child('Profile_Pics') // Folder name in Storage
               .child('$uid.jpg');
           UploadTask uploadTask = storageRef.putData(
             _profileImageBytes!,
-            SettableMetadata(contentType: 'image/jpeg'),
+            SettableMetadata(contentType: 'image/jpeg'), // or 'image/png'
           );
           TaskSnapshot snapshot = await uploadTask;
           profilePicUrl = await snapshot.ref.getDownloadURL();
         }
 
+        // Update the user document in 'users' collection
         await _firestore.collection('users').doc(uid).update({
           'completedSetup': true,
         });
 
+        // Create a document in the 'realtors' collection
         await _firestore.collection('realtors').doc(uid).set({
           'uid': uid,
           'firstName': _firstNameController.text.trim(),
@@ -104,9 +109,30 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
           'profilePicUrl': profilePicUrl,
           'invitationCode': _invitationCodeController.text,
           'createdAt': FieldValue.serverTimestamp(),
+          'cashFlowDefaults' :{
+            'useLoan': true,
+            'downPayment': 0.20,
+            'interestRate': 0.06,
+            'loanTerm': 30,
+            'closingCost': 6000,
+            'needsRepair': false,
+            'repairCost': 0,
+            'valueAfterRepair': 0,
+            'propertyTax': 0.015,
+            'insurance': 0.01,
+            'defaultHOA': 50,
+            'maintenance': 0.03,
+            'otherCosts': 500,
+            'vacancyRate': 0.05,
+            'otherIncome': 0,
+            'managementFee': 0.00,
+            'valueAppreciation': 0.03,
+            'holdingLength': 20,
+            'costToSell': 0.08
+          }
         });
 
-        Navigator.pushReplacementNamed(context, '/realtorHome');
+        context.go("/realtorDashboard");
       } catch (e) {
         setState(() {
           _errorMessage = "Error saving data. Please try again.";
@@ -119,6 +145,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     });
   }
 
+  // Reusable text field widget
   Widget _buildTextField(TextEditingController controller, String label,
       {TextInputType keyboardType = TextInputType.text, bool readOnly = false}) {
     return TextField(
@@ -140,9 +167,9 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.white, // Matches login screen theme
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: false, // Removes back arrow
         title: const Text(
           'Set Up Your Account',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
@@ -156,26 +183,14 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Container(
+            // Constrain overall width for three columns
             constraints: const BoxConstraints(maxWidth: 1200),
             child: Row(
+              // Center children vertically in the row
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.real_estate_agent, size: 100, color: Colors.black),
-                      SizedBox(height: 8),
-                      Text(
-                        'RealEst',
-                        style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.black),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 100),
+                // Left Column: Logo and Company Name (centered)
                 Expanded(
                   flex: 2,
                   child: Container(
@@ -192,6 +207,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
                         ),
                         const SizedBox(height: 20),
+                        // Profile Image Picker
                         GestureDetector(
                           onTap: _pickImage,
                           child: CircleAvatar(
@@ -204,6 +220,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                           ),
                         ),
                         const SizedBox(height: 20),
+                        // First Name & Last Name Fields
                         Row(
                           children: [
                             Expanded(child: _buildTextField(_firstNameController, "First Name")),
@@ -253,26 +270,6 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                   ),
                 ),
                 const SizedBox(width: 100),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'Need help signing in?\nContact our support at support@realest.com',
-                          style: TextStyle(fontSize: 20, color: Colors.black),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
