@@ -1,12 +1,16 @@
+// Importing necessary Flutter and third-party packages
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Firebase authentication for user sign-in and sign-up
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore for storing user data
+import 'package:provider/provider.dart'; // State management provider for managing user data
+import '../../user_provider.dart'; // Custom provider for user data management
+import 'package:google_fonts/google_fonts.dart'; // Custom fonts for UI styling
+import "package:realest/services/auth_service.dart";
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../user_provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+//Custom Login Page
 class CustomLoginPage extends StatefulWidget {
   const CustomLoginPage({Key? key}) : super(key: key);
 
@@ -14,19 +18,29 @@ class CustomLoginPage extends StatefulWidget {
   _CustomLoginPageState createState() => _CustomLoginPageState();
 }
 
+// State class that holds login and registration logic
 class _CustomLoginPageState extends State<CustomLoginPage> {
-  bool _isRegister = false;
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  bool _isLoading = false;
-  String? _errorMessage;
+  bool _isRegister = false; // Determines if the user is in sign-up mode
+  final _emailController = TextEditingController(); // Controller for email input
+  final _passwordController = TextEditingController(); // Controller for password input
+  final _confirmPasswordController = TextEditingController(); // Controller for confirming password in registration
+  bool _isLoading = false; // State to show loading indicator
+  String? _errorMessage; // Holds error messages from authentication
   String _selectedRole = 'investor'; // Default role
   Timer? _errorTimer;
 
+
+  // Firebase authentication and Firestore database instances
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  final authService = AuthService(
+    auth: FirebaseAuth.instance,
+    firestore: FirebaseFirestore.instance,
+  );
+
+
+  // Dispose controllers when the widget is removed from the tree to prevent memory leaks
   @override
   void dispose() {
      _errorTimer?.cancel();
@@ -36,16 +50,22 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     super.dispose();
   }
 
+
+  // Main authentication method to handle login and registration
   Future<void> _authenticate() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _errorMessage = null; // Reset error message
     });
     try {
       if (_isRegister) {
-        await _createAccount();
+        await authService.createAccount(
+            email: _emailController.text,
+            password: _passwordController.text,
+            confirmPassword: _confirmPasswordController.text,
+            role: _selectedRole);
       } else {
-        await _signInWithEmail();
+        await authService.signInWithEmail(_emailController.text, _passwordController.text);
       }
     } on FirebaseAuthException catch (e) {
       final message = _getAuthErrorMessage(e);
@@ -55,13 +75,17 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     }
   }
 
+
+  // Handles sign-in using email and password
   Future<void> _signInWithEmail() async {
     try {
+      // Authenticate the user with Firebase
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
+      // Retrieve the user's role from Firestore
       String uid = userCredential.user!.uid;
 
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
@@ -71,6 +95,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
           _selectedRole = userDoc['role'];
         });
 
+        // Navigate based on user role
         Provider.of<UserProvider>(context, listen: false).fetchUserData();
         if (_selectedRole == "realtor") {
 
@@ -91,27 +116,36 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   }
 
 
-
+  // Handles user registration
   Future<void> _createAccount() async {
+    // Ensure passwords match before proceeding
     if (_passwordController.text != _confirmPasswordController.text) {
       throw FirebaseAuthException(code: 'password-mismatch', message: 'Passwords do not match');
     }
+    // Create a new user account in Firebase
     UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
     );
+
+    // Store user details in Firestore
     await _createUserDocument(userCredential.user!);
     _navigateAfterRegistration();
   }
 
+
+  // Creates a Firestore document for the new user
   Future<void> _createUserDocument(User user) async {
     await _firestore.collection('users').doc(user.uid).set({
       'email': user.email,
       'role': _selectedRole,
-      'createdAt': FieldValue.serverTimestamp(),
-      'completedSetup': false,
+      'createdAt': FieldValue.serverTimestamp(), // Stores the time of registration
+      'completedSetup': false, // Indicates if setup is completed
     });
   }
+
+
+  // Navigate to the correct page after successful registration
   void _navigateAfterRegistration() {
     if (_selectedRole == "investor") {
       context.go('/investorSetup');
@@ -121,6 +155,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   }
 
 
+  // Maps Firebase authentication error codes to user-friendly messages
   String _getAuthErrorMessage(FirebaseAuthException e) {
     // print(e.code);
     if(_errorTimer != null) {
@@ -151,6 +186,8 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     }
   }
 
+
+  // Builds the UI for the login page
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -166,7 +203,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
           ),
 
 
-          // Semi-transparent white overlay
+          // Semi-transparent white overlay for readability
           Positioned.fill(
             child: Container(
               color: Colors.white.withOpacity(.90), // Adjust opacity as needed
@@ -276,6 +313,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   }
 
 
+  // Builds the login/register button
   Widget _buildActionButton() {
     return SizedBox(
       width: double.infinity,
@@ -292,6 +330,8 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     );
   }
 
+
+  // Switches between login and register modes
   Widget _buildToggleAuthText() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
