@@ -16,7 +16,7 @@ import 'package:realest/src/views/investor/swiping/property_swiping.dart';
 import 'package:realest/src/views/realtor/realtor_dashboard.dart';
 import 'package:realest/src/views/realtor/realtor_home_search.dart';
 import 'package:realest/src/views/realtor/realtor_setup.dart';
-import 'package:realest/src/views/calculators.dart';
+import 'package:realest/src/views/calculators/calculators.dart';
 import 'package:realest/src/views/realtor/clients/realtor_clients.dart';
 import 'package:realest/src/views/realtor/realtor_reports.dart';
 import 'package:realest/src/views/realtor/realtor_settings.dart';
@@ -230,6 +230,17 @@ ThemeData _lightTheme() {
       bodyLarge: TextStyle(color: Colors.black),
       bodyMedium: TextStyle(color: Colors.black87),
     ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.grey.shade100,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      hintStyle: TextStyle(color: Colors.grey[500]),
+      labelStyle: TextStyle(fontWeight: FontWeight.normal),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    ),
   );
 }
 
@@ -248,6 +259,17 @@ ThemeData _darkTheme() {
     textTheme: const TextTheme(
       bodyLarge: TextStyle(color: Colors.white),
       bodyMedium: TextStyle(color: Colors.white70),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.grey.shade100,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      hintStyle: TextStyle(color: Colors.grey[500]),
+      labelStyle: TextStyle(fontWeight: FontWeight.normal),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
   );
 }
