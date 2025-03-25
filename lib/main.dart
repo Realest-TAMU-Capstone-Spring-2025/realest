@@ -16,7 +16,7 @@ import 'package:realest/src/views/investor/swiping/property_swiping.dart';
 import 'package:realest/src/views/realtor/dashboard/realtor_dashboard.dart';
 import 'package:realest/src/views/realtor/realtor_home_search.dart';
 import 'package:realest/src/views/realtor/realtor_setup.dart';
-import 'package:realest/src/views/calculators.dart';
+import 'package:realest/src/views/calculators/calculators.dart';
 import 'package:realest/src/views/realtor/clients/realtor_clients.dart';
 import 'package:realest/src/views/realtor/realtor_reports.dart';
 import 'package:realest/src/views/realtor/realtor_settings.dart';
@@ -219,9 +219,9 @@ class MainLayout extends StatelessWidget {
 /// **🎨 Light Theme**
 ThemeData _lightTheme() {
   return ThemeData(
-    primaryColor: Colors.black, // Main theme color
-    scaffoldBackgroundColor: Colors.grey[100], // Page background
-    cardColor: Colors.grey[200], // Card background
+    primaryColor: Colors.black,
+    scaffoldBackgroundColor: Colors.white,
+    cardColor: Colors.grey[200],
     colorScheme: const ColorScheme.light(
       primary: Colors.deepPurple, // Buttons and selected navbar item
       secondary: Colors.black87, // Secondary elements
@@ -235,11 +235,14 @@ ThemeData _lightTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white, // Input field background
+      fillColor: Colors.grey.shade100,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
+      hintStyle: TextStyle(color: Colors.grey[500]),
+      labelStyle: TextStyle(fontWeight: FontWeight.normal),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
   );
 }
@@ -247,9 +250,9 @@ ThemeData _lightTheme() {
 /// **🌙 Dark Theme**
 ThemeData _darkTheme() {
   return ThemeData(
-    primaryColor: Colors.white, // Main theme color
-    scaffoldBackgroundColor: CupertinoColors.darkBackgroundGray, // Page background
-    cardColor: Colors.grey[900], // Card background
+    primaryColor: Colors.white,
+    scaffoldBackgroundColor: Colors.black87,
+    cardColor: Colors.grey[900],
     colorScheme: const ColorScheme.dark(
       primary: Colors.deepPurpleAccent, // Buttons and selected navbar item
       secondary: Colors.white70, // Secondary elements
@@ -263,11 +266,14 @@ ThemeData _darkTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.grey[850], // Input field background
+      fillColor: Colors.grey.shade100,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
+      hintStyle: TextStyle(color: Colors.grey[500]),
+      labelStyle: TextStyle(fontWeight: FontWeight.normal),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
