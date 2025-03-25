@@ -13,10 +13,10 @@ import 'package:realest/src/views/investor/properties/saved_properties.dart';
 import 'package:realest/src/views/investor/swiping/property_swiping.dart';
 
 // Views related to the realtor
-import 'package:realest/src/views/realtor/realtor_dashboard.dart';
+import 'package:realest/src/views/realtor/dashboard/realtor_dashboard.dart';
 import 'package:realest/src/views/realtor/realtor_home_search.dart';
 import 'package:realest/src/views/realtor/realtor_setup.dart';
-import 'package:realest/src/views/calculators.dart';
+import 'package:realest/src/views/calculators/calculators.dart';
 import 'package:realest/src/views/realtor/clients/realtor_clients.dart';
 import 'package:realest/src/views/realtor/realtor_reports.dart';
 import 'package:realest/src/views/realtor/realtor_settings.dart';
@@ -27,6 +27,8 @@ import 'package:realest/src/views/navbar.dart'; // Sidebar navigation
 
 // Provider and user-related imports
 import 'user_provider.dart';
+
+import 'package:flutter/cupertino.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -221,14 +223,26 @@ ThemeData _lightTheme() {
     scaffoldBackgroundColor: Colors.white,
     cardColor: Colors.grey[200],
     colorScheme: const ColorScheme.light(
-      primary: Colors.deepPurple,
-      secondary: Colors.black87,
-      surfaceVariant: Colors.black,
+      primary: Colors.deepPurple, // Buttons and selected navbar item
+      secondary: Colors.black87, // Secondary elements
+      surface: Colors.white, // Default text color
+      surfaceVariant: Colors.black, // Navbar background
       onSurface: Colors.black,
     ),
     textTheme: const TextTheme(
       bodyLarge: TextStyle(color: Colors.black),
       bodyMedium: TextStyle(color: Colors.black87),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.grey.shade100,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      hintStyle: TextStyle(color: Colors.grey[500]),
+      labelStyle: TextStyle(fontWeight: FontWeight.normal),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
   );
 }
@@ -240,14 +254,34 @@ ThemeData _darkTheme() {
     scaffoldBackgroundColor: Colors.black87,
     cardColor: Colors.grey[900],
     colorScheme: const ColorScheme.dark(
-      primary: Colors.deepPurpleAccent,
-      secondary: Colors.white70,
-      surfaceVariant: Colors.black,
-      onSurface: Colors.white,
+      primary: Colors.deepPurpleAccent, // Buttons and selected navbar item
+      secondary: Colors.white70, // Secondary elements
+      surfaceVariant: Colors.black, // Navbar background
+      surface: Colors.black,
+      onSurface: Colors.white, // Default text color
     ),
     textTheme: const TextTheme(
       bodyLarge: TextStyle(color: Colors.white),
       bodyMedium: TextStyle(color: Colors.white70),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.grey.shade100,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      hintStyle: TextStyle(color: Colors.grey[500]),
+      labelStyle: TextStyle(fontWeight: FontWeight.normal),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.deepPurpleAccent, // Primary button color
+        foregroundColor: Colors.white, // Button text color
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
     ),
   );
 }

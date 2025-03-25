@@ -387,7 +387,7 @@ class PropertyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String imageUrl = (property.primaryPhoto != null)
-        ? "http://localhost:8080/${property.primaryPhoto}"
+        ? "${property.primaryPhoto}"
         : 'https://via.placeholder.com/150';
 
     return GestureDetector(

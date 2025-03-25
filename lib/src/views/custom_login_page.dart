@@ -160,7 +160,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
           // Background image
           Positioned.fill(
             child: Image.network(
-              'https://photos.zillowstatic.com/fp/f92e12421954f63424e6788ca770bdc4-cc_ft_1536.webp',
+              'https://photos.zillowstatic.com/fp/dcc59aedfbee68c4e9bc4879fe11da9c-cc_ft_768.webp',
               fit: BoxFit.cover,
             ),
           ),
