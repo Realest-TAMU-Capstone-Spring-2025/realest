@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 import '../../../../user_provider.dart'; // Ensure this path is correct
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'average_graphs.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RealtorDashboard extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -41,56 +43,57 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
     },
   ];
 
-  final List<Map<String, dynamic>> notifications = [
-    {
-      "message": "John Doe approved 1101 University Dr",
-      "investorEmail": "john@example.com",
-      "status": "approved",
-      "timestamp": "2024-02-25",
-    },
-    {
-      "message": "Eshwar Reddy liked 1510 Northside Dr",
-      "investorEmail": "john@example.com",
-      "status": "liked",
-      "timestamp": "2024-02-25",
-    },
-    {
-      "message": "Dinesh Balakrishnan disliked 1203 Wellborn Dr",
-      "investorEmail": "john@example.com",
-      "status": "disliked",
-      "timestamp": "2024-02-25",
-    },
-    {
-      "message": "Thesis Doe disapproved 821 Texas Dr",
-      "investorEmail": "john@example.com",
-      "status": "disapproved",
-      "timestamp": "2024-02-25",
-    },
-    {
-      "message": "Dinesh Reddy liked 1510 Northside Dr",
-      "investorEmail": "john@example.com",
-      "status": "liked",
-      "timestamp": "2024-02-25",
-    },
-    {
-      "message": "Arjun Som liked 1510 Northside Dr",
-      "investorEmail": "john@example.com",
-      "status": "liked",
-      "timestamp": "2024-02-25",
-    },
-    {
-      "message": "Dev Patel disliked 1203 Wellborn Dr",
-      "investorEmail": "john@example.com",
-      "status": "disliked",
-      "timestamp": "2024-02-25",
-    },
-    {
-      "message": "John Doe disapproved 821 Texas Dr",
-      "investorEmail": "john@example.com",
-      "status": "disapproved",
-      "timestamp": "2024-02-25",
-    },
-  ];
+  List<Map<String, dynamic>> notifications = [];
+  // final List<Map<String, dynamic>> notifications = [
+  //   {
+  //     "message": "John Doe approved 1101 University Dr",
+  //     "investorEmail": "john@example.com",
+  //     "status": "approved",
+  //     "timestamp": "2024-02-25",
+  //   },
+  //   {
+  //     "message": "Eshwar Reddy liked 1510 Northside Dr",
+  //     "investorEmail": "john@example.com",
+  //     "status": "liked",
+  //     "timestamp": "2024-02-25",
+  //   },
+  //   {
+  //     "message": "Dinesh Balakrishnan disliked 1203 Wellborn Dr",
+  //     "investorEmail": "john@example.com",
+  //     "status": "disliked",
+  //     "timestamp": "2024-02-25",
+  //   },
+  //   {
+  //     "message": "Thesis Doe disapproved 821 Texas Dr",
+  //     "investorEmail": "john@example.com",
+  //     "status": "disapproved",
+  //     "timestamp": "2024-02-25",
+  //   },
+  //   {
+  //     "message": "Dinesh Reddy liked 1510 Northside Dr",
+  //     "investorEmail": "john@example.com",
+  //     "status": "liked",
+  //     "timestamp": "2024-02-25",
+  //   },
+  //   {
+  //     "message": "Arjun Som liked 1510 Northside Dr",
+  //     "investorEmail": "john@example.com",
+  //     "status": "liked",
+  //     "timestamp": "2024-02-25",
+  //   },
+  //   {
+  //     "message": "Dev Patel disliked 1203 Wellborn Dr",
+  //     "investorEmail": "john@example.com",
+  //     "status": "disliked",
+  //     "timestamp": "2024-02-25",
+  //   },
+  //   {
+  //     "message": "John Doe disapproved 821 Texas Dr",
+  //     "investorEmail": "john@example.com",
+  //     "status": "disapproved",
+  //     "timestamp": "2024-02-25",
+  //   },
+  // ];
 
   Map<String, int> clientStatusCounts = {
     "Update": 0,
@@ -98,6 +101,7 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
     "Inactive": 0,
   };
   bool _isLoadingClients = true;
+  bool _isLoadingNotifications = false;
   String? _errorMessage;
 
   // Houses Sold Meter Variables
@@ -116,6 +120,7 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
   @override
   void initState() {
     super.initState();
+    _fetchNotifications();
 
     _animationController = AnimationController(
       vsync: this,
@@ -240,6 +245,99 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
       ),
     );
   }
+
+  Future<void> _fetchNotifications() async {
+    setState(() => _isLoadingNotifications = true);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
+    try {
+      // Ensure user data is loaded
+      if (userProvider.uid == null) {
+        await userProvider.fetchUserData();
+      }
+      
+      final realtorUid = userProvider.uid;
+      if (realtorUid == null) {
+        throw Exception('Realtor UID not found');
+      }
+
+      // 1. Get realtor's liked properties
+      final realtorLikedSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(realtorUid)
+          .collection('decisions')
+          .where('liked', isEqualTo: true)
+          .get();
+
+      final realtorLikedProperties = realtorLikedSnapshot.docs.map((doc) => doc.id).toList();
+
+      // 2. Get all investors assigned to this realtor
+      final investorsSnapshot = await FirebaseFirestore.instance
+          .collection('investors')
+          .where('realtorId', isEqualTo: realtorUid)
+          .get();
+
+      final List<Map<String, dynamic>> matches = [];
+      
+      // Process matches in parallel
+      await Future.wait(investorsSnapshot.docs.map((investorDoc) async {
+        final investorId = investorDoc.id;
+        
+        final investorLikedSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(investorId)
+            .collection('decisions')
+            .where('liked', isEqualTo: true)
+            .get();
+
+        await Future.wait(investorLikedSnapshot.docs.map((decisionDoc) async {
+          if (realtorLikedProperties.contains(decisionDoc.id)) {
+            final propertyFuture = FirebaseFirestore.instance
+                .collection('listings')
+                .doc(decisionDoc.id)
+                .get();
+
+            final investorFuture = FirebaseFirestore.instance
+                .collection('users')
+                .doc(investorId)
+                .get();
+
+            final results = await Future.wait([propertyFuture, investorFuture]);
+            final propertySnapshot = results[0];
+            final investorSnapshot = results[1];
+
+            matches.add({
+              'timestamp': decisionDoc.data()['timestamp'],
+              'investorEmail': investorSnapshot.data()?['email'] ?? 'Unknown',
+              'propertyAddress': propertySnapshot.data()?['street'] ?? 'Unknown',
+              'message': 'Investor ${investorSnapshot.data()?['firstName'] ?? ''}approved '
+                  '${propertySnapshot.data()?['street']}',
+            });
+          }
+        }));
+      }));
+
+      // Sort by most recent first
+      matches.sort((a, b) => (b['timestamp'] as Timestamp).compareTo(a['timestamp'] as Timestamp));
+
+      setState(() {
+        notifications = matches.map((match) => ({
+              'message': match['message'],
+              'investorEmail': match['investorEmail'],
+              'timestamp': DateFormat('yyyy-MM-dd – HH:mm').format((match['timestamp'] as Timestamp).toDate()),
+              'propertyAddress': match['propertyAddress'],
+            })).toList();
+      });
+    } catch (e) {
+      print('Error fetching notifications: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading matches: ${e.toString()}')),
+      );
+    } finally {
+      setState(() => _isLoadingNotifications = false);
+    }
+  } 
+
 
   Widget _buildStatusBar() {
     final theme = Theme.of(context);
@@ -441,10 +539,32 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
                                         statusColor = Colors.red;
                                         break;
                                       default:
-                                        statusColor = Colors.grey; // Fallback for undefined status
+                                        statusColor = Colors.green; // Fallback for undefined status TODO: swap to grey
                                     }
 
                                     return ListTile(
+                                      onTap: () async {
+                                        final email = notification['investorEmail'];
+                                        if (email == null || email.isEmpty) return;
+                                        
+                                        final Uri emailLaunchUri = Uri(
+                                          scheme: 'mailto',
+                                          path: email,
+                                          queryParameters: {
+                                            'subject': 'Regarding ${notification['propertyAddress']}',
+                                            'body': 'Hello,',
+                                          },
+                                        );
+
+                                        try {
+                                          await launchUrl(emailLaunchUri);
+                                        } catch (e) {
+                                          print('Error launching email client: $e');
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Could not launch email client')),
+                                          );
+                                        }
+                                      },
                                       leading: CircleAvatar(
                                         radius: 20,
                                         backgroundColor: statusColor.withOpacity(0.2),
