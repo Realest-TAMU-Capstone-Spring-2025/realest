@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'widgets/property_card.dart';
 import 'widgets/property_detail_sheet.dart';
+import 'package:realest/src/views/investor/properties/properties_view.dart';
 
 class RealtorHomeSearch extends StatefulWidget {
   const RealtorHomeSearch({Key? key}) : super(key: key);
@@ -134,7 +135,21 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
       ),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => PropertyDetailSheet(property: propertyData),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (_, controller) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: PropertiesView(
+            propertyId: propertyId,
+            showSaveIcon: true,
+          ),
+        ),
+      ),
       //disable swipe to close
       enableDrag: false,
 
