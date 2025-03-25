@@ -86,7 +86,8 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
         "sqft": data["sqft"] ?? 0,
         "mls_id": data["mls_id"] ?? "N/A",
         "image": (data["primary_photo"] != null && data["primary_photo"] != "")
-            ? data["primary_photo"]
+            ? "http://localhost"
+            ":8080/${data["primary_photo"]}"
             : "https://bearhomes.com/wp-content/uploads/2019/01/default-featured.png",
       };
     }).toList(); // ✅ Now it's a List<Map<String, dynamic>>
@@ -152,7 +153,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     //convert alt_photos to a list of strings
     List<String> altPhotos = data['alt_photos'].split(', ');
     // add "http://0.0.0.0:8080/" to each alt_photo"
-    altPhotos = altPhotos.map((photo) => "http://localhost:8080/$photo").toList();
+    altPhotos = altPhotos.map((photo) => photo).toList();
     return {
       'id': propertyId,
       'alt_photos': altPhotos,
