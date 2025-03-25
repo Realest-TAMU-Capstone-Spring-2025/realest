@@ -26,16 +26,20 @@ class _RealtorClientsState extends State<RealtorClients> {
   Set<String> _selectedFilters = {'Account Created', 'Liked a Property', 'Responded to Message'};
   final TextEditingController _searchController = TextEditingController(); // Added search controller
   String _searchQuery = ''; // Added search query state
+  String _selectedColumn = 'Update'; // Default column for mobile
+  bool isSmallScreen = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchClients(); // This will call _applyFiltersAndSearch after fetching
+    _fetchClients();
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-        _applyFiltersAndSearch();
-      });
+      if (mounted) {
+        setState(() {
+          _searchQuery = _searchController.text.toLowerCase();
+          _applyFiltersAndSearch();
+        });
+      }
     });
     _applyFiltersAndSearch();
   }
@@ -47,6 +51,8 @@ class _RealtorClientsState extends State<RealtorClients> {
   }
 
   Future<void> _fetchClients() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -57,10 +63,12 @@ class _RealtorClientsState extends State<RealtorClients> {
       final String? realtorId = userProvider.uid;
 
       if (realtorId == null) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'User not logged in. Please log in to view clients.';
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'User not logged in. Please log in to view clients.';
+          });
+        }
         return;
       }
 
@@ -84,19 +92,23 @@ class _RealtorClientsState extends State<RealtorClients> {
 
       clients.sort((a, b) => b['createdAt'].compareTo(a['createdAt']));
 
-      setState(() {
-        _clients = clients;
-        _applyFiltersAndSearch(); // This ensures filters are applied immediately
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _clients = clients;
+          _applyFiltersAndSearch();
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Failed to load clients: $e';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load clients: $e')),
-      );
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to load clients: $e';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load clients: $e')),
+        );
+      }
     }
   }
 
@@ -130,179 +142,16 @@ class _RealtorClientsState extends State<RealtorClients> {
   }
 
   void _toggleFilter(String filter) {
-    setState(() {
-      if (_selectedFilters.contains(filter)) {
-        _selectedFilters.remove(filter);
-      } else {
-        _selectedFilters.add(filter);
-      }
-      _applyFiltersAndSearch();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UserProvider>(context, listen: false).fetchUserData();
-    });
-
-    return MultiProvider(
-        providers: [
-        ChangeNotifierProvider(create: (_) => MouseRegionProvider()),
-    ],
-    child: Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Your Clients',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Consumer<UserProvider>(
-                  builder: (context, userProvider, child) {
-                    final invitationCode = userProvider.invitationCode ?? 'Loading...';
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              invitationCode,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontSize: 18,
-                                color: theme.colorScheme.onSurface.withOpacity(0.7),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: Icon(
-                                Icons.copy,
-                                size: 14,
-                                color: theme.colorScheme.onSurface.withOpacity(0.7),
-                              ),
-                              onPressed: () {
-                                Clipboard.setData(ClipboardData(text: invitationCode));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Invitation code copied to clipboard!')),
-                                );
-                              },
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          'Invitation Code',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontSize: 12,
-                            color: theme.colorScheme.onSurface.withOpacity(0.5),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 1,
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: InputDecoration(
-                            hintText: 'Search clients...',
-                            prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface),
-                            contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      _buildFilterButton(
-                        context,
-                        'Filters',
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('More filters coming soon!')),
-                          );
-                        },
-                        icon: Icons.filter_list,
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: inviteClientsButton(
-                      onPressed: () => _showInviteDialog(context),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 16),
-                ),
-              ),
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _buildClientColumn(
-                      context,
-                      'Update',
-                      _latestFilteredClients,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildClientColumn(
-                      context,
-                      'Active',
-                      _activeFilteredClients,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildClientColumn(
-                      context,
-                      'All Clients',
-                      _allFilteredClients,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-    );
+    if (mounted) {
+      setState(() {
+        if (_selectedFilters.contains(filter)) {
+          _selectedFilters.remove(filter);
+        } else {
+          _selectedFilters.add(filter);
+        }
+        _applyFiltersAndSearch();
+      });
+    }
   }
 
 
@@ -319,7 +168,7 @@ class _RealtorClientsState extends State<RealtorClients> {
         ),
         child: Icon(
           icon,
-          size: 24,
+          size: isSmallScreen ? 16 : 24,
           color: Colors.white, // Always white
         ),
       ),
@@ -335,7 +184,7 @@ class _RealtorClientsState extends State<RealtorClients> {
         );
       },
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.brown,
+        backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         minimumSize: const Size(0, 48),
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -496,106 +345,110 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
-  Widget _buildClientColumn(BuildContext context, String title, List<Map<String, dynamic>> clients) {
+  Widget _buildClientColumn(BuildContext context, String title, List<Map<String, dynamic>> clients, {VoidCallback? onTitleTap}) {
     final theme = Theme.of(context);
     final isLightTheme = theme.brightness == Brightness.light;
 
     Color titleColor;
     switch (title) {
       case 'Update':
-        titleColor = isLightTheme ? Colors.blue : Colors.blueAccent;
+        titleColor = isLightTheme ? Colors.blue : Color(0xFF1F51FF);
         break;
       case 'Active':
-        titleColor = isLightTheme ? Colors.purple : Colors.purpleAccent;
+        titleColor = isLightTheme ? Colors.purple : Color(0xFFBC13FE);
         break;
       case 'All Clients':
-        titleColor = isLightTheme ? Colors.green : Colors.greenAccent;
+        titleColor = isLightTheme ? Colors.green : Color(0xFF39FF14);
         break;
       default:
-        titleColor = theme.colorScheme.onSurface;
+        titleColor = theme.colorScheme.onSurface; // Fallback
     }
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.inputDecorationTheme.fillColor,
+        color: theme.scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            margin: const EdgeInsets.only(top: 16.0, bottom: 8.0, left: 8.0, right: 8.0),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: titleColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      title,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: titleColor,
-                      ),
-                    ),
-                  ],
-                ),
-                Flexible( // Wrap the right side in Flexible to allow shrinking
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.end,
+          GestureDetector(
+            onTap: onTitleTap, // Enable tap only for mobile
+            child: Container(
+              margin: const EdgeInsets.only(top: 16.0, bottom: 8.0, left: 8.0, right: 8.0),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
                     children: [
-                      if (title == 'Update')
-                        Flexible(
-                          child: Wrap(
-                            spacing: 8, // Horizontal space between icons
-                            runSpacing: 8, // Vertical space if wrapped to next line
-                            children: [
-                              _buildFilterIconButton('Account Created', Icons.account_circle, Colors.green),
-                              _buildFilterIconButton('Liked a Property', Icons.business, Colors.red),
-                              _buildFilterIconButton('Responded to Message', Icons.message, Colors.blue),
-                            ],
-                          ),
-                        ),
-                      const SizedBox(width: 16),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        width: 10,
+                        height: 10,
                         decoration: BoxDecoration(
-                          color: theme.inputDecorationTheme.fillColor,
-                          borderRadius: BorderRadius.circular(8),
+                          color: titleColor,
+                          shape: BoxShape.circle,
                         ),
-                        child: Text(
-                          '${clients.length} clients',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.7),
-                          ),
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        title,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: titleColor,
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (title == 'Update')
+                          Flexible(
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildFilterIconButton('Account Created', Icons.account_circle, Colors.green),
+                                _buildFilterIconButton('Liked a Property', Icons.business, Colors.red),
+                                _buildFilterIconButton('Responded to Message', Icons.message, Colors.blue),
+                              ],
+                            ),
+                          ),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: theme.inputDecorationTheme.fillColor,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${clients.length} clients',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withOpacity(0.7),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -733,15 +586,22 @@ class _RealtorClientsState extends State<RealtorClients> {
                                                   size: 14,
                                                   color: Colors.white,
                                                 ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  notes,
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
+                                                if (!isSmallScreen)
+                                                  const SizedBox(width: 4),
+                                                if (!isSmallScreen)
+                                                  Row(
+                                                    children: [
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        notes,
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                ),
                                               ],
                                             ),
                                           ),
@@ -779,4 +639,367 @@ class _RealtorClientsState extends State<RealtorClients> {
       ),
     );
   }
+
+  Widget _buildMobileLayout(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Row 1: Title and Invitation Code
+            Row(
+              children: [
+                Text(
+                  'Your Clients',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Consumer<UserProvider>(
+                  builder: (context, userProvider, child) {
+                    final invitationCode = userProvider.invitationCode ?? 'Loading...';
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              invitationCode,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontSize: 16,
+                                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: Icon(
+                                Icons.copy,
+                                size: 14,
+                                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: invitationCode));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Invitation code copied to clipboard!')),
+                                );
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          'Invitation Code',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 12,
+                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Row 2: Search Bar
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search clients...',
+                prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Row 3: Filters and Invite Button (Aligned Right)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _buildFilterButton(
+                  context,
+                  'Filters',
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('More filters coming soon!')),
+                    );
+                  },
+                  icon: Icons.filter_list,
+                ),
+                const SizedBox(width: 8),
+                inviteClientsButton(onPressed: () => _showInviteDialog(context)),
+              ],
+            ),
+
+            // Row 4: Error Message or Loading Indicator
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.red, fontSize: 16),
+                ),
+              ),
+            if (_isLoading)
+              const Expanded(child: Center(child: CircularProgressIndicator()))
+            else
+            // Row 5: Selected Client Column
+              Expanded(
+                child: _buildClientColumn(
+                  context,
+                  _selectedColumn,
+                  _selectedColumn == 'Update'
+                      ? _latestFilteredClients
+                      : _selectedColumn == 'Active'
+                      ? _activeFilteredClients
+                      : _allFilteredClients,
+                  onTitleTap: () => _showColumnSelector(context),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(BuildContext context) {
+    final theme = Theme.of(context);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<UserProvider>(context, listen: false).fetchUserData();
+    });
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => MouseRegionProvider()),
+      ],
+      child: Scaffold(
+        body: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Your Clients',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Consumer<UserProvider>(
+                    builder: (context, userProvider, child) {
+                      final invitationCode = userProvider.invitationCode ?? 'Loading...';
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                invitationCode,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontSize: 18,
+                                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.copy,
+                                  size: 14,
+                                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                ),
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: invitationCode));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Invitation code copied to clipboard!')),
+                                  );
+                                },
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'Invitation Code',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: 12,
+                              color: theme.colorScheme.onSurface.withOpacity(0.5),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: 'Search clients...',
+                              prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface),
+                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        _buildFilterButton(
+                          context,
+                          'Filters',
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('More filters coming soon!')),
+                            );
+                          },
+                          icon: Icons.filter_list,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: inviteClientsButton(
+                        onPressed: () => _showInviteDialog(context),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red, fontSize: 16),
+                  ),
+                ),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildClientColumn(
+                        context,
+                        'Update',
+                        _latestFilteredClients,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildClientColumn(
+                        context,
+                        'Active',
+                        _activeFilteredClients,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildClientColumn(
+                        context,
+                        'All Clients',
+                        _allFilteredClients,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showColumnSelector(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final theme = Theme.of(context);
+        return AlertDialog(
+          title: Text('Select Column', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text('Update'),
+                onTap: () {
+                  if (mounted) {
+                    setState(() => _selectedColumn = 'Update');
+                  }
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text('Active'),
+                onTap: () {
+                  if (mounted) {
+                    setState(() => _selectedColumn = 'Active');
+                  }
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text('All Clients'),
+                onTap: () {
+                  if (mounted) {
+                    setState(() => _selectedColumn = 'All Clients');
+                  }
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: TextStyle(color: theme.colorScheme.primary)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    isSmallScreen = MediaQuery.of(context).size.width < 800;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<UserProvider>(context, listen: false).fetchUserData();
+    });
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => MouseRegionProvider()),
+      ],
+      child: isSmallScreen ? _buildMobileLayout(context) : _buildWebLayout(context),
+    );
+  }
+
 }

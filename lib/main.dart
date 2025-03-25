@@ -13,7 +13,7 @@ import 'package:realest/src/views/investor/properties/saved_properties.dart';
 import 'package:realest/src/views/investor/swiping/property_swiping.dart';
 
 // Views related to the realtor
-import 'package:realest/src/views/realtor/realtor_dashboard.dart';
+import 'package:realest/src/views/realtor/dashboard/realtor_dashboard.dart';
 import 'package:realest/src/views/realtor/realtor_home_search.dart';
 import 'package:realest/src/views/realtor/realtor_setup.dart';
 import 'package:realest/src/views/calculators.dart';
@@ -27,6 +27,8 @@ import 'package:realest/src/views/navbar.dart'; // Sidebar navigation
 
 // Provider and user-related imports
 import 'user_provider.dart';
+
+import 'package:flutter/cupertino.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -217,18 +219,27 @@ class MainLayout extends StatelessWidget {
 /// **🎨 Light Theme**
 ThemeData _lightTheme() {
   return ThemeData(
-    primaryColor: Colors.black,
-    scaffoldBackgroundColor: Colors.white,
-    cardColor: Colors.grey[200],
+    primaryColor: Colors.black, // Main theme color
+    scaffoldBackgroundColor: Colors.grey[100], // Page background
+    cardColor: Colors.grey[200], // Card background
     colorScheme: const ColorScheme.light(
-      primary: Colors.deepPurple,
-      secondary: Colors.black87,
-      surfaceVariant: Colors.black,
+      primary: Colors.deepPurple, // Buttons and selected navbar item
+      secondary: Colors.black87, // Secondary elements
+      surface: Colors.white, // Default text color
+      surfaceVariant: Colors.black, // Navbar background
       onSurface: Colors.black,
     ),
     textTheme: const TextTheme(
       bodyLarge: TextStyle(color: Colors.black),
       bodyMedium: TextStyle(color: Colors.black87),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white, // Input field background
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide.none,
+      ),
     ),
   );
 }
@@ -236,18 +247,35 @@ ThemeData _lightTheme() {
 /// **🌙 Dark Theme**
 ThemeData _darkTheme() {
   return ThemeData(
-    primaryColor: Colors.white,
-    scaffoldBackgroundColor: Colors.black87,
-    cardColor: Colors.grey[900],
+    primaryColor: Colors.white, // Main theme color
+    scaffoldBackgroundColor: CupertinoColors.darkBackgroundGray, // Page background
+    cardColor: Colors.grey[900], // Card background
     colorScheme: const ColorScheme.dark(
-      primary: Colors.deepPurpleAccent,
-      secondary: Colors.white70,
-      surfaceVariant: Colors.black,
-      onSurface: Colors.white,
+      primary: Colors.deepPurpleAccent, // Buttons and selected navbar item
+      secondary: Colors.white70, // Secondary elements
+      surfaceVariant: Colors.black, // Navbar background
+      surface: Colors.black,
+      onSurface: Colors.white, // Default text color
     ),
     textTheme: const TextTheme(
       bodyLarge: TextStyle(color: Colors.white),
       bodyMedium: TextStyle(color: Colors.white70),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.grey[850], // Input field background
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide.none,
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.deepPurpleAccent, // Primary button color
+        foregroundColor: Colors.white, // Button text color
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
     ),
   );
 }
