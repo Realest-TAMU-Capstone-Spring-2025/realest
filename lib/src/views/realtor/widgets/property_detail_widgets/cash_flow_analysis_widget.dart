@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class CashFlowAnalysisWidget extends StatefulWidget {
-  const CashFlowAnalysisWidget({Key? key}) : super(key: key);
+  final String listingId;
+
+  const CashFlowAnalysisWidget({Key? key, required this.listingId}) : super(key: key);
 
   @override
   _CashFlowAnalysisWidgetState createState() => _CashFlowAnalysisWidgetState();
@@ -10,27 +13,73 @@ class CashFlowAnalysisWidget extends StatefulWidget {
 
 class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
   bool _isExpanded = false;
+  bool _isLoading = true;
 
-  // Hardcoded Data (Replace with real calculations later)
-  final double estimatedRent = 2500; // Income
-  final double propertyTax = 300;
-  final double insurance = 150;
-  final double maintenance = 200;
-  final double vacancyRate = 100;
-  final double managementFee = 200;
-  final double mortgage = 1300;
+  double? estimatedRent;
+  double? propertyTax;
+  double? insurance;
+  double? maintenance;
+  double? vacancyReserve;
+  double? managementFee;
+  double? hoaFee;
+  double? loanInterest;
+  double? loanPrincipal;
+  double? otherCosts;
+
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCashFlowData();
+  }
+
+  Future<void> _fetchCashFlowData() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('cashflow_analysis')
+        .doc(widget.listingId)
+        .get();
+
+    if (doc.exists) {
+      final data = doc.data()!;
+      final expenses = data['monthlyExpenseBreakdown'] ?? {};
+
+      setState(() {
+        estimatedRent = (data['price'] ?? 0).toDouble() * 0.0086;
+        final grossRent = (data['grossMonthlyRent'] ?? 0).toDouble();
+        vacancyReserve = grossRent - estimatedRent!;
+
+        hoaFee = (expenses['hoaFee'] ?? 0).toDouble();
+        insurance = (expenses['insurance'] ?? 0).toDouble();
+        loanInterest = (expenses['loanInterest'] ?? 0).toDouble();
+        loanPrincipal = (expenses['loanPrinciple'] ?? 0).toDouble();
+        maintenance = (expenses['maintenance'] ?? 0).toDouble();
+        managementFee = (expenses['managementFee'] ?? 0).toDouble();
+        otherCosts = (expenses['otherCosts'] ?? 0).toDouble();
+        propertyTax = (expenses['propertyTax'] ?? 0).toDouble();
+        _isLoading = false;
+      });
+
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currencyFormat = NumberFormat.currency(symbol: "\$");
 
-    double totalExpenses =
-        propertyTax + insurance + maintenance + vacancyRate + managementFee + mortgage;
-    double cashFlow = estimatedRent - totalExpenses;
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if ([loanInterest, loanPrincipal, propertyTax, insurance, maintenance, vacancyReserve, managementFee].any((v) => v == null)) {
+      return const Text("Unable to load cash flow data.");
+    }
+
+    final totalExpenses = loanInterest! + loanPrincipal! + propertyTax! + insurance! + hoaFee! + maintenance! + managementFee! + otherCosts!;
+    final cashFlow = estimatedRent! - totalExpenses;
 
     return Container(
-      width: double.infinity, // Take full width
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.primary.withOpacity(0.1),
@@ -39,7 +88,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 🔥 **Modern Title with Icon**
+          // 🔥 Title
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -47,16 +96,18 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
               const SizedBox(width: 8),
               Text(
                 "Cash Flow Analysis",
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 24),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 10),
 
-          // **📌 Income - Expenses = Cash Flow Display (Boxes)**
+          // 📊 Income - Expenses = Cash Flow
           _buildEquationDisplay(currencyFormat, totalExpenses, cashFlow, theme),
 
-          // 📌 **Expand Breakdown Button**
           const SizedBox(height: 16),
           GestureDetector(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
@@ -80,7 +131,6 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
             ),
           ),
 
-          // 📌 **Expanded Breakdown Section**
           if (_isExpanded)
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
@@ -92,29 +142,38 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
       ),
     );
   }
-
-  /// **🔥 Displays [Income - Expenses = Cash Flow] as stylish full-width floating boxes**
   Widget _buildEquationDisplay(NumberFormat currencyFormat, double totalExpenses, double cashFlow, ThemeData theme) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 400;
+
+    return Wrap(
+      spacing: isMobile ? 0 : 12,
+      runSpacing: isMobile ? 6: 12,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      alignment: WrapAlignment.center,
       children: [
-        Expanded(child: _buildValueBox("Income", estimatedRent, theme, Colors.green)),
+        _buildValueBox("Income", estimatedRent!, theme, Colors.green),
         _buildOperator("-", theme),
-        Expanded(child: _buildValueBox("Expenses", totalExpenses, theme, Colors.red)),
+        _buildValueBox("Expenses", totalExpenses, theme, Colors.red),
         _buildOperator("=", theme),
-        Expanded(child: _buildValueBox("Cash Flow", cashFlow, theme, cashFlow >= 0 ? Colors.green : Colors.red)),
+        _buildValueBox("Cash Flow", cashFlow, theme, cashFlow >= 0 ? Colors.green : Colors.red),
       ],
     );
   }
 
-  /// **🔥 Creates a floating value box for Income, Expenses, Cash Flow**
+
   Widget _buildValueBox(String label, double amount, ThemeData theme, Color color) {
     final currencyFormat = NumberFormat.currency(symbol: "\$");
+    final isMobile = MediaQuery.of(context).size.width < 400;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : 16,
+        vertical: isMobile ? 6 : 10,
+      ),
       decoration: BoxDecoration(
         color: color.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isMobile ? 12 : 20),
       ),
       child: Column(
         children: [
@@ -122,34 +181,34 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
             label,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: Colors.black,
-              fontSize: 18,
+              fontSize: isMobile ? 14 : 18,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),
           Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration:
-                  BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 6 : 10,
+              vertical: isMobile ? 4 : 6,
+            ),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Text(
-
-                currencyFormat.format(amount),
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                  fontSize: 22,
-                ),
-            )
+              currencyFormat.format(amount),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
+                fontSize: isMobile ? 16 : 22,
+              ),
+            ),
           )
         ],
       ),
     );
   }
 
-  /// **🔥 Creates the - and = symbols between boxes**
   Widget _buildOperator(String symbol, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -164,21 +223,22 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
     );
   }
 
-  /// **📌 Breakdown of all expenses**
   Widget _buildExpenseBreakdown(ThemeData theme) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildExpenseItem("🏡 Mortgage", mortgage, theme),
-        _buildExpenseItem("🏦 Property Tax", propertyTax, theme),
-        _buildExpenseItem("🔐 Insurance", insurance, theme),
-        _buildExpenseItem("🔧 Maintenance", maintenance, theme),
-        _buildExpenseItem("📉 Vacancy Reserve", vacancyRate, theme),
-        _buildExpenseItem("👨‍💼 Management Fee", managementFee, theme),
+        _buildIncomeItem( "Estimated Rent", estimatedRent ?? 0, theme),
+        _buildExpenseItem("Loan Interest", loanInterest ?? 0, theme),
+        _buildExpenseItem("Loan Principal", loanPrincipal ?? 0, theme),
+        _buildExpenseItem("Property Tax", propertyTax ?? 0, theme),
+        _buildExpenseItem("Insurance", insurance ?? 0, theme),
+        _buildExpenseItem("HOA Fee", hoaFee ?? 0, theme),
+        _buildExpenseItem("Maintenance", maintenance ?? 0, theme),
+        _buildExpenseItem("Management Fee", managementFee ?? 0, theme),
+        _buildExpenseItem("Other Costs", otherCosts ?? 0, theme),
       ],
     );
   }
-
-  /// **📌 Expense Item Row**
   Widget _buildExpenseItem(String label, double amount, ThemeData theme) {
     final currencyFormat = NumberFormat.currency(symbol: "\$");
     return Container(
@@ -197,9 +257,31 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
           ),
           Text(
             currencyFormat.format(amount),
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildIncomeItem(String label, double amount, ThemeData theme) {
+    final currencyFormat = NumberFormat.currency(symbol: "\$");
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          Text(
+            currencyFormat.format(amount),
+            style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
         ],
       ),
