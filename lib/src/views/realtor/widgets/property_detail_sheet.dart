@@ -28,7 +28,6 @@ class PropertyDetailSheet extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -48,7 +47,7 @@ class PropertyDetailSheet extends StatelessWidget {
                   const SizedBox(height: 6),
                   PropertyPriceWidget(price: property["list_price"], status: property["status"]),
                   const SizedBox(height: 6),
-                  CashFlowAnalysisWidget(),
+                  CashFlowAnalysisWidget(listingId: property["id"]),
                   const SizedBox(height: 10),
                   ImportantDetailsWidget(property: property),
                   const SizedBox(height: 20),
