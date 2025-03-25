@@ -219,9 +219,9 @@ class MainLayout extends StatelessWidget {
 /// **🎨 Light Theme**
 ThemeData _lightTheme() {
   return ThemeData(
-    primaryColor: Colors.black, // Main theme color
-    scaffoldBackgroundColor: Colors.grey[100], // Page background
-    cardColor: Colors.grey[200], // Card background
+    primaryColor: Colors.black,
+    scaffoldBackgroundColor: Colors.white,
+    cardColor: Colors.grey[200],
     colorScheme: const ColorScheme.light(
       primary: Colors.deepPurple, // Buttons and selected navbar item
       secondary: Colors.black87, // Secondary elements
@@ -250,9 +250,9 @@ ThemeData _lightTheme() {
 /// **🌙 Dark Theme**
 ThemeData _darkTheme() {
   return ThemeData(
-    primaryColor: Colors.white, // Main theme color
-    scaffoldBackgroundColor: CupertinoColors.darkBackgroundGray, // Page background
-    cardColor: Colors.grey[900], // Card background
+    primaryColor: Colors.white,
+    scaffoldBackgroundColor: Colors.black87,
+    cardColor: Colors.grey[900],
     colorScheme: const ColorScheme.dark(
       primary: Colors.deepPurpleAccent, // Buttons and selected navbar item
       secondary: Colors.white70, // Secondary elements
