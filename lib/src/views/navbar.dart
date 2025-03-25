@@ -111,7 +111,6 @@ class _NavBarState extends State<NavBar> {
             ..._buildNavItems(context, false),
             const Spacer(),
             InkWell(
-              onTap: () => context.go('/realtorHome'),
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Icon(Icons.real_estate_agent, size: 42, color: Colors.white),
