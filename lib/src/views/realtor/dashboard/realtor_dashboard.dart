@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
-import '../../../../realtor_user_provider.dart'; // Ensure this path is correct
+import '../../../../user_provider.dart'; // Ensure this path is correct
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'average_graphs.dart';
@@ -127,7 +127,7 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
     _targetController = TextEditingController(text: monthlyTarget.toString());
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    userProvider.fetchRealtorData().then((_) {
+    userProvider.fetchUserData().then((_) {
       if (mounted) { // Check mounted before proceeding
         _fetchClientStatusCounts();
       }

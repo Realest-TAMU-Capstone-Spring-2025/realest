@@ -776,7 +776,7 @@ class _RealtorClientsState extends State<RealtorClients> {
     final theme = Theme.of(context);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UserProvider>(context, listen: false).fetchRealtorData();
+      Provider.of<UserProvider>(context, listen: false).fetchUserData();
     });
 
     return MultiProvider(
@@ -991,7 +991,7 @@ class _RealtorClientsState extends State<RealtorClients> {
     isSmallScreen = MediaQuery.of(context).size.width < 800;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UserProvider>(context, listen: false).fetchRealtorData();
+      Provider.of<UserProvider>(context, listen: false).fetchUserData();
     });
 
     return MultiProvider(
