@@ -25,6 +25,7 @@ class ProfilePic extends StatelessWidget {
     final String contactPhone = userProvider.contactPhone ?? '';
     final String profilePicUrl = userProvider.profilePicUrl ?? '';
     final String invitationCode = userProvider.invitationCode ?? ''; // Fetch invitation code
+    final String userRole = userProvider.userRole ?? '';
 
     showDialog(
       context: context,
@@ -82,7 +83,8 @@ class ProfilePic extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          invitationCode.isNotEmpty ? 'Invitation Code: $invitationCode' : 'No Invitation Code',
+                          //test if realtor
+                          userRole == 'realtor' ? invitationCode.isNotEmpty ? 'Invitation Code: $invitationCode' : 'No Invitation Code' : '',
                           style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
                           textAlign: TextAlign.center,
                         ),
@@ -220,7 +222,7 @@ class ProfilePic extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
+    final userProvider = Provider.of<UserProvider>(context, listen: true);
     final String profilePicUrl = userProvider.profilePicUrl ?? '';
     return GestureDetector(
       onTap: () => _showProfileDialog(context),

@@ -18,6 +18,8 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   List<Property> _properties = [];
   List<Property> _swipedProperties = [];
   bool _noMoreProperties = false;
+  bool _noRealtorAssigned = false;
+  bool _useRealtorDecisions = false;
 
   @override
   void initState() {
@@ -26,6 +28,95 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   }
 
   Future<void> _loadProperties() async {
+    setState(() {
+      _properties = [];
+      _noMoreProperties = false;
+    });
+
+    if (_useRealtorDecisions) {
+      await _loadRealtorProperties();
+    } else {
+      await _loadNormalProperties();
+    }
+  }
+  Future<void> _loadRealtorProperties() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      setState(() {
+        _noMoreProperties = true;
+      });
+      return;
+    }
+
+    try {
+      // Get investor's realtor ID
+      final investorDoc = await _db.collection('investors').doc(userId).get();
+      if(investorDoc.data() == null) {
+        setState(() {
+          _noMoreProperties = true;
+          _noRealtorAssigned = true;
+        });
+        return;
+      }
+      final realtorId = investorDoc.data()?['realtorId'] as String?;
+      if (realtorId == null) {
+        setState(() {
+          _noMoreProperties = true;
+          _noRealtorAssigned = true;
+        });
+        return;
+      }
+
+      final userLikedPropertiesSnapshot = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('decisions')
+          .where('liked', isEqualTo: true)
+          .get();
+
+      final userLikedPropertyIds = userLikedPropertiesSnapshot.docs.map((doc) => doc.id).toSet();
+
+      // Get realtor's decisions
+      final decisionsSnapshot = await _db
+          .collection('users')
+          .doc(realtorId)
+          .collection('decisions')
+          .where('liked', isEqualTo: true)
+          .get();
+
+      final propertyIds = decisionsSnapshot.docs
+          .map((doc) => doc.id)
+          .where((id) => !userLikedPropertyIds.contains(id))
+          .toList();
+
+      if (propertyIds.isEmpty) {
+        setState(() {
+          _noMoreProperties = true;
+        });
+        return;
+      }
+
+      // Fetch properties based on filtered realtor's decisions
+      final propertiesSnapshot = await _db
+          .collection('listings')
+          .where(FieldPath.documentId, whereIn: propertyIds)
+          .get();
+
+      setState(() {
+        _properties = propertiesSnapshot.docs
+            .map((doc) => Property.fromFirestore(doc))
+            .toList();
+      });
+    } catch (e) {
+      print('Error loading realtor properties: $e');
+      setState(() {
+        _noMoreProperties = true;
+      });
+    }
+  }
+
+
+  Future<void> _loadNormalProperties() async {
     try {
       final snapshot = await _db
           .collection('listings')
@@ -187,7 +278,19 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Swipe Properties'),
+        // title: const Text('Swipe Properties'),
+        leading: IconButton(
+          icon: Icon(_useRealtorDecisions ? Icons.real_estate_agent_outlined : Icons.public),
+          onPressed: () {
+            setState(() {
+              _useRealtorDecisions = !_useRealtorDecisions;
+               _properties = []; // Clear properties
+              _noMoreProperties = false; // Reset noMoreProperties state
+            });
+            _loadProperties();
+          },
+          tooltip: _useRealtorDecisions ? 'Using Realtor Decisions' : 'Using All Properties',
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.help_rounded),
@@ -243,32 +346,35 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
         ],
       ),
       body: _properties.isEmpty
-          ? Center(child: CircularProgressIndicator())
-          : _noMoreProperties
-              ? Center(child: Text('No more properties available.'))
-              : CardSwiper(
-                  controller: _controller,
-                  cardsCount: _properties.length,
-                  numberOfCardsDisplayed: 2,
-                  backCardOffset: Offset(0, 40),
-                  scale: 0.9,
-                  padding: EdgeInsets.all(24),
-                  allowedSwipeDirection: AllowedSwipeDirection.symmetric(
-                    horizontal: true,
-                    vertical: false,
-                  ),
-                  onSwipe: _handleSwipe,
-                  onEnd: () {
-                    setState(() {
-                      _noMoreProperties = true;
-                    });
-                  },
-                  cardBuilder:
-                      (context, index, percentThresholdX, percentThresholdY) {
-                    final property = _properties[index];
-                    return PropertyCard(property: property);
-                  },
-                ),
+    ? Center(
+        child: _noMoreProperties
+            ? (_noRealtorAssigned && _useRealtorDecisions
+                ? Text('No realtor assigned. Please contact support.')
+                : Text('No more properties available.'))
+            : CircularProgressIndicator(),
+      )
+    : CardSwiper(
+        controller: _controller,
+        cardsCount: _properties.length,
+        numberOfCardsDisplayed: (_properties.length >= 2) ? 2 : 1, // Ensure valid card count
+        backCardOffset: const Offset(0, 40),
+        scale: 0.9,
+        padding: const EdgeInsets.all(24),
+        allowedSwipeDirection: AllowedSwipeDirection.symmetric(
+          horizontal: true,
+          vertical: false,
+        ),
+        onSwipe: _handleSwipe,
+        onEnd: () {
+          setState(() {
+            _noMoreProperties = true;
+          });
+        },
+        cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
+          final property = _properties[index];
+          return PropertyCard(property: property);
+        },
+      ),
     );
   }
 }

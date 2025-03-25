@@ -20,12 +20,15 @@ class _PropertiesViewState extends State<PropertiesView> {
   bool _isSaved = false;
   late final Future<DocumentSnapshot> _propertyData;
   final NumberFormat currencyFormat = NumberFormat('#,##0', 'en_US');
+  bool _isRealtor = false;
 
   @override
   void initState() {
     super.initState();
     _propertyData = _fetchPropertyData();
     _checkSavedStatus();
+    _checkRealtorStatus();
+
   }
 
   Future<DocumentSnapshot> _fetchPropertyData() async {
@@ -33,6 +36,41 @@ class _PropertiesViewState extends State<PropertiesView> {
         .collection('listings')
         .doc(widget.propertyId)
         .get();
+  }
+
+  Future<void> _addToCuratedList() async {
+    if (_user == null || !_isRealtor) return;
+
+    final curatedListRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(_user!.uid)
+        .collection('curated_listings');
+
+    await curatedListRef.doc(widget.propertyId).set({
+      'added_at': FieldValue.serverTimestamp(),
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Added to curated list')),
+    );
+  }
+
+  Future<bool> _isUserRealtor() async {
+    if (_user == null) return false;
+    
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(_user!.uid)
+        .get();
+    
+    return userDoc.data()?['role'] == 'realtor';
+  }
+
+  Future<void> _checkRealtorStatus() async {
+    final isRealtor = await _isUserRealtor();
+    if (mounted) {
+      setState(() => _isRealtor = isRealtor);
+    }
   }
 
   Future<void> _checkSavedStatus() async {
@@ -79,6 +117,9 @@ class _PropertiesViewState extends State<PropertiesView> {
         title: const Text('Property Details'),
         actions: widget.showSaveIcon
             ? [
+                _isRealtor
+                ? Text('Add to Curated List')
+                    : const SizedBox.shrink(),
                 IconButton(
                   icon: Icon(_isSaved ? Icons.favorite : Icons.favorite_border),
                   color: _isSaved ? Colors.red : Colors.green,
@@ -147,7 +188,9 @@ class _PropertiesViewState extends State<PropertiesView> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12.0),
         child: Image.network(
-          "http://localhost:8080/$url",
+          // "http://localhost:3000/proxy-image?url=${Uri.encodeQueryComponent(url)}",
+          "https://localhost:3000/proxy-image?url=${Uri.encodeQueryComponent(url)}",
+          // "http://localhost:2999/$url",
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => Container(
             color: Colors.grey[200],

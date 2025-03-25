@@ -37,7 +37,6 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   google_fonts: ^6.2.1
-  lottie:
   shared_preferences:
   firebase_core: ^3.11.0
   firebase_auth: ^5.4.2
@@ -64,6 +63,7 @@ dependencies:
   fl_chart: ^0.70.2
   photo_view: ^0.15.0
   go_router: ^14.8.1
+  url_launcher: ^6.1.11
 
 dev_dependencies:
   flutter_test:
@@ -90,7 +90,6 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/lottie/
 
   fonts:
     - family: globalFont
