@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -20,7 +21,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
 
 
   // **Pagination Settings**
-  final int _perPage = 10;
+  final int _perPage = 200;
   DocumentSnapshot? _lastDocument;
   bool _isLoadingMore = false;
   bool _hasMore = true;
@@ -85,8 +86,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
         "sqft": data["sqft"] ?? 0,
         "mls_id": data["mls_id"] ?? "N/A",
         "image": (data["primary_photo"] != null && data["primary_photo"] != "")
-            ? "http://localhost"
-            ":8080/${data["primary_photo"]}"
+            ? data["primary_photo"]
             : "https://bearhomes.com/wp-content/uploads/2019/01/default-featured.png",
       };
     }).toList(); // ✅ Now it's a List<Map<String, dynamic>>
@@ -206,27 +206,30 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
 
 
 
-  Set<Marker> _createMarkers() {
-    if (_defaultMarkerIcon == null || _selectedMarkerIcon == null) {
-      return {};
-    }
+  Future<Set<Marker>> _createMarkers() async {
+    final Set<Marker> markers = {};
 
-    return allFilteredPropertiesForMap.map((property) {
+    for (final property in allFilteredPropertiesForMap) {
       final LatLng location = LatLng(property["latitude"], property["longitude"]);
       final bool isSelected = _selectedPropertyId == property["id"];
+      final price = property["price"] ?? 0;
 
-      return Marker(
+      final marker = Marker(
         markerId: MarkerId(property["id"]),
         position: location,
-        icon: isSelected ? _selectedMarkerIcon! : _defaultMarkerIcon!,
-        infoWindow: InfoWindow(
-          title: property["address"],
-          snippet: "\$${NumberFormat("#,##0").format(property["price"])}",
+        icon: await createPriceMarkerBitmap(
+          "\$${(price / 1000).round()}K",
+          selected: isSelected,
         ),
         onTap: () => _selectProperty(property["id"], location),
       );
-    }).toSet();
+
+      markers.add(marker);
+    }
+
+    return markers;
   }
+
 
 
 
@@ -243,15 +246,22 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
               // **Left Side: Google Map**
               ((_showingMap && isSmallScreen) || !isSmallScreen)? Expanded(
                 flex: 1,
-                child: GoogleMap(
-                  initialCameraPosition: const CameraPosition(
-                    target: LatLng(30.6280, -96.3344),
-                    zoom: 12,
-                  ),
-                  mapType: MapType.normal,
-                  onMapCreated: _onMapCreated,
-                  markers: _createMarkers(),  // Call a function to rebuild markers
+                child: FutureBuilder<Set<Marker>>(
+                  future: _createMarkers(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) return const SizedBox();
+                    return GoogleMap(
+                      initialCameraPosition: const CameraPosition(
+                        target: LatLng(30.6280, -96.3344),
+                        zoom: 12,
+                      ),
+                      onMapCreated: _onMapCreated,
+                      markers: snapshot.data!,
+                      mapType: MapType.normal,
+                    );
+                  },
                 ),
+
 
               ) : Container(),
 
@@ -506,6 +516,47 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
           property["baths"] >= _minBaths)
           .toList();
     });
+  }
+
+  Future<BitmapDescriptor> createPriceMarkerBitmap(String priceText, {bool selected = false}) async {
+    final TextPainter textPainter = TextPainter(
+      text: TextSpan(
+        text: priceText,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+      textDirection: ui.TextDirection.ltr,
+    );
+    textPainter.layout();
+
+    final double padding = 15;
+    final double width = textPainter.width + padding;
+    final double height = 20;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    final Paint paint = Paint()
+      ..color = selected ? Colors.deepPurple : Colors.red
+      ..style = PaintingStyle.fill;
+
+    final RRect rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, width, height),
+      Radius.circular(12),
+    );
+
+    canvas.drawRRect(rrect, paint);
+
+    textPainter.paint(canvas, Offset(padding / 2, (height - textPainter.height) / 2));
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(width.toInt(), height.toInt());
+    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+
+    return BitmapDescriptor.fromBytes(bytes!.buffer.asUint8List());
   }
 
 }
