@@ -30,6 +30,49 @@ class _RealtorSettingsState extends State<RealtorSettings> {
   final TextEditingController _contactEmailController = TextEditingController();
   final TextEditingController _contactPhoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  final Map<String, TextEditingController> _cashFlowControllers = {
+    'closingCost': TextEditingController(),
+    'costToSell': TextEditingController(),
+    'defaultHOA': TextEditingController(),
+    'downPayment': TextEditingController(),
+    'holdingLength': TextEditingController(),
+    'insurance': TextEditingController(),
+    'interestRate': TextEditingController(),
+    'loanTerm': TextEditingController(),
+    'maintenance': TextEditingController(),
+    'managementFee': TextEditingController(),
+    'needsRepair': TextEditingController(),
+    'otherCosts': TextEditingController(),
+    'otherIncome': TextEditingController(),
+    'propertyTax': TextEditingController(),
+    'repairCost': TextEditingController(),
+    'useLoan': TextEditingController(),
+    'vacancyRate': TextEditingController(),
+    'valueAfterRepair': TextEditingController(),
+    'valueAppreciation': TextEditingController(),
+  };
+  final Map<String, String> _cashFlowFieldTypes = {
+    'closingCost': 'cash',
+    'costToSell': 'percent',
+    'defaultHOA': 'cash',
+    'downPayment': 'percent',
+    'holdingLength': 'years',
+    'insurance': 'percent',
+    'interestRate': 'percent',
+    'loanTerm': 'years',
+    'maintenance': 'percent',
+    'managementFee': 'percent',
+    'needsRepair': 'bool',
+    'otherCosts': 'cash',
+    'otherIncome': 'cash',
+    'propertyTax': 'percent',
+    'repairCost': 'cash',
+    'useLoan': 'bool',
+    'vacancyRate': 'percent',
+    'valueAfterRepair': 'cash',
+    'valueAppreciation': 'percent',
+  };
+
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -64,6 +107,18 @@ class _RealtorSettingsState extends State<RealtorSettings> {
             _contactPhoneController.text = doc['contactPhone'] ?? '';
             _addressController.text = doc['address'] ?? '';
             _profilePicUrl = doc['profilePicUrl'] ?? '';
+            final cashFlow = doc['cashFlowDefaults'] ?? {};
+            cashFlow.forEach((key, value) {
+              if (_cashFlowControllers.containsKey(key)) {
+                final type = _cashFlowFieldTypes[key];
+                if (type == 'percent' && value is num) {
+                  _cashFlowControllers[key]!.text = (value * 100).toString();
+                } else {
+                  _cashFlowControllers[key]!.text = value.toString();
+                }
+              }
+            });
+
           });
         }
       } catch (e) {
@@ -217,6 +272,69 @@ class _RealtorSettingsState extends State<RealtorSettings> {
                     onChanged: (value) => widget.toggleTheme(),
                   ),
                   const SizedBox(height: 20),
+                  ExpansionTile(
+                    title: const Text("Cash Flow Defaults"),
+                    initiallyExpanded: false,
+                    children: [
+                      ..._cashFlowControllers.entries.map((entry) {
+                        final key = entry.key;
+                        final controller = entry.value;
+                        final type = _cashFlowFieldTypes[key] ?? 'text';
+
+                        Widget suffix;
+                        switch (type) {
+                          case 'percent':
+                            suffix = const Text('%');
+                            break;
+                          case 'cash':
+                            suffix = const Text('\$');
+                            break;
+                          case 'years':
+                            suffix = const Text('yrs');
+                            break;
+                          default:
+                            suffix = const SizedBox();
+                        }
+
+                        if (type == 'bool') {
+                          // Render as switch
+                          final boolVal = controller.text.toLowerCase() == 'true';
+                          return SwitchListTile(
+                            title: Text(_formatCashFlowLabel(key)),
+                            value: boolVal,
+                            onChanged: (val) {
+                              setState(() {
+                                controller.text = val.toString();
+                              });
+                            },
+                          );
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: TextField(
+                            controller: controller,
+                            keyboardType: TextInputType.numberWithOptions(decimal: true),
+                            decoration: InputDecoration(
+                              labelText: _formatCashFlowLabel(key),
+                              suffix: suffix,
+                              border: const OutlineInputBorder(),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: ElevatedButton(
+                          onPressed: _saveCashFlowDefaults,
+                          child: const Text("Save Cash Flow Defaults"),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
                   // Save / Cancel Buttons
                   Center(
                     child: Row(
@@ -258,6 +376,45 @@ class _RealtorSettingsState extends State<RealtorSettings> {
       ),
     );
   }
+  String _formatCashFlowLabel(String key) {
+    return key.replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (match) {
+      return '${match.group(1)} ${match.group(2)}';
+    }).replaceFirstMapped(RegExp(r'^.'), (m) => m.group(0)!.toUpperCase());
+  }
+  Future<void> _saveCashFlowDefaults() async {
+    final User? user = _auth.currentUser;
+    if (user == null) return;
+
+    final Map<String, dynamic> updated = {};
+    _cashFlowControllers.forEach((key, controller) {
+      final val = controller.text.trim();
+      final type = _cashFlowFieldTypes[key];
+
+      if (type == 'bool') {
+        updated[key] = val.toLowerCase() == 'true';
+      } else if (type == 'percent') {
+        updated[key] = (double.tryParse(val) ?? 0) / 100;
+      } else {
+        updated[key] = double.tryParse(val) ?? val;
+      }
+    });
+
+
+    try {
+      await _firestore.collection('realtors').doc(user.uid).update({
+        'cashFlowDefaults': updated,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cash Flow Defaults updated")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update: $e")),
+      );
+    }
+  }
+
+
 
 
   /// Creates a modern input field that adapts to the theme
