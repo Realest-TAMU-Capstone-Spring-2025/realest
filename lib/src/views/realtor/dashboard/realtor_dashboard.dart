@@ -117,7 +117,6 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
   void initState() {
     super.initState();
 
-    // Initialize AnimationController for the needle
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -129,20 +128,22 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     userProvider.fetchRealtorData().then((_) {
-      _fetchClientStatusCounts();
+      if (mounted) { // Check mounted before proceeding
+        _fetchClientStatusCounts();
+      }
     }).catchError((e) {
-      setState(() {
-        _isLoadingClients = false;
-        _errorMessage = "Failed to initialize user data: $e";
-      });
-    });
-
-    // Staggered fade-in animations for each section
-    Future.delayed(const Duration(milliseconds: 1000), () {
       if (mounted) {
         setState(() {
-          _notificationsOpacity = 1.0; // First section appears after 500ms
+          _isLoadingClients = false;
+          _errorMessage = "Failed to initialize user data: $e";
         });
+      }
+    });
+
+    // Staggered animations with mounted checks
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() => _notificationsOpacity = 1.0);
       }
     });
     Future.delayed(const Duration(milliseconds: 1500), () {
@@ -150,25 +151,19 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
         setState(() {
           _housesClientsOpacity = 1.0;
           Future.delayed(const Duration(milliseconds: 800), () {
-            if (mounted) {
-              _animationController.forward();
-            }
-          });// Second section after 1000ms
+            if (mounted) _animationController.forward();
+          });
         });
       }
     });
     Future.delayed(const Duration(milliseconds: 1000), () {
       if (mounted) {
-        setState(() {
-          _propertiesOpacity = 1.0; // Third section after 1500ms
-        });
+        setState(() => _propertiesOpacity = 1.0);
       }
     });
     Future.delayed(const Duration(milliseconds: 2000), () {
       if (mounted) {
-        setState(() {
-          _rentPriceOpacity = 1.0; // Fourth section after 2000ms
-        });
+        setState(() => _rentPriceOpacity = 1.0);
       }
     });
   }
@@ -181,6 +176,8 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
   }
 
   Future<void> _fetchClientStatusCounts() async {
+    if (!mounted) return; // Early exit if not mounted
+
     setState(() {
       _isLoadingClients = true;
       _errorMessage = null;
@@ -191,10 +188,12 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
       final String? realtorId = userProvider.uid;
 
       if (realtorId == null) {
-        setState(() {
-          _isLoadingClients = false;
-          _errorMessage = "Realtor ID is null. Please log in again.";
-        });
+        if (mounted) {
+          setState(() {
+            _isLoadingClients = false;
+            _errorMessage = "Realtor ID is null. Please log in again.";
+          });
+        }
         return;
       }
 
@@ -209,18 +208,22 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
         counts[status] = (counts[status] ?? 0) + 1;
       }
 
-      setState(() {
-        clientStatusCounts = counts;
-        _isLoadingClients = false;
-      });
+      if (mounted) {
+        setState(() {
+          clientStatusCounts = counts;
+          _isLoadingClients = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoadingClients = false;
-        _errorMessage = "Failed to load client status: $e";
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load client status: $e')),
-      );
+      if (mounted) {
+        setState(() {
+          _isLoadingClients = false;
+          _errorMessage = "Failed to load client status: $e";
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load client status: $e')),
+        );
+      }
     }
   }
 
@@ -361,7 +364,7 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget _buildWebLayout(BuildContext context) {
     final theme = Theme.of(context);
     final userProvider = Provider.of<UserProvider>(context);
 
@@ -777,6 +780,394 @@ class _RealtorDashboardState extends State<RealtorDashboard> with SingleTickerPr
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Row 1: Notifications
+            AnimatedOpacity(
+              opacity: _notificationsOpacity,
+              duration: const Duration(milliseconds: 500),
+              child: _buildModernCard(
+                SizedBox(
+                  height: 275,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Notifications",
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: (275) - 45,
+                        child: ListView.builder(
+                          itemCount: notifications.length,
+                          itemBuilder: (context, index) {
+                            final notification = notifications[index];
+                            final String initial = notification['message'].toString().substring(0, 1).toUpperCase();
+                            Color statusColor;
+                            switch (notification['status']) {
+                              case 'liked':
+                                statusColor = Colors.blue;
+                                break;
+                              case 'disliked':
+                                statusColor = Colors.orange;
+                                break;
+                              case 'approved':
+                                statusColor = Colors.green;
+                                break;
+                              case 'disapproved':
+                                statusColor = Colors.red;
+                                break;
+                              default:
+                                statusColor = Colors.grey;
+                            }
+                            return ListTile(
+                              leading: CircleAvatar(
+                                radius: 20,
+                                backgroundColor: statusColor.withOpacity(0.2),
+                                child: Text(
+                                  initial,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ),
+                              title: Text(
+                                notification['message'],
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Row 2: Clients
+            AnimatedOpacity(
+              opacity: _housesClientsOpacity,
+              duration: const Duration(milliseconds: 1000),
+              child: _buildModernCard(
+                SizedBox(
+                  height: 100,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Clients",
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _isLoadingClients
+                          ? const Center(child: CircularProgressIndicator())
+                          : _errorMessage != null
+                          ? Text(
+                        _errorMessage!,
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      )
+                          : Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Total: ${clientStatusCounts.values.reduce((a, b) => a + b)}",
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Flexible(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 2,
+                                            height: 16,
+                                            color: Color(0xFF1F51FF),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            "Update: ${clientStatusCounts["Update"]}",
+                                            style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 2,
+                                            height: 16,
+                                            color: Color(0xFFBC13FE),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            "Active: ${clientStatusCounts["Active"]}",
+                                            style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 2,
+                                            height: 16,
+                                            color: Color(0xFF39FF14),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            "Inactive: ${clientStatusCounts["Inactive"]}",
+                                            style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            _buildStatusBar(),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Row 3: Property Updates
+            AnimatedOpacity(
+              opacity: _propertiesOpacity,
+              duration: const Duration(milliseconds: 1500),
+              child: _buildModernCard(
+                SizedBox(
+                  height: 275,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Property Updates",
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: recentProperties.length,
+                          itemBuilder: (context, index) {
+                            final property = recentProperties[index];
+                            return ListTile(
+                              title: Text(
+                                property['address'],
+                                style: theme.textTheme.bodyMedium,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                "Price: \$${property['price']}",
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.secondary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing: Text(
+                                property['status'],
+                                style: TextStyle(
+                                  color: property['status'] == "For Sale" ? Colors.green : Colors.orange,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Row 4: Houses Sold
+            AnimatedOpacity(
+              opacity: _housesClientsOpacity,
+              duration: const Duration(milliseconds: 2000),
+              child: _buildModernCard(
+                SizedBox(
+                  height: 275,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Houses Sold",
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Flexible(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  "Target:",
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  width: 60,
+                                  child: TextField(
+                                    controller: _targetController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                    ),
+                                    style: theme.textTheme.bodyMedium,
+                                    onSubmitted: (value) {
+                                      final newTarget = double.tryParse(value);
+                                      if (newTarget != null && newTarget >= 0) {
+                                        setState(() {
+                                          monthlyTarget = newTarget;
+                                          _targetController.text = newTarget.toString();
+                                          _animationController.reset();
+                                          _needleAnimation = Tween<double>(begin: 0, end: housesSold).animate(
+                                            CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+                                          );
+                                          _animationController.forward();
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(child: _buildHousesSoldMeter()),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Row 5: Average Rent Price
+            AnimatedOpacity(
+              opacity: _rentPriceOpacity,
+              duration: const Duration(milliseconds: 500),
+              child: _buildModernCard(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Average Rent Price",
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    AspectRatio(
+                      aspectRatio: 1.70,
+                      child: AverageGraphs(title: "Average House Price", graphType: "rent"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Row 6: Average House Price
+            AnimatedOpacity(
+              opacity: _rentPriceOpacity,
+              duration: const Duration(milliseconds: 500),
+              child: _buildModernCard(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Average House Price",
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    AspectRatio(
+                      aspectRatio: 1.70,
+                      child: AverageGraphs(title: "Average House Price", graphType: "house"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final userProvider = Provider.of<UserProvider>(context);
+
+    bool isSmallScreen = MediaQuery.of(context).size.width < 800;
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: isSmallScreen ? _buildMobileLayout(context) : _buildWebLayout(context),
     );
   }
 }

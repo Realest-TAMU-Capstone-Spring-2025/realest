@@ -55,10 +55,13 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                //User Details
                 Text(
                   '${userProvider.firstName ?? ''} ${userProvider.lastName ?? ''}'.trim(),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: widget.isDarkMode ? Colors.white : Colors.black, // Respect dark mode
+                  ),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -140,7 +143,13 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
       _NavItem(icon: Icons.calculate, label: "Calculators", route: '/realtorCalculators', isDrawer: isDrawer),
       _NavItem(icon: Icons.people, label: "Clients", route: '/realtorClients', isDrawer: isDrawer),
       _NavItem(icon: Icons.assessment, label: "Reports", route: '/realtorReports', isDrawer: isDrawer),
-      _NavItem(icon: Icons.logout, label: "Logout", route: '/logout', isDrawer: isDrawer, onTap: () => _showLogoutDialog(context)),
+      _NavItem(
+        icon: Icons.logout,
+        label: "Logout",
+        route: '/logout',
+        isDrawer: isDrawer,
+        onTap: () => _showLogoutDialog(context),
+      ),
     ];
   }
 
@@ -174,6 +183,7 @@ class _RealtorNavBarState extends State<RealtorNavBar> {
     );
   }
 }
+
 class _NavItem extends StatefulWidget {
   final IconData icon;
   final String label;
@@ -198,10 +208,15 @@ class __NavItemState extends State<_NavItem> {
 
   @override
   Widget build(BuildContext context) {
+    final realtorNavBar = context.findAncestorWidgetOfExactType<RealtorNavBar>();
+    final isDarkMode = realtorNavBar?.isDarkMode ?? false; // Get isDarkMode from parent widget
     bool isSelected = GoRouterState.of(context).matchedLocation == widget.route;
-
-    // ✅ Get sidebar expansion state
     bool isSidebarExpanded = context.findAncestorStateOfType<_RealtorNavBarState>()?._isExpanded ?? false;
+
+    // Determine default color based on dark mode and layout
+    Color defaultColor = widget.isDrawer
+        ? (isDarkMode ? Colors.white : Colors.black) // Drawer: white in dark mode, black in light mode
+        : Colors.white; // Sidebar: always white (assuming dark background)
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -213,7 +228,7 @@ class __NavItemState extends State<_NavItem> {
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          child: ClipRect( // ✅ Prevents overflow
+          child: ClipRect(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 8),
@@ -227,8 +242,8 @@ class __NavItemState extends State<_NavItem> {
               ),
               child: Row(
                 mainAxisAlignment: isSidebarExpanded || widget.isDrawer
-                    ? MainAxisAlignment.start // ✅ Align left when expanded or in drawer
-                    : MainAxisAlignment.center, // ✅ Center icons when collapsed
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.center,
                 children: [
                   AnimatedScale(
                     scale: _isHovered ? 1.2 : 1.0,
@@ -237,27 +252,24 @@ class __NavItemState extends State<_NavItem> {
                       widget.icon,
                       color: isSelected
                           ? Colors.deepPurpleAccent
-                          : widget.isDrawer
-                          ? Colors.black
-                          : Colors.white,
+                          : _isHovered
+                          ? Colors.deepPurpleAccent
+                          : defaultColor, // Use defaultColor based on dark mode
                     ),
                   ),
-                  if (isSidebarExpanded || widget.isDrawer) // ✅ Only add text if sidebar is expanded
-                    Expanded( // ✅ Prevents text from forcing a width overflow
+                  if (isSidebarExpanded || widget.isDrawer)
+                    Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(left: 12),
                         child: Text(
                           widget.label,
-                          // ✅ Ensures text does not exceed width
                           softWrap: false,
                           style: TextStyle(
-                            color: _isHovered
+                            color: isSelected
                                 ? Colors.deepPurpleAccent
-                                : isSelected
+                                : _isHovered
                                 ? Colors.deepPurpleAccent
-                                : widget.isDrawer
-                                ? Colors.black
-                                : Colors.white,
+                                : defaultColor, // Use defaultColor based on dark mode
                             fontSize: 16,
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                           ),
