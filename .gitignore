@@ -51,6 +51,9 @@
 **/unlinked.ds
 **/unlinked_spec.ds
 
+# Firebase 
+**/lib/firebase_options.dart
+
 # Android related
 **/android/**/gradle-wrapper.jar
 .gradle/
@@ -92,6 +95,7 @@
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Runner/GoogleService-Info.plist
 
 # macOS
 **/Flutter/ephemeral/
@@ -126,6 +130,9 @@ app.*.symbols
 # Environment Variables
 .env
 env.g.dart
+web/index.html
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
 
 # Fastlane specific
 **/fastlane/report.xml
@@ -144,3 +151,10 @@ env.g.dart
 .fvm
 
 android/app/.cxx/
+
+#Node.js
+server/node_modules/
+server/npm-debug.log
+server/yarn-error.log
+server/*.log
+server/.env

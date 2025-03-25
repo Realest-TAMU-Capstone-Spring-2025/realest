@@ -6,8 +6,11 @@ import 'package:provider/provider.dart'; // State management provider for managi
 import '../../user_provider.dart'; // Custom provider for user data management
 import 'package:google_fonts/google_fonts.dart'; // Custom fonts for UI styling
 import "package:realest/services/auth_service.dart";
+import 'package:go_router/go_router.dart';
+import 'dart:async';
+import '../../user_provider.dart';
 
-// Stateful widget for the custom login page
+//Custom Login Page
 class CustomLoginPage extends StatefulWidget {
   const CustomLoginPage({Key? key}) : super(key: key);
 
@@ -24,6 +27,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   bool _isLoading = false; // State to show loading indicator
   String? _errorMessage; // Holds error messages from authentication
   String _selectedRole = 'investor'; // Default role
+  Timer? _errorTimer;
 
 
   // Firebase authentication and Firestore database instances
@@ -39,6 +43,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   // Dispose controllers when the widget is removed from the tree to prevent memory leaks
   @override
   void dispose() {
+     _errorTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -63,7 +68,8 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
         await authService.signInWithEmail(_emailController.text, _passwordController.text);
       }
     } on FirebaseAuthException catch (e) {
-      setState(() => _errorMessage = _getAuthErrorMessage(e));
+      final message = _getAuthErrorMessage(e);
+      setState(() => _errorMessage = message);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -90,12 +96,12 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
         });
 
         // Navigate based on user role
+        Provider.of<UserProvider>(context, listen: false).fetchUserData();
         if (_selectedRole == "realtor") {
-          Provider.of<UserProvider>(context, listen: false).fetchRealtorData();
 
-          Navigator.pushNamedAndRemoveUntil(context, "/realtorHome", (route) => false);
+          context.go( "/realtorDashboard");
         } else {
-          Navigator.pushNamedAndRemoveUntil(context, "/investorHome", (route) => false);
+          context.go( "/investorHome");
         }
       } else if (mounted) {
         setState(() {
@@ -142,16 +148,24 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   // Navigate to the correct page after successful registration
   void _navigateAfterRegistration() {
     if (_selectedRole == "investor") {
-      Navigator.pushNamedAndRemoveUntil(context, "/investorHome", (route) => false);
+      context.go('/investorSetup');
     } else {
-      Navigator.pushNamedAndRemoveUntil(context, "/realtorSetup", (route) => false);
+      context.go("/realtorSetup");
     }
   }
 
 
   // Maps Firebase authentication error codes to user-friendly messages
   String _getAuthErrorMessage(FirebaseAuthException e) {
-    print(e.code); // Debugging
+    // print(e.code);
+    if(_errorTimer != null) {
+      _errorTimer!.cancel();
+    }
+    _errorTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() => _errorMessage = null);
+      }
+    });
     switch (e.code) {
       case 'invalid-email':
         return 'The email address is not valid.';
@@ -211,24 +225,23 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      _isRegister ? 'Please Sign Up' : 'Please Sign In',
-                      style: GoogleFonts.poppins(fontSize: 20, color: Colors.grey, fontWeight: FontWeight.bold),
+                      _errorMessage ?? (_isRegister ? 'Please Sign Up' : 'Please Sign In'),
+                      style: _errorMessage != null
+                          ? const TextStyle(color: Colors.red, fontSize: 14)
+                          : GoogleFonts.poppins(
+                              fontSize: 20,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      textAlign: TextAlign.center,
                     ),
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        _errorMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 14),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
                     const SizedBox(height: 40),
-                    _buildTextField(_emailController, 'Email', false),
+                    _buildTextField(_emailController, 'Email', false, false),
                     const SizedBox(height: 16),
-                    _buildTextField(_passwordController, 'Password', true),
+                    _buildTextField(_passwordController, 'Password', true, !_isRegister),
                     if (_isRegister) ...[
                       const SizedBox(height: 16),
-                      _buildTextField(_confirmPasswordController, 'Confirm Password', true),
+                      _buildTextField(_confirmPasswordController, 'Confirm Password', true, true),
                       const SizedBox(height: 16),
                       ToggleButtons(
                         borderRadius: BorderRadius.circular(30),
@@ -269,9 +282,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     );
   }
 
-
-  // Function to create text fields
-  Widget _buildTextField(TextEditingController controller, String hint, bool obscure) {
+  Widget _buildTextField(TextEditingController controller, String hint, bool obscure, bool isLastField) {
     return TextField(
       controller: controller,
       decoration: InputDecoration(
@@ -289,6 +300,15 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
       ),
       obscureText: obscure,
       keyboardType: obscure ? TextInputType.text : TextInputType.emailAddress,
+
+        // If it's the last text field, pressing Enter triggers the login logic
+        textInputAction:
+        isLastField ? TextInputAction.done : TextInputAction.next,
+        onSubmitted: (value) {
+          if (isLastField) {
+            _authenticate();
+          }
+        },
     );
   }
 
