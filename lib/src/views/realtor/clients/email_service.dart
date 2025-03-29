@@ -8,7 +8,8 @@ class EmailService {
       String invitationCode,
       BuildContext context,
       ) async {
-    final url = Uri.parse('http://localhost:3000/send-email'); // Node.js server URL
+    // Use the Vercel production URL instead of localhost
+    final url = Uri.parse('https://imap-server-f5z6xeiyv-eshwars-projects-8d469d55.vercel.app/send-email');
 
     final body = jsonEncode({
       'clientEmail': clientEmail,
@@ -31,7 +32,7 @@ class EmailService {
       } else {
         final errorMessage = jsonDecode(response.body)['error'] ?? 'Unknown error';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send invite: $errorMessage')),
+          SnackBar(content: Text('Failed to send invite: $errorMessage (Status: ${response.statusCode})')),
         );
       }
     } catch (e) {
