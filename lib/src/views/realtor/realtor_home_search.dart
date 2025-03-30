@@ -87,8 +87,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
         "sqft": data["sqft"] ?? 0,
         "mls_id": data["mls_id"] ?? "N/A",
         "image": (data["primary_photo"] != null && data["primary_photo"] != "")
-            ? "http://localhost"
-            ":8080/${data["primary_photo"]}"
+            ? data["primary_photo"].replaceAll("http://", "https://")
             : "https://bearhomes.com/wp-content/uploads/2019/01/default-featured.png",
       };
     }).toList(); // ✅ Now it's a List<Map<String, dynamic>>
@@ -136,26 +135,13 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
       ),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, controller) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: PropertiesView(
-            propertyId: propertyId,
-            showSaveIcon: true,
-          ),
-        ),
-      ),
+      builder: (_) => PropertyDetailSheet(property: propertyData),
       //disable swipe to close
       enableDrag: false,
 
     );
   }
+
 
 
 

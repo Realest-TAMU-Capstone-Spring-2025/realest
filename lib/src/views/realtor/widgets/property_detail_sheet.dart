@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
@@ -9,6 +11,7 @@ import 'package:realest/src/views/realtor/widgets/property_detail_widgets/proper
 import 'package:realest/src/views/realtor/widgets/property_detail_widgets/property_location_widget.dart';
 import 'package:realest/src/views/realtor/widgets/property_detail_widgets/property_price_widget.dart';
 import 'package:realest/src/views/realtor/widgets/property_detail_widgets/tax_assessment_widget.dart';
+import 'package:realest/src/views/realtor/widgets/select_client_dialog.dart';
 
 class PropertyDetailSheet extends StatelessWidget {
   final Map<String, dynamic> property;
@@ -36,6 +39,21 @@ class PropertyDetailSheet extends StatelessWidget {
                   ImageGalleryWidget(
                     imageUrls: List<String>.from(property["alt_photos"] ?? []), // Safe casting
                   ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.send),
+                    label: const Text("Send Property to Client"),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 45),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      _sendPropertyToClient(context, property["id"]);
+                    },
+                  ),
+
                   const SizedBox(height: 12),
                   Text(
                     property["address"] as String? ?? 'N/A',
@@ -106,4 +124,30 @@ class PropertyDetailSheet extends StatelessWidget {
       ),
     );
   }
+
+  void _sendPropertyToClient(BuildContext context, String propertyId) async {
+    final selectedClient = await showDialog<String>(
+      context: context,
+      builder: (_) => SelectClientDialog(),
+    );
+
+    if (selectedClient != null) {
+      final realtorId = FirebaseAuth.instance.currentUser?.uid;
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(selectedClient)
+          .collection('recommended_properties')
+          .doc(propertyId)
+          .set({
+        'sent_by': realtorId,
+        'sent_at': FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Property sent to client!')),
+      );
+    }
+  }
+
+
 }
