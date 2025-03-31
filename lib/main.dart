@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:realest/firebase_options.dart';
+import 'package:realest/src/views/home/overview/overview_page.dart';
 
 // Views related to the investor
 import 'package:realest/src/views/investor/investor_settings.dart';
@@ -27,6 +28,7 @@ import 'package:realest/src/views/navbar.dart'; // Sidebar navigation
 
 // Provider and user-related imports
 import 'user_provider.dart';
+
 
 import 'package:flutter/cupertino.dart';
 
@@ -74,11 +76,11 @@ class _MyAppState extends State<MyApp> {
 /// **GoRouter Configuration**
 GoRouter _router(VoidCallback toggleTheme, ThemeMode themeMode) {
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/home',
     routes: [
       GoRoute(
-        path: '/',
-        builder: (context, state) => AuthGate(toggleTheme: toggleTheme, themeMode: themeMode),
+        path: '/home',
+        builder: (context, state) => HomePage(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const CustomLoginPage()),
 
