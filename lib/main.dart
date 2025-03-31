@@ -220,14 +220,16 @@ class MainLayout extends StatelessWidget {
 ThemeData _lightTheme() {
   return ThemeData(
     primaryColor: Colors.black,
-    scaffoldBackgroundColor: Colors.white,
+    scaffoldBackgroundColor: Colors.white24,
     cardColor: Colors.grey[200],
+
     colorScheme: const ColorScheme.light(
       primary: Colors.deepPurple, // Buttons and selected navbar item
       secondary: Colors.black87, // Secondary elements
       surface: Colors.white, // Default text color
       surfaceVariant: Colors.black, // Navbar background
       onSurface: Colors.black,
+      onTertiary: Colors.white38, // Text color for elevated buttons
     ),
     textTheme: const TextTheme(
       bodyLarge: TextStyle(color: Colors.black),
@@ -251,7 +253,7 @@ ThemeData _lightTheme() {
 ThemeData _darkTheme() {
   return ThemeData(
     primaryColor: Colors.white,
-    scaffoldBackgroundColor: Colors.black87,
+    scaffoldBackgroundColor: Colors.black54,
     cardColor: Colors.grey[900],
     colorScheme: const ColorScheme.dark(
       primary: Colors.deepPurpleAccent, // Buttons and selected navbar item
