@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart'; // For Firestore
 import '../../../../user_provider.dart';
 import 'mouse_region_provider.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 
 class RealtorClients extends StatefulWidget {
@@ -311,13 +312,22 @@ class _RealtorClientsState extends State<RealtorClients> {
   }
 
   //delete client
-  Future<void> _deleteClient(String uid) async {
+  Future<void> _deleteClient(String uid, String name) async {
     // Show confirmation dialog
-    final confirm = await showDialog<bool>(
+    showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Client"),
-        content: const Text("Are you sure you want to delete this client?"),
+        content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text("This action cannot be undone."),
+          Text("Are you sure you want to delete this lead?"),
+          const SizedBox(height: 12),
+          // name of the lead
+          Text("${name}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red)),
+        ],
+      ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -326,7 +336,11 @@ class _RealtorClientsState extends State<RealtorClients> {
           ElevatedButton(
             onPressed: () async {
               await FirebaseFirestore.instance.collection('investors').doc(uid).delete();
-              _fetchClients();
+              //updaate the client list without calling the fetch clients
+              setState(() {
+                _clients.removeWhere((client) => client['uid'] == uid);
+              });
+              Navigator.pop(context, true);
               Navigator.pop(context, true);
             },
             child: const Text("Delete"),
@@ -338,118 +352,162 @@ class _RealtorClientsState extends State<RealtorClients> {
 
   //client details dialog
   Future<void> _showClientDetailsDialog(String uid) async {
-    final theme = Theme.of(context);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final realtorId = userProvider.uid;
+
     final clientDoc = await FirebaseFirestore.instance.collection('investors').doc(uid).get();
     final data = clientDoc.data();
     if (data == null) return;
 
     final TextEditingController notesController = TextEditingController(text: data['notes'] ?? '');
-    final TextEditingController tagController = TextEditingController();
-    List<String> tags = List<String>.from(data['tags'] ?? []);
-    List<Map<String, dynamic>> sentHomes = List<Map<String, dynamic>>.from(data['sentProperties'] ?? []);
-    List<Map<String, dynamic>> likedHomes = List<Map<String, dynamic>>.from(data['likedProperties'] ?? []);
-    List<Map<String, dynamic>> dislikedHomes = List<Map<String, dynamic>>.from(data['dislikedProperties'] ?? []);
 
-    await showDialog(
+    final tagsSnapshot = await FirebaseFirestore.instance
+        .collection('realtors')
+        .doc(realtorId)
+        .collection('tags')
+        .get();
+
+    List<QueryDocumentSnapshot> allTags = tagsSnapshot.docs;
+    List<String> assignedTags = allTags
+        .where((doc) => (doc['investors'] as List).contains(uid))
+        .map((doc) => doc.id)
+        .toList();
+
+    final TextEditingController searchController = TextEditingController();
+
+    showDialog(
       context: context,
       builder: (context) {
-        return Dialog(
-          insetPadding: const EdgeInsets.all(16),
-          child: Container(
-            width: 600,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.dialogBackgroundColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("${data['firstName']} ${data['lastName']}", style: theme.textTheme.headlineSmall),
-                  const SizedBox(height: 8),
-                  Text("Email: ${data['contactEmail']}"),
-                  Text(data['contactPhone'] != null && data['contactPhone'].toString().isNotEmpty
-                      ? "Phone: +1 ${data['contactPhone']}"
-                      : "Phone: Not provided"),
-                  const Divider(height: 32),
+        return StatefulBuilder(builder: (context, setModalState) {
+          final filteredTags = allTags.where((doc) {
+            final searchLower = searchController.text.toLowerCase();
+            return doc['name'].toLowerCase().contains(searchLower);
+          }).toList();
 
-                  Text("Notes", style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      filled: true,
-                      border: OutlineInputBorder(),
-                      hintText: "Add notes about this client...",
+          return Dialog(
+            insetPadding: const EdgeInsets.all(16),
+            child: Container(
+              width: 600,
+              padding: const EdgeInsets.all(20),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("${data['firstName']} ${data['lastName']}",
+                        style: Theme.of(context).textTheme.headlineSmall),
+                    const SizedBox(height: 8),
+                    Text("Email: ${data['contactEmail']}"),
+                    Text(data['contactPhone']?.isNotEmpty ?? false
+                        ? "Phone: +1 ${data['contactPhone']}"
+                        : "Phone: Not provided"),
+                    const Divider(height: 32),
+                    const SizedBox(height: 8),
+                    Text("Notes", style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: notesController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: "Client notes...",
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  Text("Tags", style: theme.textTheme.titleMedium),
-                  Wrap(
-                    spacing: 8,
-                    children: tags.map((tag) {
-                      return Chip(
-                        label: Text(tag),
-                        onDeleted: () {
-                          setState(() {
-                            tags.remove(tag);
-                          });
+                    // Tag assignment section with search
+                    Text("Assign Tags", style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: searchController,
+                      decoration: InputDecoration(
+                        hintText: "Search tags...",
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (_) => setModalState(() {}),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 200,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: filteredTags.length,
+                        itemBuilder: (context, index) {
+                          final tagDoc = filteredTags[index];
+                          final isAssigned = assignedTags.contains(tagDoc.id);
+
+                          return CheckboxListTile(
+                            secondary: CircleAvatar(
+                              backgroundColor: Color(tagDoc['color']),
+                            ),
+                            title: Text(tagDoc['name']),
+                            value: isAssigned,
+                            onChanged: (checked) async {
+                              final docRef = FirebaseFirestore.instance
+                                  .collection('realtors')
+                                  .doc(realtorId)
+                                  .collection('tags')
+                                  .doc(tagDoc.id);
+
+                              if (checked == true) {
+                                await docRef.update({
+                                  'investors': FieldValue.arrayUnion([uid])
+                                });
+                                assignedTags.add(tagDoc.id);
+                              } else {
+                                await docRef.update({
+                                  'investors': FieldValue.arrayRemove([uid])
+                                });
+                                assignedTags.remove(tagDoc.id);
+                              }
+                              setModalState(() {});
+                            },
+                          );
                         },
-                      );
-                    }).toList(),
-                  ),
-                  TextField(
-                    controller: tagController,
-                    decoration: InputDecoration(
-                      hintText: "Add new tag",
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.add),
-                        onPressed: () {
-                          if (tagController.text.trim().isNotEmpty) {
-                            setState(() {
-                              tags.add(tagController.text.trim());
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          //make red
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
+                          onPressed: () {
+                            _deleteClient(uid, "${data['firstName']} ${data['lastName']}");
+                          },
+                          child: const Text("Delete Client"),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            await FirebaseFirestore.instance
+                                .collection('investors')
+                                .doc(uid)
+                                .update({
+                              'notes': notesController.text.trim(),
                             });
-                            tagController.clear();
-                          }
-                        },
-                      ),
+                            Navigator.pop(context);
+                            _fetchClients();
+                          },
+                          child: const Text("Save"),
+                        ),
+                      ],
                     ),
-                  ),
-
-
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Cancel"),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: () async {
-                          await FirebaseFirestore.instance.collection('investors').doc(uid).update({
-                            'notes': notesController.text.trim(),
-                            'tags': tags,
-                          });
-                          _fetchClients();
-                          Navigator.pop(context);
-                        },
-                        child: const Text("Save"),
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        );
+          );
+        });
       },
     );
-
   }
 
   Widget _buildNewLeadCard(Map<String, dynamic> client) {
@@ -515,6 +573,7 @@ class _RealtorClientsState extends State<RealtorClients> {
                   ),
                   child: const Text("Notes"),
                 ),
+
                 ElevatedButton(
                   onPressed: () => _updateClientStatus(uid, 'qualified-lead'),
                   child: const Text("Qualify"),
@@ -525,7 +584,6 @@ class _RealtorClientsState extends State<RealtorClients> {
                 ),
               ],
             )
-
           ],
         ),
       ),
@@ -661,6 +719,137 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
+
+// Updated tags management dialog with color picker
+  Future<void> _showTagsManagementDialog() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final realtorId = userProvider.uid;
+
+    final tagsSnapshot = await FirebaseFirestore.instance
+        .collection('realtors')
+        .doc(realtorId)
+        .collection('tags')
+        .get();
+
+    List<QueryDocumentSnapshot> tagsDocs = tagsSnapshot.docs;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final TextEditingController tagController = TextEditingController();
+        Color selectedColor = Colors.blue; // default color
+
+        return StatefulBuilder(builder: (context, setModalState) {
+          return AlertDialog(
+            title: const Text("Manage Tags"),
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Expanded(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: tagsDocs.map((doc) {
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Color(doc['color']),
+                          ),
+                          title: Text(doc['name']),
+                          trailing: IconButton(
+                            icon: Icon(Icons.delete, color: Colors.red),
+                            onPressed: () async {
+                              await FirebaseFirestore.instance
+                                  .collection('realtors')
+                                  .doc(realtorId)
+                                  .collection('tags')
+                                  .doc(doc.id)
+                                  .delete();
+                              Navigator.pop(context);
+                              _showTagsManagementDialog();
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  TextField(
+                    controller: tagController,
+                    decoration: const InputDecoration(
+                      labelText: "New Tag Name",
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Text("Pick Color:", style: TextStyle(fontSize: 16)),
+                      const SizedBox(width: 10),
+                      GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Select Tag Color'),
+                              content: SingleChildScrollView(
+                                child: ColorPicker(
+                                  pickerColor: selectedColor,
+                                  onColorChanged: (color) {
+                                    setModalState(() {
+                                      selectedColor = color;
+                                    });
+                                  },
+                                ),
+                              ),
+                              actions: [
+                                ElevatedButton(
+                                  child: const Text('Done'),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        child: CircleAvatar(
+                          backgroundColor: selectedColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text("Cancel"),
+                onPressed: () => Navigator.pop(context),
+              ),
+              ElevatedButton(
+                child: const Text("Add Tag"),
+                onPressed: () async {
+                  final name = tagController.text.trim();
+                  if (name.isNotEmpty) {
+                    await FirebaseFirestore.instance
+                        .collection('realtors')
+                        .doc(realtorId)
+                        .collection('tags')
+                        .add({
+                      'name': name,
+                      'color': selectedColor.value,
+                      'investors': [],
+                    });
+                    Navigator.pop(context);
+                    _showTagsManagementDialog();
+                  }
+                },
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -689,7 +878,6 @@ class _RealtorClientsState extends State<RealtorClients> {
                     ),
                   ),
                   const SizedBox(width: 16),
-
                 ],
               ),
               const SizedBox(height: 16),
@@ -760,9 +948,22 @@ class _RealtorClientsState extends State<RealtorClients> {
                       );
                     },
 
-                    body: Column(
-                      children: _clients.where(
-                        (client) => client['status'] == 'lead',).map<Widget>(_buildNewLeadCard).toList(),
+                    body: Builder(
+                      builder: (context) {
+                        final leadClients = _clients.where((client) => client['status'] == 'lead').toList();
+
+                        return leadClients.isEmpty
+                            ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: Text(
+                            'No leads available.',
+                            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                          ),
+                        )
+                            : Column(
+                          children: leadClients.map<Widget>(_buildNewLeadCard).toList(),
+                        );
+                      },
                     ),
                     isExpanded: _isLeadExpanded,
                     canTapOnHeader: true,
@@ -778,27 +979,37 @@ class _RealtorClientsState extends State<RealtorClients> {
                 children: [
                   ExpansionPanel(
                     headerBuilder: (BuildContext context, bool isExpanded) {
-                      return ListTile(
-                        title: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              "Qualified Leads",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            )
-                          ],
+                      return const ListTile(
+                        title: Text(
+                          "Qualified Leads",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       );
                     },
+                    body: Builder(
+                      builder: (context) {
+                        final qualifiedClients = _clients
+                            .where((client) => client['status'] == 'qualified-lead')
+                            .toList();
 
-                    body: Column(
-                      children: _clients.where(
-                            (client) => client['status'] == 'qualified-lead',).map<Widget>(_buildQualifiedLeadCard).toList(),
+                        return qualifiedClients.isEmpty
+                            ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: Text(
+                            'No qualified leads available.',
+                            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                          ),
+                        )
+                            : Column(
+                          children: qualifiedClients
+                              .map<Widget>(_buildQualifiedLeadCard)
+                              .toList(),
+                        );
+                      },
                     ),
                     isExpanded: _isQualifiedLeadExpanded,
                     canTapOnHeader: true,
                   ),
-
                 ],
               ),
               const SizedBox(height: 15),
@@ -818,23 +1029,39 @@ class _RealtorClientsState extends State<RealtorClients> {
                             const Text(
                               "Clients",
                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            )
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.settings),
+                              onPressed: _showTagsManagementDialog,
+                            ),
                           ],
                         ),
                       );
                     },
+                    body: Builder(
+                      builder: (context) {
+                        final clientList = _clients
+                            .where((client) => client['status'] == 'client')
+                            .toList();
 
-                    body: Column(
-                      children: _clients.where(
-                            (client) => client['status'] == 'client',).map<Widget>(_buildClientCard).toList(),
+                        return clientList.isEmpty
+                            ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: Text(
+                            'No clients yet.',
+                            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                          ),
+                        )
+                            : Column(
+                          children: clientList.map<Widget>(_buildClientCard).toList(),
+                        );
+                      },
                     ),
                     isExpanded: _isClientExpanded,
                     canTapOnHeader: true,
                   ),
-
                 ],
               ),
-
             ],
           ),
         ),

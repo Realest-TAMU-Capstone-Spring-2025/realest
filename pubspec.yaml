@@ -74,6 +74,7 @@ dependencies:
   appflowy_board: ^0.1.0
   random_password_generator: ^0.2.1
   cloud_functions: ^5.4.0
+  flutter_colorpicker: ^1.0.3
 
 
 
