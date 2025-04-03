@@ -4,12 +4,12 @@ class WaveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final path = Path();
-    path.lineTo(0, size.height - 50); // Start at bottom-left with some offset
+    path.lineTo(0, size.height); // Start at the very bottom-left
 
     // Define wave points
-    final firstControlPoint = Offset(size.width / 4, 0);  // Flipped y
-    final firstEndPoint = Offset(size.width / 2, 30);     // Flipped y
-    final secondControlPoint = Offset(size.width * 3/4, 80);  // Flipped y
+    final firstControlPoint = Offset(size.width / 4, 0); // Top of the wave
+    final firstEndPoint = Offset(size.width / 2, 30);
+    final secondControlPoint = Offset(size.width * 3 / 4, 80);
     final secondEndPoint = Offset(size.width, 40);
 
     // Create quadratic Bezier curves for the wave
@@ -26,8 +26,8 @@ class WaveClipper extends CustomClipper<Path> {
       secondEndPoint.dy,
     );
 
-    path.lineTo(size.width, size.height);  // Close to bottom-right
-    path.lineTo(0, size.height);           // Back to bottom-left
+    path.lineTo(size.width, size.height); // Extend to bottom-right
+    path.lineTo(0, size.height); // Back to bottom-left
     path.close();
 
     return path;

@@ -66,6 +66,8 @@ dependencies:
   url_launcher: ^6.1.11
   video_player: ^2.9.5
   slider_button: ^2.1.0
+  animated_text_kit: ^4.2.2
+  visibility_detector: ^0.4.0
 
 dev_dependencies:
   flutter_test:
@@ -93,6 +95,7 @@ flutter:
   assets:
     - assets/images/
     - assets/videos/
+    - assets/demo/
 
   fonts:
     - family: globalFont

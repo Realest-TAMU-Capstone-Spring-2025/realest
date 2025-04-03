@@ -10,7 +10,7 @@ class Footer extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 5),
       child: TextButton(
         onPressed: () {},
-        child: Text(title, style: const TextStyle(color: Colors.white)),
+        child: Text(title, style: const TextStyle(fontSize: 18, color: Colors.white)),
       ),
     );
   }
@@ -27,16 +27,16 @@ class Footer extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.real_estate_agent, color: neonPurple, size: 40),
+                const Icon(Icons.real_estate_agent, color: neonPurple, size: 54),
                 const SizedBox(height: 10),
                 const Text(
                   'RealEst',
-                  style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 30, color: Colors.white, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
                 const Text(
                   '© 2025 RealEst',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(fontSize: 24, color: Colors.white),
                 ),
               ],
             ),
@@ -47,7 +47,7 @@ class Footer extends StatelessWidget {
               children: [
                 const Text(
                   'Quick Links',
-                  style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
                 _footerLink('Overview'),
@@ -71,7 +71,7 @@ class Footer extends StatelessWidget {
                     hintText: 'Enter your email',
                     hintStyle: const TextStyle(color: Colors.white),
                     filled: true,
-                    fillColor: Colors.grey[900],
+                    fillColor: Colors.black,
                     border: OutlineInputBorder(
                       borderSide: const BorderSide(color: neonPurple),
                       borderRadius: BorderRadius.circular(8),
@@ -84,6 +84,9 @@ class Footer extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       backgroundColor: neonPurple,
                     ),
                     child: const Text('Subscribe', style: TextStyle(color: Colors.white)),

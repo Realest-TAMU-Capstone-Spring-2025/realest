@@ -76,10 +76,10 @@ class _MyAppState extends State<MyApp> {
 /// **GoRouter Configuration**
 GoRouter _router(VoidCallback toggleTheme, ThemeMode themeMode) {
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/',
     routes: [
       GoRoute(
-        path: '/home',
+        path: '/',
         builder: (context, state) => HomePage(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const CustomLoginPage()),

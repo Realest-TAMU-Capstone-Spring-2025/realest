@@ -5,6 +5,7 @@ import 'app_overview.dart';
 import 'value_proposition.dart';
 import 'wave_clipper.dart';
 import 'progress_metrics.dart';
+import 'realtor_stats.dart';
 import '../footer.dart';
 
 class HomePage extends StatefulWidget {
@@ -137,11 +138,14 @@ class _HomePageState extends State<HomePage> {
               AppOverview(),
               const Divider(height: 10, color: neonPurple, indent: 100, endIndent: 100),
               ValuePropositions(),
-              const SizedBox(height: 80),
-              const Divider(height: 10, color: neonPurple, indent: 100, endIndent: 100),
-              const SizedBox(height: 60),
+              const SizedBox(height: 100),
+              // const Divider(height: 10, color: neonPurple, indent: 100, endIndent: 100),
               ProgressMetricsSection(scrollController: _scrollController),
               // Wave separation before Footer
+              const SizedBox(height: 40),
+              const Divider(height: 10, color: neonPurple, indent: 100, endIndent: 100),
+              RealtorStats(scrollController: _scrollController),
+              const SizedBox(height: 80),
               ClipPath(
                 clipper: WaveClipper(),
                 child: Container(
@@ -149,7 +153,12 @@ class _HomePageState extends State<HomePage> {
                   color: const Color(0x33D500F9), // Match Footer's background color
                 ),
               ),
-              Footer(),
+              Container(
+                // Ensure Footer starts immediately after the wave
+                margin: EdgeInsets.zero, // Remove any default margin
+                padding: EdgeInsets.zero, // Remove any default padding
+                child: Footer(),
+              ),
             ],
           ),
         ),
