@@ -109,6 +109,7 @@ flutter:
     - assets/images/
     - assets/videos/
     - assets/demo/
+    - assets/dark_map_style.json
 
   fonts:
     - family: globalFont

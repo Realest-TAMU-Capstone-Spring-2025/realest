@@ -1,12 +1,13 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle; // Import for rootBundle
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:realest/src/views/realtor/widgets/property-search-bar.dart';
 import 'package:realest/src/views/realtor/widgets/property_filter.dart';
 import 'package:realest/src/views/realtor/widgets/property_list.dart';
-import 'widgets/property_card.dart';
-import 'widgets/property_detail_sheet.dart';
+import 'package:realest/src/views/realtor/widgets/property_card.dart';
+import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
 import 'package:algolia_helper_flutter/algolia_helper_flutter.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
@@ -23,6 +24,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
   bool _isFilterOpen = false;
   String? _selectedPropertyId;
   bool _showingMap = true; // default to map on small screen
+  String? _darkMapStyle;
 
   final LayerLink _priceLink = LayerLink();
   OverlayEntry? _priceOverlayEntry;
@@ -65,6 +67,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
   void initState() {
     super.initState();
 
+    _loadMapStyle();
     // 👇 Enable hybrid composition for Android (fixes rendering issues)
     final GoogleMapsFlutterPlatform mapsImplementation = GoogleMapsFlutterPlatform.instance;
     if (mapsImplementation is GoogleMapsFlutterAndroid) {
@@ -87,11 +90,19 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+    if (_darkMapStyle != null) {
+      _mapController.setMapStyle(_darkMapStyle);
+    }
+  }
+
+  Future<void> _loadMapStyle() async {
+    _darkMapStyle = await rootBundle.loadString('assets/dark_map_style.json');
+    setState(() {}); // Update the UI once the style is loaded
   }
 
   Future<void> _selectProperty(String propertyId, LatLng location) async {
 
-   // get the property with this id from firestore
+    // get the property with this id from firestore
     final propertyRef = FirebaseFirestore.instance.collection('listings').doc(propertyId);
     final snapshot = await propertyRef.get();
 
@@ -313,14 +324,14 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
                                 if (!snapshot.hasData) return const SizedBox();
                                 return RepaintBoundary(
                                     child: GoogleMap(
-                                  initialCameraPosition: const CameraPosition(
-                                    target: LatLng(30.6280, -96.3344),
-                                    zoom: 12,
-                                  ),
-                                  onMapCreated: _onMapCreated,
-                                  markers: snapshot.data!,
-                                  mapType: MapType.normal,
-                                ));
+                                      initialCameraPosition: const CameraPosition(
+                                        target: LatLng(30.6280, -96.3344),
+                                        zoom: 12,
+                                      ),
+                                      onMapCreated: _onMapCreated,
+                                      markers: snapshot.data!,
+                                      mapType: MapType.normal,
+                                    ));
                               },
                             ),
                           ),
@@ -333,11 +344,11 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
                                 Expanded(
 
                                   child: RepaintBoundary(
-                                     child: PropertyList(
-                                       query: _filteredQuery,
-                                       buildPropertyCard: _buildPropertyCard,
-                                     ),
-                                ),)
+                                    child: PropertyList(
+                                      query: _filteredQuery,
+                                      buildPropertyCard: _buildPropertyCard,
+                                    ),
+                                  ),)
                               ],
                             ),
                           ),
@@ -1227,5 +1238,3 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
 
 
 }
-
-

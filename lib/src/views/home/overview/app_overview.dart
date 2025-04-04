@@ -349,7 +349,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(10),
                                         image: const DecorationImage(
-                                          image: AssetImage('assets/browser.png'),
+                                          image: AssetImage('assets/demo/browser.png'),
                                           fit: BoxFit.cover,
                                         ),
                                       ),
