@@ -132,6 +132,7 @@ class PropertyDetailSheet extends StatelessWidget {
                 .set({
               'property_id': propertyId,
               'sent_at': FieldValue.serverTimestamp(),
+              'status': 'pending',
             });
           }
           ScaffoldMessenger.of(context).showSnackBar(

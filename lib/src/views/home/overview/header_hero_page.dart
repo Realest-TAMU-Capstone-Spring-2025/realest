@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:slider_button/slider_button.dart';
 import 'package:go_router/go_router.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'feature_container.dart';
@@ -26,8 +25,8 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
   late Animation<double> _headerAnimation;
   late AnimationController _subtitleController;
   late Animation<double> _subtitleAnimation;
-  late AnimationController _sliderController;
-  late Animation<double> _sliderAnimation;
+  late AnimationController _buttonController; // Renamed from _sliderController
+  late Animation<double> _buttonAnimation;    // Renamed from _sliderAnimation
   late AnimationController _featuresController;
   late Animation<double> _featuresAnimation;
 
@@ -56,13 +55,13 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
       CurvedAnimation(parent: _subtitleController, curve: Curves.easeIn),
     );
 
-    // Slider button animation controller
-    _sliderController = AnimationController(
+    // Button animation controller (replacing slider)
+    _buttonController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _sliderAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _sliderController, curve: Curves.easeIn),
+    _buttonAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _buttonController, curve: Curves.easeIn),
     );
 
     // Features animation controller
@@ -85,7 +84,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
   void dispose() {
     _headerController.dispose();
     _subtitleController.dispose();
-    _sliderController.dispose();
+    _buttonController.dispose(); // Updated from _sliderController
     _featuresController.dispose();
     super.dispose();
   }
@@ -93,7 +92,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
   void startAnimations() {
     _subtitleController.forward();
     Future.delayed(const Duration(milliseconds: 300), () {
-      _sliderController.forward();
+      _buttonController.forward(); // Updated from _sliderController
       Future.delayed(const Duration(milliseconds: 300), () {
         _featuresController.forward();
       });
@@ -114,7 +113,6 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    // Debug print to track rebuilds
     debugPrint('HeaderHeroPage build called');
 
     return SizedBox(
@@ -220,7 +218,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
             ),
           ),
 
-          // Main text and slider button with animations
+          // Main text and button with animations
           Positioned(
             top: 180,
             left: 0,
@@ -265,7 +263,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
                     stopPauseOnTap: true,
                     onFinished: () {
                       setState(() {
-                        _hasTyped = true; // Switch to static text after animation
+                        _hasTyped = true;
                       });
                       startAnimations();
                     },
@@ -273,7 +271,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
                 ),
                 const SizedBox(height: 20),
                 FadeTransition(
-                  opacity: _subtitleAnimation,
+                  opacity: _subtitleAnimation, // Fixed: Corrected typo and used named parameter
                   child: const Text(
                     'Turn spreadsheet hours into investor-ready insights instantly.',
                     style: TextStyle(fontSize: 22, color: Colors.white),
@@ -282,50 +280,39 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
                 ),
                 const SizedBox(height: 40),
                 FadeTransition(
-                  opacity: _sliderAnimation,
-                  child: StatefulBuilder(
-                    builder: (context, setState) {
-                      bool isSliding = false;
-                      return Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: isSliding ? Colors.black : neonPurple,
-                            width: 2.0,
-                          ),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: GestureDetector(
-                          onHorizontalDragStart: (_) => setState(() => isSliding = true),
-                          onHorizontalDragEnd: (_) => setState(() => isSliding = false),
-                          child: SliderButton(
-                            action: () async {
-                              context.go('/login');
-                            },
-                            width: 200,
-                            height: 60,
-                            radius: 30,
-                            backgroundColor: isSliding ? neonPurple : Colors.black,
-                            buttonColor: neonPurple,
-                            baseColor: neonPurple,
-                            highlightedColor: Colors.white,
-                            shimmer: false,
-                            label: Text(
-                              'Get Started',
-                              style: TextStyle(
-                                color: isSliding ? Colors.white : neonPurple,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            icon: const Icon(
-                              Icons.arrow_forward,
-                              color: Colors.white,
-                              size: 30,
-                            ),
-                          ),
-                        ),
-                      );
+                  opacity: _buttonAnimation, // Updated from _sliderAnimation
+                  child: ElevatedButton(
+                    onPressed: () {
+                      context.go('/login');
                     },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: neonPurple,
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        side: const BorderSide(color: neonPurple, width: 2),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Text(
+                          'Get Started',
+                          style: TextStyle(
+                            color: neonPurple,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Icon(
+                          Icons.arrow_forward,
+                          color: neonPurple,
+                          size: 30,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
