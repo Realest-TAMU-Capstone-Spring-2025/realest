@@ -95,7 +95,7 @@ class _MyAppState extends State<MyApp> {
 
   GoRouter _createRouter(VoidCallback toggleTheme, ThemeMode themeMode) {
     return GoRouter(
-      initialLocation: '/login',
+      initialLocation: '/',
       routes: [
         GoRoute(
           path: '/',

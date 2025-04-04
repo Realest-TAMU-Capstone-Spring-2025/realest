@@ -122,24 +122,25 @@ class PropertyDetailSheet extends StatelessWidget {
       context: context,
       builder: (_) => SelectClientDialog(
         onClientsSelected: (List<String> selectedClientIds) async {
-          final realtorId = FirebaseAuth.instance.currentUser?.uid;
           for (String clientId in selectedClientIds) {
+            // For each selected investor, add the property to the recommended_properties subcollection.
             await FirebaseFirestore.instance
-                .collection('users')
+                .collection('investors')
                 .doc(clientId)
                 .collection('recommended_properties')
                 .doc(propertyId)
                 .set({
-              'sent_by': realtorId,
+              'property_id': propertyId,
               'sent_at': FieldValue.serverTimestamp(),
             });
           }
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Property sent to ${selectedClientIds.length} client(s)!')),
+            SnackBar(content: Text('Property sent to ${selectedClientIds.length} investor(s)!')),
           );
         },
         property: property, // Pass the property data
       ),
     );
   }
+
 }
