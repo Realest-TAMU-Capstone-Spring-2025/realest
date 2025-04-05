@@ -16,8 +16,7 @@ import 'package:realest/src/views/realtor/widgets/select_client_dialog.dart';
 class PropertyDetailSheet extends StatelessWidget {
   final Map<String, dynamic> property;
 
-  const PropertyDetailSheet({Key? key, required this.property})
-      : super(key: key);
+  const PropertyDetailSheet({Key? key, required this.property}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +25,6 @@ class PropertyDetailSheet extends StatelessWidget {
     return PointerInterceptor(
       child: Stack(
         children: [
-          // 🏡 Property Details Content
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -37,7 +35,7 @@ class PropertyDetailSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ImageGalleryWidget(
-                    imageUrls: List<String>.from(property["alt_photos"] ?? []), // Safe casting
+                    imageUrls: List<String>.from(property["alt_photos"] ?? []),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
@@ -53,7 +51,6 @@ class PropertyDetailSheet extends StatelessWidget {
                       _sendPropertyToClient(context, property["id"]);
                     },
                   ),
-
                   const SizedBox(height: 12),
                   Text(
                     property["address"] as String? ?? 'N/A',
@@ -71,9 +68,7 @@ class PropertyDetailSheet extends StatelessWidget {
                   const SizedBox(height: 20),
                   IntelligentOverviewWidget(overview: property["text"] ?? ""),
                   const SizedBox(height: 8),
-                  PropertyDescriptionWidget(
-                    description: property["text"] ?? "", // Handle missing descriptions
-                  ),
+                  PropertyDescriptionWidget(description: property["text"] ?? ""),
                   const SizedBox(height: 8),
                   TaxAssessmentWidget(taxHistory: property["tax_history"] ?? []),
                   const SizedBox(height: 20),
@@ -83,7 +78,6 @@ class PropertyDetailSheet extends StatelessWidget {
                     propertyId: property["id"] ?? "unknown",
                   ),
                   const SizedBox(height: 20),
-
                   ElevatedButton.icon(
                     icon: const Icon(Icons.message),
                     label: const Text("Contact Realtor"),
@@ -103,18 +97,16 @@ class PropertyDetailSheet extends StatelessWidget {
               ),
             ),
           ),
-
-          // ❌ **Close Button in Top Right**
           Positioned(
             right: 10,
             top: 10,
             child: GestureDetector(
-              onTap: () => Navigator.pop(context), // Close Modal
+              onTap: () => Navigator.pop(context),
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.black.withOpacity(0.6), // Background for contrast
+                  color: Colors.black.withOpacity(0.6),
                 ),
                 child: const Icon(Icons.close, color: Colors.white, size: 28),
               ),
@@ -126,28 +118,30 @@ class PropertyDetailSheet extends StatelessWidget {
   }
 
   void _sendPropertyToClient(BuildContext context, String propertyId) async {
-    final selectedClient = await showDialog<String>(
+    await showDialog(
       context: context,
-      builder: (_) => SelectClientDialog(),
+      builder: (_) => SelectClientDialog(
+        onClientsSelected: (List<String> selectedClientIds) async {
+          for (String clientId in selectedClientIds) {
+            // For each selected investor, add the property to the recommended_properties subcollection.
+            await FirebaseFirestore.instance
+                .collection('investors')
+                .doc(clientId)
+                .collection('recommended_properties')
+                .doc(propertyId)
+                .set({
+              'property_id': propertyId,
+              'sent_at': FieldValue.serverTimestamp(),
+              'status': 'pending',
+            });
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Property sent to ${selectedClientIds.length} investor(s)!')),
+          );
+        },
+        property: property, // Pass the property data
+      ),
     );
-
-    if (selectedClient != null) {
-      final realtorId = FirebaseAuth.instance.currentUser?.uid;
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(selectedClient)
-          .collection('recommended_properties')
-          .doc(propertyId)
-          .set({
-        'sent_by': realtorId,
-        'sent_at': FieldValue.serverTimestamp(),
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Property sent to client!')),
-      );
-    }
   }
-
 
 }
