@@ -175,6 +175,8 @@ class ProfilePic extends StatelessWidget {
                                   onPressed: () async {
                                     Navigator.of(dialogContext).pop();
                                     await FirebaseAuth.instance.signOut();
+                                    //clear user data from provider
+                                    userProvider.clearUserData();
                                     context.go("/login");
                                   },
                                   child: Text(

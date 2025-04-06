@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../user_provider.dart';
 import 'profile_pic.dart';
@@ -51,7 +50,7 @@ class _NavBarState extends State<NavBar> {
                   child: ProfilePic(
                     toggleTheme: widget.toggleTheme,
                     isDarkMode: widget.isDarkMode,
-                    onAccountSettings: () => context.go(userProvider.userRole == "realtor"? "/realtorSettings" : "/investorSettings"),
+                    onAccountSettings: () => context.go("/settings"),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -72,8 +71,6 @@ class _NavBarState extends State<NavBar> {
 
   /// **📌 Sidebar for Large Screens**
   Widget _buildSidebar(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
-
     final theme = Theme.of(context);
 
     return AnimatedContainer(
@@ -137,7 +134,7 @@ class _NavBarState extends State<NavBar> {
               child: ProfilePic(
                 toggleTheme: widget.toggleTheme,
                 isDarkMode: widget.isDarkMode,
-                onAccountSettings: () => context.go(userProvider.userRole == "realtor"? "/realtorSettings" : "/investorSettings"),
+                onAccountSettings: () => context.go("/settings"),
               ),
             ),
             SizedBox(height: 30,)
@@ -152,53 +149,20 @@ class _NavBarState extends State<NavBar> {
     return userProvider.userRole == "realtor"?
     //nav items for realtor
     [
-      _NavItem(icon: Icons.dashboard, label: "Dashboard", route: '/realtorDashboard', isDrawer: isDrawer),
-      _NavItem(icon: Icons.search, label: "Home Search", route: '/realtorHomeSearch', isDrawer: isDrawer),
-      _NavItem(icon: Icons.calculate, label: "Calculators", route: '/realtorCalculators', isDrawer: isDrawer),
-      _NavItem(icon: Icons.people, label: "Clients", route: '/realtorClients', isDrawer: isDrawer),
-      _NavItem(icon: Icons.assessment, label: "Reports", route: '/realtorReports', isDrawer: isDrawer),
+      _NavItem(icon: Icons.dashboard, label: "Dashboard", route: '/home', isDrawer: isDrawer),
+      _NavItem(icon: Icons.search, label: "Home Search", route: '/search', isDrawer: isDrawer),
+      _NavItem(icon: Icons.calculate, label: "Calculators", route: '/calculators', isDrawer: isDrawer),
+      _NavItem(icon: Icons.people, label: "Clients", route: '/clients', isDrawer: isDrawer),
+      _NavItem(icon: Icons.assessment, label: "Reports", route: '/reports', isDrawer: isDrawer),
     ] :
     //nav items for investor
     [
-      _NavItem(icon: Icons.home, label: "Home", route: '/InvestorHome', isDrawer: isDrawer),
-      _NavItem(icon: Icons.calculate, label: "Calculators", route: '/investorCalculators', isDrawer: isDrawer),
-      _NavItem(icon: Icons.favorite, label: "Saved", route: '/investorSavedProperties', isDrawer: isDrawer),
+      _NavItem(icon: Icons.home, label: "Home", route: '/home', isDrawer: isDrawer),
+      _NavItem(icon: Icons.calculate, label: "Calculators", route: '/calculators', isDrawer: isDrawer),
+      _NavItem(icon: Icons.favorite, label: "Saved", route: '/saved', isDrawer: isDrawer),
 
     ];
   }
-
-  /// **📌 Logout Dialog**
-  Future<void> _showLogoutDialog(BuildContext context) async {
-    final theme = Theme.of(context);
-
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: theme.cardColor,
-          title: Text("Confirm Logout", style: TextStyle(fontWeight: FontWeight.bold)),
-          content: Text("Are you sure you want to log out?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text("Cancel", style: TextStyle(color: theme.colorScheme.primary)),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await FirebaseAuth.instance.signOut();
-                if (context.mounted) {
-                  context.go('/login');
-                }
-              },
-              child: Text("Logout", style: TextStyle(color: Colors.redAccent)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
 }
 class _NavItem extends StatefulWidget {
   final IconData icon;

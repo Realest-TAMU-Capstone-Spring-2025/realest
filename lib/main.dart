@@ -36,15 +36,12 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (context) {
-            final userProvider = UserProvider();
-            userProvider.fetchUserData(); // Fetch user data on app start
-            return userProvider;
-          },
+          create: (context) => UserProvider()..initializeUser(),
         ),
       ],
       child: const MyApp(),
@@ -92,6 +89,16 @@ class _MyAppState extends State<MyApp> {
       },
     );
   }
+  void redirectToHomeWithNotification(BuildContext context, {String message = 'Access Denied'}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
+    context.go('/home');
+  }
 
   GoRouter _createRouter(VoidCallback toggleTheme, ThemeMode themeMode) {
     return GoRouter(
@@ -100,6 +107,12 @@ class _MyAppState extends State<MyApp> {
         GoRoute(
           path: '/',
           builder: (context, state) => const HomePage(),
+        ),
+        GoRoute(
+          path: '/loading',
+          builder: (context, state) => const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ),
         ),
         GoRoute(
           path: '/login',
@@ -112,141 +125,160 @@ class _MyAppState extends State<MyApp> {
             themeMode: themeMode,
           ),
           routes: [
+            // Shared endpoints with role-based content
             GoRoute(
-              path: '/investorHome',
-              builder: (context, state) => const PropertySwipingView(),
+              path: '/home',
+              builder: (context, state) {
+                final userProvider = Provider.of<UserProvider>(context, listen: false);
+                print(userProvider.userRole);
+                return userProvider.userRole == 'investor'
+                    ? const PropertySwipingView()
+                    : RealtorDashboard(
+                        toggleTheme: toggleTheme,
+                        isDarkMode: themeMode == ThemeMode.dark,
+                      );
+              },
             ),
             GoRoute(
-              path: '/investorSetup',
-              builder: (context, state) => const InvestorSetupPage(),
+              path: '/setup',
+              builder: (context, state) {
+                final userProvider = Provider.of<UserProvider>(context, listen: false);
+                return userProvider.userRole == 'investor'
+                    ? const InvestorSetupPage()
+                    : const RealtorSetupPage();
+              },
             ),
             GoRoute(
-              path: '/investorSettings',
-              builder: (context, state) => InvestorSettings(
-                toggleTheme: toggleTheme,
-                isDarkMode: themeMode == ThemeMode.dark,
+              path: '/settings',
+              builder: (context, state) {
+                final userProvider = Provider.of<UserProvider>(context, listen: false);
+                return userProvider.userRole == 'investor'
+                    ? InvestorSettings(
+                        toggleTheme: toggleTheme,
+                        isDarkMode: themeMode == ThemeMode.dark,
+                      )
+                    : RealtorSettings(
+                        toggleTheme: toggleTheme,
+                        isDarkMode: themeMode == ThemeMode.dark,
+                      );
+              },
+            ),
+            GoRoute(
+              path: '/calculators',
+              builder: (context, state) => const Calculators(),
+            ),
+
+            // Investor-specific routes
+            GoRoute(
+              path: '/saved',
+              builder: (context, state) => _roleProtectedView(
+                context,
+                allowedRole: 'investor',
+                view: SavedProperties(),
+                fallbackMessage: 'Saved properties only available to investors',
+              ),
+            ),
+
+            // Realtor-specific routes
+            GoRoute(
+              path: '/clients',
+              builder: (context, state) => _roleProtectedView(
+                context,
+                allowedRole: 'realtor',
+                view: const RealtorClients(),
+                fallbackMessage: 'Client management only available to realtors',
               ),
             ),
             GoRoute(
-              path: '/investorCalculators',
-              builder: (context, state) => const Calculators(),
-            ),
-            GoRoute(
-              path: '/investorSavedProperties',
-              builder: (context, state) => SavedProperties(),
-            ),
-          ],
-        ),
-        ShellRoute(
-          builder: (context, state, child) => MainLayout(
-            child: child,
-            toggleTheme: toggleTheme,
-            themeMode: themeMode,
-          ),
-          routes: [
-            GoRoute(
-              path: '/realtorDashboard',
-              builder: (context, state) => RealtorDashboard(
-                toggleTheme: toggleTheme,
-                isDarkMode: themeMode == ThemeMode.dark,
+              path: '/reports',
+              builder: (context, state) => _roleProtectedView(
+                context,
+                allowedRole: 'realtor',
+                view: const RealtorReports(),
+                fallbackMessage: 'Reports only available to realtors',
               ),
             ),
             GoRoute(
-              path: '/realtorSetup',
-              builder: (context, state) => const RealtorSetupPage(),
-            ),
-            GoRoute(
-              path: '/realtorCalculators',
-              builder: (context, state) => const Calculators(),
-            ),
-            GoRoute(
-              path: '/realtorClients',
-              builder: (context, state) => const RealtorClients(),
-            ),
-            GoRoute(
-              path: '/realtorReports',
-              builder: (context, state) => const RealtorReports(),
-            ),
-            GoRoute(
-              path: '/realtorHomeSearch',
-              builder: (context, state) => const RealtorHomeSearch(),
-            ),
-            GoRoute(
-              path: '/realtorSettings',
-              builder: (context, state) => RealtorSettings(
-                toggleTheme: toggleTheme,
-                isDarkMode: themeMode == ThemeMode.dark,
+              path: '/search',
+              builder: (context, state) => _roleProtectedView(
+                context,
+                allowedRole: 'realtor',
+                view: const RealtorHomeSearch(),
+                fallbackMessage: 'Property search only available to realtors',
               ),
             ),
           ],
         ),
       ],
-      // Use a navigator observer to log route changes (optional for debugging)
-      debugLogDiagnostics: true,
-    );
-  }
-}
+      redirect: (context, state) async {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final isLoggedIn = userProvider.uid != null;
+        final currentPath = state.uri.toString();
 
-class AuthWrapper extends StatelessWidget {
-  final VoidCallback toggleTheme;
-  final ThemeMode themeMode;
-
-  const AuthWrapper({Key? key, required this.toggleTheme, required this.themeMode}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(), // More stable than idTokenChanges
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        if (userProvider.isLoading) {
+          return '/loading';
         }
 
-        final user = snapshot.data;
-        if (user == null) {
-          return const CustomLoginPage();
+        if (isLoggedIn && userProvider.userRole == null) {
+          await userProvider.fetchUserData();
+          if (userProvider.userRole == null) {
+            return '/login';
+          }
         }
 
-        return FutureBuilder<DocumentSnapshot>(
-          future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
-          builder: (context, userSnapshot) {
-            if (userSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
-            }
+        if (!currentPath.startsWith('/login') && !isLoggedIn) {
+          return '/login';
+        }
 
-            if (userSnapshot.hasData && userSnapshot.data!.exists) {
-              final role = userSnapshot.data!['role'];
-              final currentPath = GoRouterState.of(context).uri.path;
-
-              // Only redirect if on a non-role-specific route
-              if (role == 'investor' && !currentPath.startsWith('/investor')) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  context.go('/investorHome');
-                });
-                return const PropertySwipingView();
-              } else if (role == 'realtor' && !currentPath.startsWith('/realtor')) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  context.go('/realtorDashboard');
-                });
-                return RealtorDashboard(toggleTheme: toggleTheme, isDarkMode: themeMode == ThemeMode.dark);
-              }
-
-              // If already on a valid route, return the current page
-              return MainLayout(
-                child: const SizedBox(), // Placeholder, actual child comes from router
-                toggleTheme: toggleTheme,
-                themeMode: themeMode,
+        if (isLoggedIn) {
+          final userRole = userProvider.userRole!;
+          final validPaths = _getAllowedPaths(userRole);
+          
+          if (!validPaths.contains(currentPath)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Redirected: $currentPath unavailable')),
               );
-            }
+            });
+            return '/home';
+          }
+        }
 
-            return const CustomLoginPage();
-          },
-        );
+        return null;
       },
     );
   }
-}
 
+  List<String> _getAllowedPaths(String userRole) {
+    const sharedPaths = ['/home', '/setup', '/settings', '/calculators', '/login', '/loading'];
+    final roleSpecificPaths = {
+      'investor': ['/saved'],
+      'realtor': ['/clients', '/reports', '/search']
+    };
+    return [...sharedPaths, ...roleSpecificPaths[userRole] ?? []];
+  }
+
+  Widget _roleProtectedView(
+    BuildContext context, {
+    required String allowedRole,
+    required Widget view,
+    required String fallbackMessage,
+  }) {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
+    if (userProvider.userRole != allowedRole) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(fallbackMessage)),
+        );
+        context.go('/home');
+      });
+      return const SizedBox.shrink(); // Temporary empty widget
+    }
+    
+    return view;
+  }
+}
 class MainLayout extends StatelessWidget {
   final Widget child;
   final VoidCallback toggleTheme;
