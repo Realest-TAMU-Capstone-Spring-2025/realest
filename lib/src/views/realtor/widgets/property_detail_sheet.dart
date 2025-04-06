@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:realest/user_provider.dart'; // Ensure this path matches the actual location of UserProvider
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:realest/src/views/realtor/widgets/property_detail_widgets/cash_flow_analysis_widget.dart';
 import 'package:realest/src/views/realtor/widgets/property_detail_widgets/image_gallery_widget.dart';
@@ -18,9 +20,11 @@ class PropertyDetailSheet extends StatelessWidget {
 
   const PropertyDetailSheet({Key? key, required this.property}) : super(key: key);
 
+  //check if the user is a realtor
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat("#,##0", "en_US");
+    final bool isRealtor = Provider.of<UserProvider>(context).userRole == "realtor";
 
     return PointerInterceptor(
       child: Stack(
@@ -38,19 +42,21 @@ class PropertyDetailSheet extends StatelessWidget {
                     imageUrls: List<String>.from(property["alt_photos"] ?? []),
                   ),
                   const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.send),
-                    label: const Text("Send Property to Client"),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 45),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  
+                  if (isRealtor)//if realtor, show the send property button
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.send),
+                      label: const Text("Send Property to Client"),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 45),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
+                      onPressed: () {
+                        _sendPropertyToClient(context, property["id"]);
+                      },
                     ),
-                    onPressed: () {
-                      _sendPropertyToClient(context, property["id"]);
-                    },
-                  ),
                   const SizedBox(height: 12),
                   Text(
                     property["address"] as String? ?? 'N/A',
