@@ -71,6 +71,7 @@ class PropertyList extends StatelessWidget {
                             .toString()
                             .replaceAll("http://", "https://")
                             : "https://bearhomes.com/wp-content/uploads/2019/01/default-featured.png",
+                        "status": property["status"],
                       }),
                     ),
                   );
