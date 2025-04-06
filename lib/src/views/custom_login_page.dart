@@ -29,7 +29,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
 
   @override
   void dispose() {
-     _errorTimer?.cancel();
+    _errorTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -73,10 +73,9 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
 
         Provider.of<UserProvider>(context, listen: false).fetchUserData();
         if (_selectedRole == "realtor") {
-
-          context.go( "/realtorDashboard");
+          context.go("/realtorDashboard");
         } else {
-          context.go( "/investorHome");
+          context.go("/investorHome");
         }
       } else if (mounted) {
         setState(() {
@@ -89,8 +88,6 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
       }
     }
   }
-
-
 
   Future<void> _createAccount() async {
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -112,6 +109,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
       'completedSetup': false,
     });
   }
+
   void _navigateAfterRegistration() {
     if (_selectedRole == "investor") {
       context.go('/investorSetup');
@@ -120,10 +118,8 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     }
   }
 
-
   String _getAuthErrorMessage(FirebaseAuthException e) {
-    // print(e.code);
-    if(_errorTimer != null) {
+    if (_errorTimer != null) {
       _errorTimer!.cancel();
     }
     _errorTimer = Timer(const Duration(seconds: 2), () {
@@ -153,131 +149,55 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    const Color neonPurple = Color(0xFFD500F9);
+    const Color neonPurple = Color(0xFFa78cde);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 800;
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Row(
+      body: Stack(
         children: [
-          // Left column with input fields
-          Expanded(
-            flex: 1,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(26.0),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _isRegister ? 'Create your account' : 'Welcome back',
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _errorMessage ?? (_isRegister ? 'Please Sign Up' : 'Please Sign In'),
-                      style: _errorMessage != null
-                          ? const TextStyle(color: Colors.red, fontSize: 14)
-                          : GoogleFonts.poppins(
-                        fontSize: 16,
-                        color: Colors.white70,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 40),
-                    Container(
-                      width: 400,
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: _buildTextField(_emailController, 'Email', false, false),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      width: 400,
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: _buildTextField(_passwordController, 'Password', true, !_isRegister),
-                    ),
-                    if (_isRegister) ...[
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: _buildTextField(_confirmPasswordController, 'Confirm Password', true, true),
-                      ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: ToggleButtons(
-                          borderRadius: BorderRadius.circular(30),
-                          constraints: const BoxConstraints(minHeight: 40, minWidth: 100),
-                          isSelected: [
-                            _selectedRole == 'investor',
-                            _selectedRole == 'realtor',
-                          ],
-                          onPressed: (int index) {
-                            setState(() {
-                              _selectedRole = index == 0 ? 'investor' : 'realtor';
-                            });
-                          },
-                          color: Colors.white,
-                          selectedColor: neonPurple,
-                          fillColor: Colors.black,
-                          borderColor: neonPurple,
-                          selectedBorderColor: neonPurple,
-                          children: const [
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16),
-                              child: Text('Investor'),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16),
-                              child: Text('Realtor'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: _buildActionButton(),
-                    ),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: _buildToggleAuthText(),
-                    ),
-                    if (_isLoading)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 16.0),
-                        child: CircularProgressIndicator(color: neonPurple),
-                      ),
-                  ],
+          isMobile
+              ? _buildMobileLayout(neonPurple, isMobile) // Pass isMobile to adjust sizes
+              : Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: _buildFormColumn(neonPurple, isMobile),
+              ),
+              Expanded(
+                flex: 1,
+                child: Container(
+                  color: const Color(0x33D500F9),
+                  child: Image.asset(
+                    'assets/images/login.png',
+                    fit: BoxFit.cover,
+                    height: double.infinity,
+                    width: double.infinity,
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-
-          // Right column with logo and text
-          Expanded(
-            flex: 1,
-            child: Container(
-              color: const Color(0x33D500F9), // Neon purple with opacity
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+          Positioned(
+            top: 20,
+            left: 20,
+            child: GestureDetector(
+              onTap: () {
+                context.go("/");
+              },
+              child: Row(
                 children: [
                   const Icon(
                     Icons.real_estate_agent,
-                    size: 200,
+                    size: 32,
                     color: Colors.white,
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     'RealEst',
                     style: GoogleFonts.poppins(
-                      fontSize: 40,
+                      fontSize: isMobile ? 20 : 24, // Smaller on mobile
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
@@ -291,16 +211,161 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint, bool obscure, bool isLastField) {
-    const Color neonPurple = Color(0xFFD500F9);
+  // Mobile layout with reduced sizes
+  Widget _buildMobileLayout(Color neonPurple, bool isMobile) {
+    return Container(
+      color: const Color(0xFF1f1e25),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 40.0), // Reduced padding
+                  child: SizedBox(
+                    width: 400, // Reduced max width for mobile
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: _buildFormChildren(neonPurple, isMobile),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Desktop layout
+  Widget _buildFormColumn(Color neonPurple, bool isMobile) {
+    return Container(
+      color: const Color(0xFF1f1e25),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: Center(
+                child: SizedBox(
+                  width: 500,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: _buildFormChildren(neonPurple, isMobile),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Form children with conditional sizing
+  List<Widget> _buildFormChildren(Color neonPurple, bool isMobile) {
+    return [
+      Center(
+        child: Text(
+          _isRegister ? 'Create your account' : 'Welcome back',
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 32 : 46, // Reduced from 46 to 32
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      Center(
+        child: Text(
+          _errorMessage ?? (_isRegister ? 'Please Sign Up' : 'Please Sign In'),
+          style: _errorMessage != null
+              ? TextStyle(color: Colors.red, fontSize: isMobile ? 12 : 14) // Reduced from 14 to 12
+              : GoogleFonts.poppins(fontSize: isMobile ? 16 : 20, color: Colors.white70), // Reduced from 20 to 16
+        ),
+      ),
+      SizedBox(height: isMobile ? 20 : 40), // Reduced spacing
+      _buildAlignedField('Email', _emailController, false, false, isMobile),
+      SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
+      _buildAlignedField('Password', _passwordController, true, !_isRegister, isMobile),
+      if (_isRegister) ...[
+        SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
+        _buildAlignedField('Confirm Password', _confirmPasswordController, true, true, isMobile),
+        SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
+        Center(child: _buildRoleToggle(isMobile)),
+      ],
+      SizedBox(height: isMobile ? 16 : 20), // Reduced spacing
+      Center(child: _buildActionButton(isMobile)),
+      SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
+      Center(child: _buildToggleAuthText(isMobile)),
+      if (_isLoading)
+        Center(
+          child: Padding(
+            padding: EdgeInsets.only(top: isMobile ? 12.0 : 16.0), // Adjusted padding
+            child: const CircularProgressIndicator(color: Color(0xFFD500F9)),
+          ),
+        ),
+    ];
+  }
+
+  Widget _buildAlignedField(String label, TextEditingController controller, bool obscure, bool isLastField, bool isMobile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(fontSize: isMobile ? 16 : 18, color: Colors.white), // Reduced from 18 to 16
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: isMobile ? 400 : 500, // Reduced width for mobile
+          child: _buildTextField(controller, obscure, isLastField, isMobile),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoleToggle(bool isMobile) {
+    const Color neonPurple = Color(0xFFa78cde);
+    return ToggleButtons(
+      borderRadius: BorderRadius.circular(30),
+      constraints: BoxConstraints(minHeight: isMobile ? 36 : 40, minWidth: isMobile ? 80 : 100), // Smaller on mobile
+      isSelected: [_selectedRole == 'investor', _selectedRole == 'realtor'],
+      onPressed: (int index) => setState(() => _selectedRole = index == 0 ? 'investor' : 'realtor'),
+      color: Colors.white,
+      selectedColor: Colors.white,
+      fillColor: neonPurple,
+      borderColor: neonPurple,
+      selectedBorderColor: neonPurple,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
+          child: Text('Investor', style: TextStyle(fontSize: isMobile ? 16 : 18)), // Reduced from 18 to 16
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
+          child: Text('Realtor', style: TextStyle(fontSize: isMobile ? 16 : 18)), // Reduced from 18 to 16
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, bool obscure, bool isLastField, bool isMobile) {
+    const Color neonPurple = Color(0xFFa78cde);
 
     return TextField(
       controller: controller,
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.grey[900],
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white70),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.0),
           borderSide: const BorderSide(color: neonPurple, width: 1),
@@ -310,7 +375,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
           borderSide: const BorderSide(color: neonPurple, width: 2),
         ),
       ),
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: Colors.white, fontSize: isMobile ? 14 : 16), // Reduced font size for mobile
       obscureText: obscure,
       keyboardType: obscure ? TextInputType.text : TextInputType.emailAddress,
       textInputAction: isLastField ? TextInputAction.done : TextInputAction.next,
@@ -322,18 +387,22 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     );
   }
 
-  Widget _buildActionButton() {
-    const Color neonPurple = Color(0xFFD500F9);
+  Widget _buildActionButton(bool isMobile) {
+    const Color neonPurple = Color(0xFFa78cde);
 
     return SizedBox(
-      width: 150,
+      width: isMobile ? 400 : 500, // Reduced width for mobile
+      height: isMobile ? 45 : 50, // Reduced height for mobile
       child: ElevatedButton(
         onPressed: _authenticate,
         style: ElevatedButton.styleFrom(
-          textStyle: GoogleFonts.openSans(fontSize: 20, fontWeight: FontWeight.bold),
+          textStyle: GoogleFonts.openSans(
+            fontSize: isMobile ? 18 : 22, // Reduced from 22 to 18
+            fontWeight: FontWeight.bold,
+          ),
           backgroundColor: neonPurple,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 15),
+          padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 15), // Adjusted padding
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
             side: const BorderSide(color: Colors.black, width: 2),
@@ -344,22 +413,22 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     );
   }
 
-  Widget _buildToggleAuthText() {
-    const Color neonPurple = Color(0xFFD500F9);
+  Widget _buildToggleAuthText(bool isMobile) {
+    const Color neonPurple = Color(0xFFa78cde);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           _isRegister ? 'Already have an account?' : 'Don\'t have an account?',
-          style: GoogleFonts.openSans(fontSize: 20, color: Colors.white),
+          style: GoogleFonts.openSans(fontSize: isMobile ? 16 : 20, color: Colors.white), // Reduced from 20 to 16
         ),
         TextButton(
           onPressed: () => setState(() => _isRegister = !_isRegister),
           child: Text(
             _isRegister ? 'Sign In' : 'Register',
             style: GoogleFonts.openSans(
-              fontSize: 20,
+              fontSize: isMobile ? 16 : 20, // Reduced from 20 to 16
               fontWeight: FontWeight.bold,
               color: neonPurple,
               decoration: TextDecoration.underline,
@@ -370,5 +439,4 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
       ],
     );
   }
-
 }

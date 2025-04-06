@@ -9,7 +9,7 @@ class AppOverview extends StatefulWidget {
 }
 
 class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin {
-  static const Color neonPurple = Color(0xFFD500F9);
+  static const Color neonPurple = Color(0xFFa78cde);
 
   final CarouselSliderController _carouselController = CarouselSliderController();
   int _currentPage = 0;
@@ -130,7 +130,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
 
           return Container(
             height: MediaQuery.of(context).size.height * (isMobile ? 1.2 : 0.9),
-            color: Colors.black,
+            color: const Color(0xFF1f1e25),
             padding: EdgeInsets.symmetric(
               vertical: isMobile ? 16 : 40, // Reduced vertical padding on mobile
               horizontal: isMobile ? 60 : 100,

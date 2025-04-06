@@ -11,7 +11,7 @@ class ProgressMetricsSection extends StatefulWidget {
 }
 
 class _ProgressMetricsSectionState extends State<ProgressMetricsSection> with SingleTickerProviderStateMixin {
-  static const Color neonPurple = Color(0xFFD500F9);
+  static const Color neonPurple = Color(0xFFa78cde);
   late AnimationController _controller;
   late Animation<double> _fadeScaleAnimation;
   late Animation<int> _countAnimation1;
@@ -81,7 +81,7 @@ class _ProgressMetricsSectionState extends State<ProgressMetricsSection> with Si
         vertical: isMobile ? 30 : 60,
         horizontal: isMobile ? 10 : 20,
       ),
-      color: Colors.black,
+      color: const Color(0xFF1f1e25),
       child: Column(
         children: [
           _buildMetricsSection(isMobile),

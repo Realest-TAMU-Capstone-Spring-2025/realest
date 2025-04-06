@@ -10,7 +10,7 @@ class ValuePropositions extends StatefulWidget {
 }
 
 class _ValuePropositionsState extends State<ValuePropositions> with TickerProviderStateMixin {
-  static const Color neonPurple = Color(0xFFD500F9);
+  static const Color neonPurple = Color(0xFFa78cde);
 
   late AnimationController _titleController;
   late Animation<double> _titleFadeAnimation;
@@ -102,7 +102,7 @@ class _ValuePropositionsState extends State<ValuePropositions> with TickerProvid
           vertical: isMobile ? 20 : 40,
           horizontal: isMobile ? 8 : 120,
         ),
-        color: Colors.black,
+        color: const Color(0xFF1f1e25),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

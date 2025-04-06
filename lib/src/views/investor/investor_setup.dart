@@ -4,7 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import '../../../user_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 
 class InvestorSetupPage extends StatefulWidget {
   const InvestorSetupPage({Key? key}) : super(key: key);
@@ -21,9 +22,6 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _contactEmailController = TextEditingController();
   final TextEditingController _contactPhoneController = TextEditingController();
-  // Removed the single invitation code controller
-
-  // Create eight controllers for the invitation code boxes
   final List<TextEditingController> _invitationCodeControllers =
   List.generate(8, (_) => TextEditingController());
 
@@ -31,15 +29,15 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
   String? _errorMessage;
   Uint8List? _profileImageBytes;
 
-  // Store the verified realtor id, name, and profile pic URL.
   String? _verifiedRealtorId;
   String? _verifiedRealtorName;
   String? _verifiedRealtorProfilePicUrl;
 
+  static const Color neonPurple = Color(0xFFa78cde);
+
   @override
   void initState() {
     super.initState();
-    // Autofill contact email from authenticated user
     User? currentUser = _auth.currentUser;
     if (currentUser != null && currentUser.email != null) {
       _contactEmailController.text = currentUser.email!;
@@ -59,8 +57,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
   }
 
   Future<void> _pickImage() async {
-    final pickedFile =
-    await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       Uint8List bytes = await pickedFile.readAsBytes();
       setState(() {
@@ -69,7 +66,6 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     }
   }
 
-  /// Concatenates the values from the eight boxes into one string.
   String _getInvitationCode() {
     String code = '';
     for (var controller in _invitationCodeControllers) {
@@ -78,13 +74,21 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     return code;
   }
 
-  /// Verifies the invitation code by querying the 'realtors' collection.
   Future<void> _verifyInvitationCode() async {
     final code = _getInvitationCode();
     if (code.length != 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Invitation code is invalid. Please enter an 8-character code.",
+            style: GoogleFonts.poppins(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
       setState(() {
-        _errorMessage =
-        "Please enter the complete 8-character invitation code.";
+        _errorMessage = null;
       });
       return;
     }
@@ -97,49 +101,56 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           .get();
 
       if (querySnapshot.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Realtor not found. Please check your invitation code.",
+              style: GoogleFonts.poppins(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
         setState(() {
-          _errorMessage =
-          "Invitation code not found. Please check and try again.";
+          _errorMessage = null;
         });
         return;
       }
 
-      // Get the realtor document.
       final realtorDoc = querySnapshot.docs.first;
       final realtorData = realtorDoc.data() as Map<String, dynamic>;
       final realtorFirstName = realtorData['firstName'] ?? '';
       final realtorLastName = realtorData['lastName'] ?? '';
       final realtorProfilePicUrl = realtorData['profilePicUrl'] ?? '';
-      final realtorId = realtorDoc.id; // This is the realtor id
+      final realtorId = realtorDoc.id;
 
-      // Show a confirmation dialog with the realtor’s details.
       showDialog(
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: const Text("Confirm Realtor"),
+            backgroundColor: Colors.grey[900],
+            title: Text("Confirm Realtor", style: GoogleFonts.poppins(color: Colors.white)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (realtorProfilePicUrl != '')
                   CircleAvatar(
                     backgroundImage: NetworkImage(realtorProfilePicUrl),
-                    radius: 40,
+                    radius: 80,
                   ),
                 const SizedBox(height: 20),
                 Text(
                   "$realtorFirstName $realtorLastName",
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyLarge
-                      ?.copyWith(fontWeight: FontWeight.bold, fontSize: 22),
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 22,
+                  ),
                 ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () {
-                  // On confirmation, store the realtor id, name, and profile pic URL.
                   setState(() {
                     _verifiedRealtorId = realtorId;
                     _verifiedRealtorName = "$realtorFirstName $realtorLastName";
@@ -148,13 +159,13 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
                   });
                   Navigator.of(context).pop();
                 },
-                child: const Text("Confirm"),
+                child: Text("Confirm", style: GoogleFonts.poppins(color: neonPurple)),
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop(); // Dismiss dialog
+                  Navigator.of(context).pop();
                 },
-                child: const Text("Cancel"),
+                child: Text("Cancel", style: GoogleFonts.poppins(color: neonPurple)),
               ),
             ],
           );
@@ -162,18 +173,16 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
       );
     } catch (e) {
       setState(() {
-        _errorMessage =
-        "Error verifying invitation code. Please try again.";
+        _errorMessage = "Error verifying invitation code: $e";
       });
+      print("Verification error: $e");
     }
   }
 
   void _saveInvestorData() async {
-    // Ensure that a realtor has been linked before saving.
     if (_verifiedRealtorId == null) {
       setState(() {
-        _errorMessage =
-        "Please verify your invitation code to link a realtor before saving.";
+        _errorMessage = "Please verify your invitation code to link a realtor before saving.";
       });
       return;
     }
@@ -206,7 +215,6 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           'completedSetup': true,
         });
 
-        // Save the investor data with the realtor id, status, and notes.
         await _firestore.collection('investors').doc(uid).set({
           'uid': uid,
           'firstName': _firstNameController.text.trim(),
@@ -216,43 +224,81 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           'realtorId': _verifiedRealtorId,
           'profilePicUrl': profilePicUrl,
           'createdAt': FieldValue.serverTimestamp(),
-          'status': 'Update', // Add status field set to "Active"
-          'notes': 'Account Created', // Add notes field set to "Account Created"
+          'status': 'Update',
+          'notes': 'Account Created',
         });
 
-        Navigator.pushReplacementNamed(context, '/investorHome');
+        if (mounted) {
+          context.go('/investorHome');
+        }
       } catch (e) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = "Error saving data: $e";
+          });
+          print("Save error: $e");
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } else {
+      if (mounted) {
         setState(() {
-          _errorMessage = "Error saving data. Please try again.";
+          _isLoading = false;
+          _errorMessage = "No authenticated user found.";
         });
       }
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
-  Widget _buildTextField(TextEditingController controller, String label,
-      {TextInputType keyboardType = TextInputType.text, bool readOnly = false}) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      readOnly: readOnly,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.grey[200],
-        labelText: label,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10.0),
-          borderSide: BorderSide.none,
+  Widget _buildTextField(
+      TextEditingController controller,
+      String label, {
+        TextInputType keyboardType = TextInputType.text,
+        bool readOnly = false,
+        required bool isMobile,
+      }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 16 : 18, // Reduced from 18 to 16
+            color: Colors.white,
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: isMobile ? 400 : 800, // Reduced width for mobile
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            readOnly: readOnly,
+            style: TextStyle(color: Colors.white, fontSize: isMobile ? 14 : 16), // Reduced font size
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.grey[900],
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15.0),
+                borderSide: const BorderSide(color: neonPurple, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15.0),
+                borderSide: const BorderSide(color: neonPurple, width: 2),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  /// Builds the row of 8 square input boxes and the Verify button.
-  Widget _buildInvitationCodeInput() {
+  Widget _buildInvitationCodeInput(bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -260,18 +306,24 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: List.generate(8, (index) {
             return Container(
-              width: 40,
-              height: 40,
+              width: isMobile ? 40 : 50, // Reduced from 50 to 40
+              height: isMobile ? 35 : 40, // Reduced from 40 to 35
               child: TextField(
                 controller: _invitationCodeControllers[index],
                 textAlign: TextAlign.center,
                 maxLength: 1,
+                style: TextStyle(color: Colors.white, fontSize: isMobile ? 14 : 16), // Reduced font size
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: Colors.grey[200],
+                  fillColor: Colors.grey[900],
                   counterText: "",
-                  border: OutlineInputBorder(
+                  enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(5.0),
+                    borderSide: const BorderSide(color: neonPurple, width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(5.0),
+                    borderSide: const BorderSide(color: neonPurple, width: 2),
                   ),
                 ),
                 onChanged: (value) {
@@ -287,14 +339,21 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          width: 100,
-          height: 45,
+          width: isMobile ? 100 : 100, // Reduced from 100 to 80
+          height: isMobile ? 50 : 45, // Reduced from 45 to 40
           child: ElevatedButton(
             onPressed: _verifyInvitationCode,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              textStyle:
-              const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              backgroundColor: neonPurple,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+                side: const BorderSide(color: Colors.black, width: 2),
+              ),
+              textStyle: GoogleFonts.poppins(
+                fontSize: isMobile ? 14 : 16, // Reduced from 16 to 14
+                fontWeight: FontWeight.bold,
+              ),
             ),
             child: const Text("Verify"),
           ),
@@ -303,30 +362,30 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     );
   }
 
-  /// Displays the verified realtor's info in a single row.
-  Widget _buildVerifiedRealtorInfo() {
+  Widget _buildVerifiedRealtorInfo(bool isMobile) {
     if (_verifiedRealtorId == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            "Realtor: ",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Text(
+            "Realtor:   ",
+            style: GoogleFonts.poppins(fontSize: isMobile ? 20 : 24, color: Colors.white), // Reduced from 24 to 20
           ),
-          if (_verifiedRealtorProfilePicUrl != null &&
-              _verifiedRealtorProfilePicUrl != '')
+          if (_verifiedRealtorProfilePicUrl != null && _verifiedRealtorProfilePicUrl != '')
             CircleAvatar(
               backgroundImage: NetworkImage(_verifiedRealtorProfilePicUrl!),
-              radius: 20,
+              radius: isMobile ? 30 : 35, // Reduced from 35 to 30
             ),
           const SizedBox(width: 8),
           Text(
             _verifiedRealtorName ?? '',
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: isMobile ? 18 : 22, // Reduced from 22 to 18
+            ),
           ),
         ],
       ),
@@ -335,99 +394,235 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 800;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'Set Up Your Account',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Text(
-              "Complete Your Investor Profile",
-              style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black),
-            ),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: _pickImage,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.grey[300],
-                backgroundImage: _profileImageBytes != null
-                    ? MemoryImage(_profileImageBytes!)
-                    : null,
-                child: _profileImageBytes == null
-                    ? const Icon(Icons.camera_alt,
-                    size: 40, color: Colors.black54)
-                    : null,
+      backgroundColor: Colors.black,
+      body: isMobile
+          ? _buildMobileLayout(isMobile)
+          : Row(
+        children: [
+          Expanded(
+            flex: 1,
+            child: _buildFormColumn(isMobile),
+          ),
+          Expanded(
+            flex: 1,
+            child: Container(
+              color: const Color(0x33D500F9),
+              child: Image.asset(
+                'assets/images/login.png',
+                fit: BoxFit.cover,
+                height: double.infinity,
+                width: double.infinity,
               ),
             ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                    child: _buildTextField(_firstNameController, "First Name")),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: _buildTextField(_lastNameController, "Last Name")),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(_contactEmailController, "Contact Email",
-                keyboardType: TextInputType.emailAddress),
-            const SizedBox(height: 16),
-            _buildTextField(_contactPhoneController, "Contact Phone Number",
-                keyboardType: TextInputType.phone),
-            const SizedBox(height: 16),
-            Text("Enter Your Invitation Code: ",
-                style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 16),
-            // Invitation code input widget.
-            _buildInvitationCodeInput(),
-            // Display verified realtor info once confirmed.
-            _buildVerifiedRealtorInfo(),
-            const SizedBox(height: 24),
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 16),
-                ),
-              ),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _saveInvestorData,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  textStyle: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("Save & Continue"),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  // Mobile layout with left-aligned logo in scrolling content
+  Widget _buildMobileLayout(bool isMobile) {
+    return Container(
+      color: const Color(0xFF1f1e25),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0), // Reduced padding
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: SizedBox(
+                width: 400, // Reduced max width for mobile
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, // Left-align logo and content
+                  children: [
+                    // Logo aligned to the left
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.real_estate_agent,
+                          size: 32,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'RealEst',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 20 : 24, // Reduced from 24 to 20
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isMobile ? 20 : 40), // Reduced spacing
+                    ..._buildFormChildren(isMobile),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Desktop layout with left-aligned logo in scrolling content
+  Widget _buildFormColumn(bool isMobile) {
+    return Container(
+      color: const Color(0xFF1f1e25),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            // padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+            padding: const EdgeInsets.only(left: 100, right: 100, top: 20, bottom: 100),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: SizedBox(
+                width: 500,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, // Left-align logo and content
+                  children: [
+                    // Logo aligned to the left
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.real_estate_agent,
+                          size: 32,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'RealEst',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 20 : 24,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isMobile ? 20 : 40), // Space after logo
+                    ..._buildFormChildren(isMobile),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Form children (without logo)
+  List<Widget> _buildFormChildren(bool isMobile) {
+    return [
+      Center(
+        child: Text(
+          textAlign: TextAlign.center,
+          'Set Up Your Investor Profile',
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 28 : 32, // Reduced from 32 to 28
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      Center(
+        child: Text(
+          _errorMessage ?? 'Complete your profile',
+          style: _errorMessage != null
+              ? TextStyle(color: Colors.red, fontSize: isMobile ? 12 : 14) // Reduced from 14 to 12
+              : GoogleFonts.poppins(fontSize: isMobile ? 16 : 20, color: Colors.white70), // Reduced from 20 to 16
+        ),
+      ),
+      SizedBox(height: isMobile ? 20 : 40), // Reduced spacing
+      Center(
+        child: GestureDetector(
+          onTap: _pickImage,
+          child: CircleAvatar(
+            radius: isMobile ? 50 : 60, // Reduced from 60 to 50
+            backgroundColor: Colors.black,
+            backgroundImage: _profileImageBytes != null ? MemoryImage(_profileImageBytes!) : null,
+            child: _profileImageBytes == null
+                ? Icon(Icons.camera_alt, size: isMobile ? 30 : 40, color: Colors.white70) // Reduced from 40 to 30
+                : null,
+          ),
+        ),
+      ),
+      SizedBox(height: isMobile ? 20 : 30), // Reduced spacing
+      Row(
+        children: [
+          Expanded(
+            child: _buildTextField(_firstNameController, "First Name", isMobile: isMobile),
+          ),
+          SizedBox(width: isMobile ? 12 : 16), // Reduced spacing
+          Expanded(
+            child: _buildTextField(_lastNameController, "Last Name", isMobile: isMobile),
+          ),
+        ],
+      ),
+      SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
+      _buildTextField(
+        _contactEmailController,
+        "Contact Email",
+        keyboardType: TextInputType.emailAddress,
+        isMobile: isMobile,
+      ),
+      SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
+      _buildTextField(
+        _contactPhoneController,
+        "Contact Phone",
+        keyboardType: TextInputType.phone,
+        isMobile: isMobile,
+      ),
+      SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
+      Center(
+        child: Text(
+          "Enter Your Invitation Code",
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 16 : 18, // Reduced from 18 to 16
+            color: Colors.white,
+          ),
+        ),
+      ),
+      SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
+      _buildInvitationCodeInput(isMobile),
+      _buildVerifiedRealtorInfo(isMobile),
+      SizedBox(height: isMobile ? 20 : 30), // Reduced spacing
+      Center(
+        child: SizedBox(
+          width: isMobile ? 400 : 500, // Reduced width for mobile
+          height: isMobile ? 45 : 50, // Reduced height for mobile
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _saveInvestorData,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: neonPurple,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 15), // Adjusted padding
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+                side: const BorderSide(color: Colors.black, width: 2),
+              ),
+              textStyle: GoogleFonts.poppins(
+                fontSize: isMobile ? 18 : 22, // Reduced from 22 to 18
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text('SAVE & CONTINUE'),
+          ),
+        ),
+      ),
+    ];
   }
 }

@@ -129,7 +129,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
     super.dispose();
   }
 
-  static const Color neonPurple = Color(0xFFD500F9);
+  static const Color neonPurple = Color(0xFFa78cde);
 
   Widget _tabButton(BuildContext context, String title) {
     return TextButton(

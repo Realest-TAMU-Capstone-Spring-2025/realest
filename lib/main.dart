@@ -105,6 +105,7 @@ class _MyAppState extends State<MyApp> {
           path: '/login',
           builder: (context, state) => const CustomLoginPage(),
         ),
+        // Investor routes with navbar
         ShellRoute(
           builder: (context, state, child) => MainLayout(
             child: child,
@@ -115,10 +116,6 @@ class _MyAppState extends State<MyApp> {
             GoRoute(
               path: '/investorHome',
               builder: (context, state) => const PropertySwipingView(),
-            ),
-            GoRoute(
-              path: '/investorSetup',
-              builder: (context, state) => const InvestorSetupPage(),
             ),
             GoRoute(
               path: '/investorSettings',
@@ -137,6 +134,7 @@ class _MyAppState extends State<MyApp> {
             ),
           ],
         ),
+        // Realtor routes with navbar
         ShellRoute(
           builder: (context, state, child) => MainLayout(
             child: child,
@@ -150,10 +148,6 @@ class _MyAppState extends State<MyApp> {
                 toggleTheme: toggleTheme,
                 isDarkMode: themeMode == ThemeMode.dark,
               ),
-            ),
-            GoRoute(
-              path: '/realtorSetup',
-              builder: (context, state) => const RealtorSetupPage(),
             ),
             GoRoute(
               path: '/realtorCalculators',
@@ -180,8 +174,16 @@ class _MyAppState extends State<MyApp> {
             ),
           ],
         ),
+        // Setup routes without navbar (standalone)
+        GoRoute(
+          path: '/investorSetup',
+          builder: (context, state) => const InvestorSetupPage(),
+        ),
+        GoRoute(
+          path: '/realtorSetup',
+          builder: (context, state) => const RealtorSetupPage(),
+        ),
       ],
-      // Use a navigator observer to log route changes (optional for debugging)
       debugLogDiagnostics: true,
     );
   }

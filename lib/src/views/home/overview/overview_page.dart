@@ -16,7 +16,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
-  static const Color neonPurple = Color(0xFFD500F9);
+  static const Color neonPurple = Color(0xFFa78cde);
   late VideoPlayerController _headerController;
   late VideoPlayerController _overviewController1;
   late VideoPlayerController _overviewController2;
@@ -135,7 +135,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         const ButtonThemeData(textTheme: ButtonTextTheme.primary),
       ),
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Color(0xFF1f1e25),
         body: FutureBuilder<void>(
           future: _videosInitialization,
           builder: (context, snapshot) {
@@ -198,8 +198,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     ClipPath(
                       clipper: WaveClipper(),
                       child: Container(
-                        height: 100,
-                        color: const Color(0x33D500F9),
+                        height: 110,
+                        color: const Color(0xFFa78cde),
                       ),
                     ),
                     Container(
