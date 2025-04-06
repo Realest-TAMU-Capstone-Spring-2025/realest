@@ -19,7 +19,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   List<Property> _properties = [];
   List<Property> _swipedProperties = [];
   bool _noMoreProperties = false;
-  bool _noRealtorAssigned = false;
+  bool _noRealtorAssigned = true;
   bool _useRealtorDecisions = false;
 
   @override
@@ -50,64 +50,41 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     }
 
     try {
-      // Get investor's realtor ID
-      final investorDoc = await _db.collection('investors').doc(userId).get();
-      if(investorDoc.data() == null) {
-        setState(() {
-          _noMoreProperties = true;
-          _noRealtorAssigned = true;
-        });
-        return;
-      }
-      final realtorId = investorDoc.data()?['realtorId'] as String?;
-      if (realtorId == null) {
-        setState(() {
-          _noMoreProperties = true;
-          _noRealtorAssigned = true;
-        });
-        return;
-      }
-
-      final userLikedPropertiesSnapshot = await _db
-          .collection('users')
+      //grab collection from investors, grab the document by userid, and then grab the collection of recommended properties from that document
+      final snapshot = await _db
+          .collection('investors')
           .doc(userId)
-          .collection('decisions')
-          .where('liked', isEqualTo: true)
+          .collection('recommended_properties')
+          .limit(20)
           .get();
-
-      final userLikedPropertyIds = userLikedPropertiesSnapshot.docs.map((doc) => doc.id).toSet();
-
-      // Get realtor's decisions
-      final decisionsSnapshot = await _db
-          .collection('users')
-          .doc(realtorId)
-          .collection('decisions')
-          .where('liked', isEqualTo: true)
-          .get();
-
-      final propertyIds = decisionsSnapshot.docs
-          .map((doc) => doc.id)
-          .where((id) => !userLikedPropertyIds.contains(id))
-          .toList();
-
-      if (propertyIds.isEmpty) {
+      if (snapshot.docs.isEmpty) {
         setState(() {
           _noMoreProperties = true;
+          _noRealtorAssigned = true; // No realtor assigned
         });
         return;
       }
-
-      // Fetch properties based on filtered realtor's decisions
-      final propertiesSnapshot = await _db
-          .collection('listings')
-          .where(FieldPath.documentId, whereIn: propertyIds)
-          .get();
-
+      //for each document in the snapshot, get the property id and then get the property from the listings collection
+      //need to make a call to the listings collection for each document in the snapshot
+      final propertyIds = snapshot.docs.map((doc) => doc['property_id'] as String).toList();
+      final propertySnapshots = await Future.wait(propertyIds.map((id) => _db.collection('listings').doc(id).get()));
+      if (propertySnapshots.isEmpty) {
+        setState(() {
+          _noMoreProperties = true;
+          _noRealtorAssigned = true; // No realtor assigned
+        });
+        return;
+      }
+      
       setState(() {
-        _properties = propertiesSnapshot.docs
+        _properties = propertySnapshots
+            .where((doc) => doc.exists)
             .map((doc) => Property.fromFirestore(doc))
             .toList();
+        _noRealtorAssigned = false; // Realtor assigned
+        _noMoreProperties = false; // Reset noMoreProperties state
       });
+
     } catch (e) {
       print('Error loading realtor properties: $e');
       setState(() {
