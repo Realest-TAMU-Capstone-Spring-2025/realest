@@ -87,6 +87,10 @@ class InvestorActivitySection extends StatelessWidget {
                         timestamp: formattedDate,
                         duration: formattedDuration,
                         onPropertyTap: () => _showPropertyDetails(context, activityData['propertyId']),
+                        profilePicUrl: clientData['profilePicUrl'] != null ?
+                        clientData['profilePicUrl']!
+                        :  'assets/images/profile.png',
+
                       );
                     },
                   );
@@ -174,6 +178,7 @@ class ClientActivityCard extends StatelessWidget {
   final String timestamp;
   final String duration;
   final VoidCallback onPropertyTap;
+  final String? profilePicUrl;
 
   const ClientActivityCard({
     Key? key,
@@ -184,6 +189,7 @@ class ClientActivityCard extends StatelessWidget {
     required this.timestamp,
     required this.duration,
     required this.onPropertyTap,
+    required this.profilePicUrl,
   }) : super(key: key);
 
   @override
@@ -202,11 +208,10 @@ class ClientActivityCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                  child: Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : '?',
-                    style: TextStyle(color: theme.colorScheme.primary),
-                  ),
-                ),
+                  backgroundImage: profilePicUrl != null ?
+                       NetworkImage(profilePicUrl!)
+                      : const AssetImage('assets/images/profile.png') as ImageProvider,
+                    ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
