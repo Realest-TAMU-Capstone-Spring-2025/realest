@@ -54,42 +54,54 @@ class _TaxAssessmentWidgetState extends State<TaxAssessmentWidget> {
 
   /// ✅ **Refactored Chart Widget**
   Widget _buildChart() {
+    if (widget.taxHistory.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          "No tax history available.",
+          style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: SizedBox(
         height: 200,
         child: LineChart(
           LineChartData(
-            titlesData:
-            FlTitlesData(
+            titlesData: FlTitlesData(
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 80, // Adjust spacing dynamically
-                  getTitlesWidget: (value, meta) => getLeftTitleWidget(value, widget.taxHistory),
+                  reservedSize: 80,
+                  getTitlesWidget: (value, meta) =>
+                      getLeftTitleWidget(value, widget.taxHistory),
                 ),
               ),
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 30, // Adjust spacing dynamically
-                  getTitlesWidget: (value, meta) => getBottomTitleWidget(value, widget.taxHistory),
+                  reservedSize: 30,
+                  getTitlesWidget: (value, meta) =>
+                      getBottomTitleWidget(value, widget.taxHistory),
                 ),
               ),
-              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)), // Hide right
-              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)), // Hide top
+              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
             ),
             borderData: FlBorderData(show: false),
             lineTouchData: LineTouchData(
               touchTooltipData: LineTouchTooltipData(
+                fitInsideHorizontally: true,
+                fitInsideVertically: true,
                 getTooltipItems: (List<LineBarSpot> touchedSpots) {
                   return touchedSpots.map((spot) {
-                    final year = spot.x.toInt(); // Get Year
-                    final price = NumberFormat("#,##0").format(spot.y); // Format Price
+                    final year = spot.x.toInt();
+                    final price = NumberFormat("#,##0").format(spot.y);
 
                     return LineTooltipItem(
                       "$year\nValue: \$$price",
-                      //use theme color to match app
                       const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     );
                   }).toList();
@@ -105,7 +117,7 @@ class _TaxAssessmentWidgetState extends State<TaxAssessmentWidget> {
                   show: true,
                   gradient: LinearGradient(
                     colors: gradientColors
-                        .map((color) => color.withValues(alpha: 0.3))
+                        .map((color) => color.withOpacity(0.3))
                         .toList(),
                   ),
                 ),
@@ -117,6 +129,7 @@ class _TaxAssessmentWidgetState extends State<TaxAssessmentWidget> {
       ),
     );
   }
+
 
   /// ✅ **Fix: Ensure Tax Data is Not Null**
   List<FlSpot> _buildTaxSpots(List<dynamic> taxHistory) {

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -96,10 +97,15 @@ class SavedProperties extends StatelessWidget {
       margin: const EdgeInsets.all(8.0),
       child: Row(
         children: [
-          property.primaryPhoto != null && property.primaryPhoto!.isNotEmpty
-              ? Image.network(property.primaryPhoto!, width: 120, fit: BoxFit.cover)
+          (property.primaryPhoto != null && property.primaryPhoto!.isNotEmpty)
+              ? Image.network(
+            kDebugMode
+                ? 'http://localhost:8080/${property.primaryPhoto!}'
+                : property.primaryPhoto!,
+            width: 120,
+            fit: BoxFit.cover,
+          )
               : Container(width: 120, color: Colors.grey),
-
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8.0),

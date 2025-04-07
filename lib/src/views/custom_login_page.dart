@@ -153,90 +153,136 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    const Color neonPurple = Color(0xFFD500F9);
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
+      backgroundColor: Colors.black,
+      body: Row(
         children: [
-          // Background image
-          Positioned.fill(
-            child: Image.network(
-              'https://photos.zillowstatic.com/fp/dcc59aedfbee68c4e9bc4879fe11da9c-cc_ft_768.webp',
-              fit: BoxFit.cover,
-            ),
-          ),
-
-
-          // Semi-transparent white overlay
-          Positioned.fill(
-            child: Container(
-              color: Colors.white.withOpacity(.90), // Adjust opacity as needed
-            ),
-          ),
-
-          // Login form
-          Center(
+          // Left column with input fields
+          Expanded(
+            flex: 1,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(26.0),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 400.0),
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.real_estate_agent, size: 200, color: Colors.black),
                     Text(
-                      'Realest',
-                      style: GoogleFonts.poppins(fontSize: 40, color: Colors.black, fontWeight: FontWeight.bold),
+                      _isRegister ? 'Create your account' : 'Welcome back',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Text(
                       _errorMessage ?? (_isRegister ? 'Please Sign Up' : 'Please Sign In'),
                       style: _errorMessage != null
                           ? const TextStyle(color: Colors.red, fontSize: 14)
                           : GoogleFonts.poppins(
-                              fontSize: 20,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        fontSize: 16,
+                        color: Colors.white70,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 40),
-                    _buildTextField(_emailController, 'Email', false, false),
+                    Container(
+                      width: 400,
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: _buildTextField(_emailController, 'Email', false, false),
+                    ),
                     const SizedBox(height: 16),
-                    _buildTextField(_passwordController, 'Password', true, !_isRegister),
+                    Container(
+                      width: 400,
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: _buildTextField(_passwordController, 'Password', true, !_isRegister),
+                    ),
                     if (_isRegister) ...[
                       const SizedBox(height: 16),
-                      _buildTextField(_confirmPasswordController, 'Confirm Password', true, true),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: _buildTextField(_confirmPasswordController, 'Confirm Password', true, true),
+                      ),
                       const SizedBox(height: 16),
-                      ToggleButtons(
-                        borderRadius: BorderRadius.circular(30),
-                        constraints: const BoxConstraints(minHeight: 40, minWidth: 100),
-                        isSelected: [
-                          _selectedRole == 'investor',
-                          _selectedRole == 'realtor',
-                        ],
-                        onPressed: (int index) {
-                          setState(() {
-                            _selectedRole = index == 0 ? 'investor' : 'realtor';
-                          });
-                        },
-                        children: const [
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('Investor'),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('Realtor'),
-                          ),
-                        ],
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: ToggleButtons(
+                          borderRadius: BorderRadius.circular(30),
+                          constraints: const BoxConstraints(minHeight: 40, minWidth: 100),
+                          isSelected: [
+                            _selectedRole == 'investor',
+                            _selectedRole == 'realtor',
+                          ],
+                          onPressed: (int index) {
+                            setState(() {
+                              _selectedRole = index == 0 ? 'investor' : 'realtor';
+                            });
+                          },
+                          color: Colors.white,
+                          selectedColor: neonPurple,
+                          fillColor: Colors.black,
+                          borderColor: neonPurple,
+                          selectedBorderColor: neonPurple,
+                          children: const [
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: Text('Investor'),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: Text('Realtor'),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                     const SizedBox(height: 16),
-                    _buildActionButton(),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: _buildActionButton(),
+                    ),
                     const SizedBox(height: 16),
-                    _buildToggleAuthText(),
-                    if (_isLoading) const Padding(padding: EdgeInsets.only(top: 16.0), child: CircularProgressIndicator()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: _buildToggleAuthText(),
+                    ),
+                    if (_isLoading)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 16.0),
+                        child: CircularProgressIndicator(color: neonPurple),
+                      ),
                   ],
                 ),
+              ),
+            ),
+          ),
+
+          // Right column with logo and text
+          Expanded(
+            flex: 1,
+            child: Container(
+              color: const Color(0x33D500F9), // Neon purple with opacity
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.real_estate_agent,
+                    size: 200,
+                    color: Colors.white,
+                  ),
+                  Text(
+                    'RealEst',
+                    style: GoogleFonts.poppins(
+                      fontSize: 40,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -246,46 +292,52 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   }
 
   Widget _buildTextField(TextEditingController controller, String hint, bool obscure, bool isLastField) {
+    const Color neonPurple = Color(0xFFD500F9);
+
     return TextField(
       controller: controller,
       decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.grey[200], // Keeps the background color
+        fillColor: Colors.grey[900],
         hintText: hint,
+        hintStyle: const TextStyle(color: Colors.white70),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30.0),
-          borderSide: const BorderSide(color: Colors.purple, width: 1), // Purple border
+          borderRadius: BorderRadius.circular(15.0),
+          borderSide: const BorderSide(color: neonPurple, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30.0),
-          borderSide: const BorderSide(color: Colors.deepPurple, width: 2), // Deeper purple when focused
+          borderRadius: BorderRadius.circular(15.0),
+          borderSide: const BorderSide(color: neonPurple, width: 2),
         ),
       ),
+      style: const TextStyle(color: Colors.white),
       obscureText: obscure,
       keyboardType: obscure ? TextInputType.text : TextInputType.emailAddress,
-
-        // If it's the last text field, pressing Enter triggers the login logic
-        textInputAction:
-        isLastField ? TextInputAction.done : TextInputAction.next,
-        onSubmitted: (value) {
-          if (isLastField) {
-            _authenticate();
-          }
-        },
+      textInputAction: isLastField ? TextInputAction.done : TextInputAction.next,
+      onSubmitted: (value) {
+        if (isLastField) {
+          _authenticate();
+        }
+      },
     );
   }
 
-
   Widget _buildActionButton() {
+    const Color neonPurple = Color(0xFFD500F9);
+
     return SizedBox(
-      width: double.infinity,
+      width: 150,
       child: ElevatedButton(
         onPressed: _authenticate,
         style: ElevatedButton.styleFrom(
           textStyle: GoogleFonts.openSans(fontSize: 20, fontWeight: FontWeight.bold),
-          backgroundColor: const Color(0xFF212834),
+          backgroundColor: neonPurple,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+            side: const BorderSide(color: Colors.black, width: 2),
+          ),
         ),
         child: Text(_isRegister ? 'REGISTER' : 'LOGIN'),
       ),
@@ -293,15 +345,30 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   }
 
   Widget _buildToggleAuthText() {
+    const Color neonPurple = Color(0xFFD500F9);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(_isRegister ? 'Already have an account?' : 'Don\'t have an account?', style: GoogleFonts.openSans(fontSize: 20)),
+        Text(
+          _isRegister ? 'Already have an account?' : 'Don\'t have an account?',
+          style: GoogleFonts.openSans(fontSize: 20, color: Colors.white),
+        ),
         TextButton(
           onPressed: () => setState(() => _isRegister = !_isRegister),
-          child: Text(_isRegister ? 'Sign In' : 'Register', style: GoogleFonts.openSans(fontSize: 20, fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
+          child: Text(
+            _isRegister ? 'Sign In' : 'Register',
+            style: GoogleFonts.openSans(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: neonPurple,
+              decoration: TextDecoration.underline,
+              decorationColor: neonPurple,
+            ),
+          ),
         ),
       ],
     );
   }
+
 }

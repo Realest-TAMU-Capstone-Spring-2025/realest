@@ -107,7 +107,6 @@ class UserProvider extends ChangeNotifier {
       _investorNotes = data['notes'];
       _realtorId = data['realtorId'];
       _status = data['status'];
-      _createdAt = data['createdAt'];
       _tempPassword = data['tempPassword'];
     }
   }
