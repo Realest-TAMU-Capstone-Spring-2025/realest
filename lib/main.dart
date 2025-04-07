@@ -10,6 +10,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 // Views related to the investor
 import 'package:realest/src/views/investor/investor_settings.dart';
 import 'package:realest/src/views/investor/investor_setup.dart';
+import 'package:realest/src/views/investor/properties/disliked_properties.dart';
 import 'package:realest/src/views/investor/properties/saved_properties.dart';
 import 'package:realest/src/views/investor/swiping/property_swiping.dart';
 
@@ -124,6 +125,7 @@ class _MyAppState extends State<MyApp> {
           '/settings',
           '/calculators',
           '/saved',
+          '/disliked',
           '/clients',
           '/reports',
           '/search'
@@ -138,6 +140,10 @@ class _MyAppState extends State<MyApp> {
           // Role-specific route protection
           if (currentPath == '/saved' && userProvider.userRole != 'investor') {
             _showAccessDenied(context, 'Saved properties only available to investors');
+            return '/home';
+          }
+          if (currentPath == '/disliked' && userProvider.userRole != 'investor') {
+            _showAccessDenied(context, 'Disliked properties only available to investors');
             return '/home';
           }
           if (currentPath == '/clients' && userProvider.userRole != 'realtor') {
@@ -220,11 +226,27 @@ class _MyAppState extends State<MyApp> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Saved properties only available to investors')),
                     );
+                    context.go('/home'); // Redirect back to home
                   });
-                  context.go('/home'); // Redirect back to home
                   return const SizedBox.shrink(); // Temporary empty widget
                 }
                 return SavedProperties();
+              },
+            ),
+            GoRoute(
+              path: '/disliked',
+              builder: (context, state) {
+                final userProvider = Provider.of<UserProvider>(context);
+                if (userProvider.userRole != 'investor') {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Disliked properties only available to investors')),
+                    );
+                    context.go('/home'); // Redirect back to home
+                  });
+                  return const SizedBox.shrink(); // Temporary empty widget
+                }
+                return DislikedProperties();
               },
             ),
             GoRoute(
@@ -236,8 +258,8 @@ class _MyAppState extends State<MyApp> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Client management only available to realtors')),
                     );
+                    context.go('/home'); // Redirect back to home
                   });
-                  context.go('/home'); // Redirect back to home
                   return const SizedBox.shrink(); // Temporary empty widget
                 }
                 return const RealtorClients();
@@ -252,8 +274,8 @@ class _MyAppState extends State<MyApp> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Reports only available to realtors')),
                     );
+                    context.go('/home');
                   });
-                  context.go('/home');
                   return const SizedBox.shrink();
                 }
                 return const RealtorReports();
@@ -268,8 +290,8 @@ class _MyAppState extends State<MyApp> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Property search only available to realtors')),
                     );
+                    context.go('/home'); // Redirect back to home
                   });
-                  context.go('/home'); // Redirect back to home
                   return const SizedBox.shrink(); // Temporary empty widget
                 }
                 return const RealtorHomeSearch();

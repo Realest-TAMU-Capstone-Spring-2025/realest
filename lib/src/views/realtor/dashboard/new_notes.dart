@@ -144,7 +144,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
-import 'package:realest/util/fetchPropertyData.dart';
+
+import '../../../../util/property_fetch_helpers.dart';
 
 class NewNotesSection extends StatelessWidget {
   const NewNotesSection({Key? key}) : super(key: key);

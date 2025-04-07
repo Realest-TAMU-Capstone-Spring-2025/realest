@@ -41,22 +41,26 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     _cardViewStartTime = DateTime.now();
     _currentPropertyId = propertyId;
   }
-  
+
   Future<void> _checkAndRecordLongActivity() async {
     if (_cardViewStartTime == null || _currentPropertyId == null) return;
-    
+
     final duration = DateTime.now().difference(_cardViewStartTime!);
     if (duration.inSeconds < _longActivityThreshold) return;
-    
+
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
-    
+
     try {
       final investorDoc = await _db.collection('investors').doc(userId).get();
       final realtorId = investorDoc.data()?['realtorId'] as String?;
       if (realtorId == null) return;
-      
-      await _db.collection('realtors').doc(realtorId).collection('long_activity').add({
+
+      await _db
+          .collection('realtors')
+          .doc(realtorId)
+          .collection('long_activity')
+          .add({
         'timestamp': FieldValue.serverTimestamp(),
         'propertyId': _currentPropertyId,
         'clientId': userId,
@@ -79,81 +83,117 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
       await _loadNormalProperties();
     }
   }
+
   Future<void> _loadRealtorProperties() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
       setState(() {
         _noMoreProperties = true;
+        _noRealtorAssigned = false;
       });
       return;
     }
 
     try {
-      //grab collection from investors, grab the document by userid, and then grab the collection of recommended properties from that document
-      final snapshot = await _db
+      final investorDoc = await _db.collection('investors').doc(userId).get();
+      final realtorId = investorDoc.data()?['realtorId'] as String?;
+
+      if (realtorId == null) {
+        setState(() {
+          _noRealtorAssigned = true;
+          _noMoreProperties = true;
+        });
+        return;
+      }
+
+      final interactionsRef = _db
           .collection('investors')
           .doc(userId)
-          .collection('recommended_properties')
-          .limit(20)
-          .get();
-      if (snapshot.docs.isEmpty) {
-        setState(() {
-          _noMoreProperties = true;
-          _noRealtorAssigned = true; // No realtor assigned
-        });
-        return;
-      }
-      //for each document in the snapshot, get the property id and then get the property from the listings collection
-      //need to make a call to the listings collection for each document in the snapshot
-      final propertyIds = snapshot.docs.map((doc) => doc['property_id'] as String).toList();
-      final propertySnapshots = await Future.wait(propertyIds.map((id) => _db.collection('listings').doc(id).get()));
-      if (propertySnapshots.isEmpty) {
-        setState(() {
-          _noMoreProperties = true;
-          _noRealtorAssigned = true; // No realtor assigned
-        });
-        return;
-      }
-      
-      setState(() {
-        _properties = propertySnapshots
-            .where((doc) => doc.exists)
-            .map((doc) => Property.fromFirestore(doc))
-            .toList();
-        _noRealtorAssigned = false; // Realtor assigned
-        _noMoreProperties = false; // Reset noMoreProperties state
-      });
+          .collection('property_interactions');
 
+      final likedDislikedSnapshot = await interactionsRef
+          .where('status', whereIn: ['liked', 'disliked']).get();
+      final excludedIds = likedDislikedSnapshot.docs
+          .map((doc) => doc['propertyId'] as String)
+          .toSet();
+
+      // Try loading sent properties first
+      final sentSnapshot =
+          await interactionsRef.where('status', isEqualTo: 'sent').get();
+      List<String> propertyIds = sentSnapshot.docs
+          .where((doc) => !excludedIds.contains(doc['propertyId']))
+          .map((doc) => doc['propertyId'] as String)
+          .toList();
+
+      if (propertyIds.isEmpty) {
+        setState(() {
+          _noMoreProperties = true;
+          _noRealtorAssigned = false;
+        });
+        return;
+      }
+
+      final propertySnapshots = await Future.wait(
+        propertyIds.map((id) => _db.collection('listings').doc(id).get()),
+      );
+
+      final properties = propertySnapshots
+          .where((doc) => doc.exists)
+          .map((doc) => Property.fromFirestore(doc))
+          .toList();
+
+      setState(() {
+        _properties = properties;
+        _noRealtorAssigned = false;
+        _noMoreProperties = false;
+      });
     } catch (e) {
       print('Error loading realtor properties: $e');
       setState(() {
         _noMoreProperties = true;
+        _noRealtorAssigned = false;
       });
     }
   }
 
-
   Future<void> _loadNormalProperties() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
     try {
-      final snapshot = await _db
+      // Step 1: Fetch excluded property IDs from interactions
+      final interactionsSnapshot = await _db
+          .collection('investors')
+          .doc(userId)
+          .collection('property_interactions')
+          .where('status', whereIn: ['liked', 'disliked', 'sent']).get();
+
+      final excludedIds = interactionsSnapshot.docs
+          .map((doc) => doc['propertyId'] as String)
+          .toSet();
+
+      // Step 2: Fetch recommended properties
+      final listingsSnapshot = await _db
           .collection('listings')
           .where('status', isEqualTo: 'FOR_SALE')
-          .limit(20)
+          .limit(50) // fetch more since you'll filter some out
           .get();
 
-      if (mounted) {
-        setState(() {
-          _properties =
-              snapshot.docs.map((doc) => Property.fromFirestore(doc)).toList();
-        });
-      }
+      final allProperties = listingsSnapshot.docs
+          .where((doc) => !excludedIds.contains(doc.id)) // filter out excluded
+          .map((doc) => Property.fromFirestore(doc))
+          .toList();
+
+      setState(() {
+        _properties = allProperties;
+        _noMoreProperties = allProperties.isEmpty;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _properties = [];
-        });
-      }
-      debugPrint('Error loading properties: $e');
+      debugPrint('Error loading recommended properties: $e');
+      setState(() {
+        _properties = [];
+        _noMoreProperties = true;
+      });
     }
   }
 
@@ -227,26 +267,44 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
     final isLiked = direction == CardSwiperDirection.right;
 
-    if (isLiked || await _wasPropertyPreviouslyLiked(property.id)) {
-      // Save swipe decision to Firestore only if it's a like or if it's undoing a previous like
-      _db
-          .collection('users')
+    final investorDoc = await _db.collection('investors').doc(userId).get();
+    final realtorId = investorDoc.data()?['realtorId'] as String?;
+    if (realtorId != null) {
+      final investorRef = _db
+          .collection('investors')
           .doc(userId)
-          .collection('decisions')
-          .doc(property.id)
-          .set({
-        'liked': isLiked,
-        'timestamp': FieldValue.serverTimestamp(),
+          .collection('property_interactions')
+          .doc(property.id);
+
+      final realtorRef = _db
+          .collection('realtors')
+          .doc(realtorId)
+          .collection('interactions')
+          .doc('${property.id}_$userId');
+
+      final data = {
         'propertyId': property.id,
-      });
+        'investorId': userId,
+        'realtorId': realtorId,
+        'status': isLiked ? 'liked' : 'disliked',
+        'timestamp': FieldValue.serverTimestamp(),
+      };
+
+      await Future.wait([
+        investorRef.set(data),
+        realtorRef.set(data),
+      ]);
     }
 
     if (mounted) {
       setState(() {
         _swipedProperties.add(property);
+        _properties.removeAt(previousIndex); // ✅ Remove swiped property
+        if (_properties.isEmpty) {
+          _noMoreProperties = true;
+        }
       });
     }
-
     _showSwipeAnimation(direction);
 
     return true;
@@ -265,35 +323,6 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     return doc.exists && doc.data()?['liked'] == true;
   }
 
-  Future<bool> _handleUndo() async {
-    if (_swipedProperties.isEmpty) return false;
-
-    final lastProperty = _swipedProperties.removeLast();
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-
-    if (userId != null) {
-      final docRef = _db
-          .collection('users')
-          .doc(userId)
-          .collection('decisions')
-          .doc(lastProperty.id);
-      final doc = await docRef.get();
-
-      if (doc.exists && doc.data()?['liked'] == true) {
-        await docRef.delete();
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        _properties.insert(0, lastProperty);
-        _noMoreProperties = false;
-      });
-    }
-
-    return true;
-  }
-
   @override
   void dispose() {
     _controller.dispose();
@@ -305,126 +334,107 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // title: const Text('Swipe Properties'),
-        leading: IconButton(
-          icon: Icon(_useRealtorDecisions ? Icons.real_estate_agent_outlined : Icons.public),
-          onPressed: () {
+        title: ToggleButtons(
+          isSelected: [_useRealtorDecisions, !_useRealtorDecisions],
+          onPressed: (index) {
             setState(() {
-              _useRealtorDecisions = !_useRealtorDecisions;
-               _properties = []; // Clear properties
-              _noMoreProperties = false; // Reset noMoreProperties state
+              _useRealtorDecisions = index == 0;
+              _properties = [];
+              _noMoreProperties = false;
             });
             _loadProperties();
           },
-          tooltip: _useRealtorDecisions ? 'Using Realtor Decisions' : 'Using All Properties',
+          borderRadius: BorderRadius.circular(8),
+          constraints: const BoxConstraints(minHeight: 36, minWidth: 120),
+          selectedColor: Colors.white,
+          color: Colors.deepPurple,
+          fillColor: Colors.deepPurple,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          children: const [
+            Text("From Realtor"),
+            Text("Recommended"),
+          ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.help_rounded),
             onPressed: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return Dialog(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Swipe right to like a property, swipe left to dislike a property. \n\n'
-                            'You can undo your last swipe by pressing the undo button. \n\n'
-                            'If you swipe through all the properties, you can reload the properties by pressing the reload button. \n\n'
-                            'Tap on a property to view more details.',
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                child: const Text('Close'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
+              // your help dialog
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.undo),
-            onPressed: _swipedProperties.isNotEmpty
-                ? () async {
-                    final success = await _handleUndo();
-                    if (success) {
-                      setState(() {
-                        _noMoreProperties = false;
-                      });
-                    }
-                  }
-                : null,
-          )
         ],
       ),
       body: _properties.isEmpty
-    ? Center(
-        child: _noMoreProperties
-            ? (_noRealtorAssigned && _useRealtorDecisions
-                ? Text('No realtor assigned. Please contact support.')
-                : Text('No more properties available.'))
-            : CircularProgressIndicator(),
-      )
-    : CardSwiper(
-        controller: _controller,
-        cardsCount: _properties.length,
-        numberOfCardsDisplayed: (_properties.length >= 2) ? 2 : 1, // Ensure valid card count
-        backCardOffset: const Offset(0, 40),
-        scale: 0.9,
-        padding: const EdgeInsets.all(24),
-        allowedSwipeDirection: AllowedSwipeDirection.symmetric(
-          horizontal: true,
-          vertical: false,
-        ),
-        onSwipe: _handleSwipe,
-        onEnd: () {
-          setState(() {
-            _noMoreProperties = true;
-          });
-        },
-        cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
-          final property = _properties[index];
-          if (index == 0) {
-            _startCardViewTracking(property.id);
-          }
-          return PropertyCard(property: property, controller: _controller);
-        },
-      ),
+          ? Center(
+              child: _noMoreProperties
+                  ? (_noRealtorAssigned && _useRealtorDecisions
+                      ? Text('No realtor assigned. Please contact support.')
+                      : Text(
+                          'No more properties available. Your realtor is busy finding properties that you like.'))
+                  : CircularProgressIndicator(),
+            )
+          : CardSwiper(
+              controller: _controller,
+              cardsCount: _properties.length,
+              numberOfCardsDisplayed: 1, // Ensure valid card count
+              backCardOffset: const Offset(0, 40),
+              scale: 0.9,
+              padding: const EdgeInsets.all(24),
+              allowedSwipeDirection: AllowedSwipeDirection.symmetric(
+                horizontal: true,
+                vertical: false,
+              ),
+              onSwipe: _handleSwipe,
+              onEnd: () {
+                setState(() {
+                  _noMoreProperties = true;
+                });
+              },
+              cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
+                if (index >= _properties.length) {
+                  return const SizedBox.shrink(); // Safeguard
+                }
+
+                final property = _properties[index];
+                if (index == 0) {
+                  _startCardViewTracking(property.id);
+                }
+
+                // Determine if this was a "sent" property
+                final wasSent =
+                    _useRealtorDecisions; // You could refine this further
+
+                return PropertySwipeCard(
+                  property: property,
+                  controller: _controller,
+                );
+              },
+            ),
     );
   }
 }
 
-class PropertyCard extends StatelessWidget {
+class PropertySwipeCard extends StatelessWidget {
   final Property property;
   final CardSwiperController controller;
 
-  const PropertyCard({super.key, required this.property, required this.controller});
+  const PropertySwipeCard({
+    super.key,
+    required this.property,
+    required this.controller,
+  });
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currencyFormat = NumberFormat("#,##0", "en_US");
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final isMobile = MediaQuery.of(context).size.width < 600; // Define mobile screen size threshold
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double imageHeight = constraints.maxHeight * 0.75;
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
-        return Container(
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             color: isDarkMode ? Colors.black : Colors.white,
@@ -437,208 +447,215 @@ class PropertyCard extends StatelessWidget {
             ],
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Image + Address/Price Overlay
-              Stack(
-                children: [
-                  // Your main image or content
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: CachedNetworkImage(
-                      imageUrl: property.primaryPhoto != null
-                          ? (kDebugMode
-                          ? 'http://localhost:8080/${property.primaryPhoto}'
-                          : property.primaryPhoto!)
-                          : 'https://placehold.co/600x400',
-                      height: imageHeight,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-                      errorWidget: (context, url, error) => const Icon(Icons.error),
-                    ),
-                  ),
-
-                  // Positioned Price
-                  Positioned(
-                    left: 10,
-                    bottom: 60,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        property.listPrice != null
-                            ? "\$ ${NumberFormat("#,##0").format(property.listPrice)}"
-                            : "N/A",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 30,
-                          color: Colors.deepPurple,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Positioned NOI badge
-                  Positioned(
-                    right: 10,
-                    bottom: 60,
-                    child: CashFlowBadge(propertyId: property.id),
-                  ),
-
-                  // Address + Price Overlay
-                  Positioned(
-                    left: 0,
-                    bottom: 0,
-                    right: 0,
-                    child: ClipRRect(
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          color: Colors.black.withOpacity(0.4),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                property.street ?? "Unknown Address",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Info icon
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Tooltip(
-                      message: "Click for more information",
-                      child: InkWell(
-                        onTap: () => _navigateToPropertyView(context),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.info_outline,
-                            size: isMobile ? 20 : 24,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // Bottom Section (details + buttons)
+              // 👇 image section that takes remaining space
               Expanded(
-                child: Container(
-                  padding: EdgeInsets.all(isMobile ? 12 : 16),
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                    color: isDarkMode ? Colors.black : Colors.white,
-                  ),
-                  child: Column(
-                    children: [
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.black54.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _buildStat(icon: Icons.king_bed, label: "${property.beds} Beds", theme: theme),
-                              _verticalDivider(),
-                              _buildStat(
-                                icon: Icons.bathtub,
-                                label: "${(property.fullBaths! + (property.halfBaths ?? 0) / 2)} Baths",
-                                theme: theme,
-                              ),
-                              _verticalDivider(),
-                              _buildStat(
-                                icon: Icons.square_foot,
-                                label: "${currencyFormat.format(property.sqft)} sqft",
-                                theme: theme,
-                              ),
-                            ],
-                          ),
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                        child: CachedNetworkImage(
+                          imageUrl: property.image != null
+                              ? (kDebugMode ? 'http://localhost:8080/${property.image}' : property.image!)
+                              : 'https://placehold.co/600x400',
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
                         ),
                       ),
-                      const SizedBox(height: 25),
-                      if (!isMobile)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildSwipeButton(
-                              icon: Icons.thumb_down,
-                              color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-                              tooltip: "Dislike",
-                              onPressed: () => controller.swipe(CardSwiperDirection.left),
-                              isMobile: isMobile,
-                            ),
-                            _buildSwipeButton(
-                              icon: Icons.favorite,
-                              color: isDarkMode ? Colors.red[400]! : Colors.red[200]!,
-                              tooltip: "Like",
-                              onPressed: () => controller.swipe(CardSwiperDirection.right),
-                              isMobile: isMobile,
+                    ),
+                    Align(
+                      alignment: Alignment.center,
+                      child: ClipRRect(
+                        child: CachedNetworkImage(
+                          imageUrl: property.image != null
+                              ? (kDebugMode ? 'http://localhost:8080/${property.image}' : property.image!)
+                              : 'https://placehold.co/600x400',
+                          width: double.infinity, // 👈 full width
+                          fit: BoxFit.fill,
+                          placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                          errorWidget: (context, url, error) => const Icon(Icons.error),
+                        ),
+                      ),
+                    ),
+
+
+                    Positioned(
+                      left: 10,
+                      bottom: 60,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                    ],
-                  ),
+                        child: Text(
+                          property.price != null
+                              ? "\$ ${currencyFormat.format(property.price)}"
+                              : "N/A",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 30,
+                            color: Colors.deepPurple,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    Positioned(
+                      right: 10,
+                      bottom: 60,
+                      child: CashFlowBadge(propertyId: property.id),
+                    ),
+
+                    Positioned(
+                      left: 0,
+                      bottom: 0,
+                      right: 0,
+                      child: ClipRRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            color: Colors.black.withOpacity(0.4),
+                            child: Text(
+                              property.address ?? "Unknown Address",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Tooltip(
+                        message: "Click for more information",
+                        child: InkWell(
+                          onTap: () => _navigateToPropertyView(context),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.info_outline,
+                              size: isMobile ? 20 : 24,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // 👇 Bottom Section - height based on content
+              Padding(
+                padding: EdgeInsets.all(isMobile ? 12 : 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.black54.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildStat(
+                            icon: Icons.king_bed,
+                            label: "${property.beds} Beds",
+                            theme: theme,
+                          ),
+                          _verticalDivider(),
+                          _buildStat(
+                            icon: Icons.bathtub,
+                            label: "${property.baths} Baths",
+                            theme: theme,
+                          ),
+                          _verticalDivider(),
+                          _buildStat(
+                            icon: Icons.square_foot,
+                            label: "${currencyFormat.format(property.sqft)} sqft",
+                            theme: theme,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 25),
+                    if (!isMobile)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildSwipeButton(
+                            icon: Icons.thumb_down,
+                            color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                            tooltip: "Dislike",
+                            onPressed: () => controller.swipe(CardSwiperDirection.left),
+                            isMobile: isMobile,
+                          ),
+                          _buildSwipeButton(
+                            icon: Icons.favorite,
+                            color: isDarkMode ? Colors.red[400]! : Colors.red[200]!,
+                            tooltip: "Like",
+                            onPressed: () => controller.swipe(CardSwiperDirection.right),
+                            isMobile: isMobile,
+                          ),
+                        ],
+                      ),
+                  ],
                 ),
               ),
             ],
           ),
-
-        );
-      },
+        ),
+      ),
     );
   }
+
+
   Widget _verticalDivider() => Container(
-    width: 1,
-    height: 20,
-    color: Colors.grey[400],
-    margin: const EdgeInsets.symmetric(horizontal: 12),
-  );
-  Widget _buildStat({required IconData icon, required String label, required ThemeData theme}) {
+        width: 1,
+        height: 20,
+        color: Colors.grey[400],
+        margin: const EdgeInsets.symmetric(horizontal: 12),
+      );
+  Widget _buildStat(
+      {required IconData icon,
+      required String label,
+      required ThemeData theme}) {
     return Row(
       children: [
         Icon(icon, size: 18, color: theme.colorScheme.primary),
         const SizedBox(width: 6),
         Text(
           label,
-          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          style:
+              theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -670,53 +687,73 @@ class PropertyCard extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       constraints: BoxConstraints(
-        maxWidth:  1000,
+        maxWidth: 1000,
       ),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => PropertyDetailSheet(property: propertyData),
       //disable swipe to close
       enableDrag: false,
-
     );
   }
 }
 
 class Property {
   final String id;
-  final String? primaryPhoto;
-  final double? listPrice;
+  final String? image;
+  final double? price;
   final int? beds;
-  final int? fullBaths;
-  final int? halfBaths;
-  final String? street;
+  final int? baths;
+  final String? address;
   final int? sqft;
   final double? tax;
+  final String? status;
 
   Property({
     required this.id,
-    this.primaryPhoto,
-    this.listPrice,
+    this.image,
+    this.price,
     this.beds,
-    this.fullBaths,
-    this.halfBaths,
-    this.street,
+    this.baths,
+    this.address,
     this.sqft,
     this.tax,
+    this.status,
   });
 
   factory Property.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return Property(
       id: doc.id,
-      primaryPhoto: data['primary_photo'],
-      listPrice: (data['list_price'] as num?)?.toDouble(),
+      image: data['primary_photo'],
+      price: (data['list_price'] as num?)?.toDouble(),
       beds: data['beds'] as int?,
-      fullBaths: data['full_baths'] as int?,
-      halfBaths: data['half_baths'] as int?,
-      street: data['street'],
+      baths: data['full_baths'] as int? ??
+          0 + (data['half_baths'] as int? ?? 0) ~/ 2,
+      address: data['street'],
       sqft: data['sqft'] as int?,
       tax: (data['tax'] as num?)?.toDouble(),
+      status: data['status'] as String?,
     );
+  }
+
+  @override
+  String toString() {
+    return 'Property{id: $id, image: $image, price: $price, beds: $beds, baths: $baths, address: $address, sqft: $sqft, tax: $tax, status: $status}';
+  }
+
+  // to Map<String, dynamic>
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'image': kDebugMode ? 'http://localhost:8080/$image' : image,
+      'price': price,
+      'beds': beds,
+      'baths': baths,
+      'address': address,
+      'sqft': sqft,
+      'tax': tax,
+      'status': status,
+    };
   }
 }

@@ -115,11 +115,6 @@ flutter:
     - .env
 
   fonts:
-    - family: globalFont
-      fonts:
-        - asset: assets/markers/marker_default.png
-        - asset: assets/markers/marker_selected.png
-
     - family: homePage
       fonts:
         - asset: assets/fonts/Lexend-Regular.ttf

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -139,27 +140,47 @@ class PropertyDetailSheet extends StatelessWidget {
       context: context,
       builder: (_) => SelectClientDialog(
         onClientsSelected: (List<String> selectedClientIds) async {
+          final firestore = FirebaseFirestore.instance;
+          final realtorId = FirebaseAuth.instance.currentUser!.uid; // or however you're identifying the realtor
+
+          final batch = firestore.batch();
+
           for (String clientId in selectedClientIds) {
-            // For each selected investor, add the property to the recommended_properties subcollection.
-            await FirebaseFirestore.instance
+            final investorRef = firestore
                 .collection('investors')
                 .doc(clientId)
-                .collection('recommended_properties')
-                .doc(propertyId)
-                .set({
-              'property_id': propertyId,
-              'sent_at': FieldValue.serverTimestamp(),
-              'status': 'pending',
-            });
+                .collection('property_interactions')
+                .doc(propertyId);
+
+            final realtorRef = firestore
+                .collection('realtors')
+                .doc(realtorId)
+                .collection('interactions')
+                .doc('${propertyId}_$clientId');
+
+            final interactionData = {
+              'propertyId': propertyId,
+              'investorId': clientId,
+              'realtorId': realtorId,
+              'status': 'sent',
+              'timestamp': FieldValue.serverTimestamp(),
+            };
+
+            batch.set(investorRef, interactionData);
+            batch.set(realtorRef, interactionData);
           }
+
+          await batch.commit();
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Property sent to ${selectedClientIds.length} investor(s)!')),
           );
         },
-        property: property, // Pass the property data
+        property: property, // assuming this is defined and passed properly
       ),
     );
   }
+
 
   void _sendNoteToRealtor(BuildContext context, String propertyId, String investorId) async {
     TextEditingController noteController = TextEditingController();

@@ -160,7 +160,7 @@ class _NavBarState extends State<NavBar> {
       _NavItem(icon: Icons.home, label: "Home", route: '/home', isDrawer: isDrawer),
       _NavItem(icon: Icons.calculate, label: "Calculators", route: '/calculators', isDrawer: isDrawer),
       _NavItem(icon: Icons.favorite, label: "Saved", route: '/saved', isDrawer: isDrawer),
-
+      _NavItem(icon: Icons.close, label: "Disliked", route: '/disliked', isDrawer: isDrawer),
     ];
   }
 }
