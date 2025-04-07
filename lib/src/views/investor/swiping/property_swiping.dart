@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,6 +18,10 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   List<Property> _properties = [];
   List<Property> _swipedProperties = [];
+  DateTime? _cardViewStartTime;
+  String? _currentPropertyId;
+  Timer? _longActivityTimer;
+  final int _longActivityThreshold = 50;
   bool _noMoreProperties = false;
   bool _noRealtorAssigned = false;
   bool _useRealtorDecisions = false;
@@ -25,6 +30,35 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   void initState() {
     super.initState();
     _loadProperties();
+  }
+  void _startCardViewTracking(String propertyId) {
+    _cardViewStartTime = DateTime.now();
+    _currentPropertyId = propertyId;
+  }
+  
+  Future<void> _checkAndRecordLongActivity() async {
+    if (_cardViewStartTime == null || _currentPropertyId == null) return;
+    
+    final duration = DateTime.now().difference(_cardViewStartTime!);
+    if (duration.inSeconds < _longActivityThreshold) return;
+    
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+    
+    try {
+      final investorDoc = await _db.collection('investors').doc(userId).get();
+      final realtorId = investorDoc.data()?['realtorId'] as String?;
+      if (realtorId == null) return;
+      
+      await _db.collection('realtors').doc(realtorId).collection('long_activity').add({
+        'timestamp': FieldValue.serverTimestamp(),
+        'propertyId': _currentPropertyId,
+        'clientId': userId,
+        'duration': duration.inSeconds,
+      });
+    } catch (e) {
+      print('Error recording long activity: $e');
+    }
   }
 
   Future<void> _loadProperties() async {
@@ -194,10 +228,19 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
   Future<bool> _handleSwipe(int previousIndex, int? currentIndex,
       CardSwiperDirection direction) async {
+    await _checkAndRecordLongActivity();
+
     final property = _properties[previousIndex];
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
     if (userId == null) return false;
+
+    if (currentIndex != null && currentIndex < _properties.length) {
+      _startCardViewTracking(_properties[currentIndex].id);
+    } else {
+      _cardViewStartTime = null;
+      _currentPropertyId = null;
+    }
 
     final isLiked = direction == CardSwiperDirection.right;
 
@@ -271,6 +314,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   @override
   void dispose() {
     _controller.dispose();
+    _longActivityTimer?.cancel();
     super.dispose();
   }
 
@@ -372,6 +416,9 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
         },
         cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
           final property = _properties[index];
+          if (index == 0) {
+            _startCardViewTracking(property.id);
+          }
           return PropertyCard(property: property);
         },
       ),

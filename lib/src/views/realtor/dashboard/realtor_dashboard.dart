@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:realest/src/views/realtor/dashboard/pinned_clients.dart';
+import 'package:realest/src/views/realtor/dashboard/investor_activity.dart';
 
 class RealtorDashboard extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -38,7 +39,6 @@ class RealtorDashboardState extends State<RealtorDashboard> {
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -54,24 +54,63 @@ class RealtorDashboardState extends State<RealtorDashboard> {
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                        Text(
-                          "Dashboard",
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                        _buildModernCard(
-                          Column(
-                            children: [
-                              const SizedBox(height: 16),
-                              // Provide a fixed height for PinnedClientsSection
+                    Text(
+                      "Dashboard",
+                      style: Theme.of(context).textTheme.headlineSmall,
+                      textAlign: TextAlign.start,
+
+                    ),
+                    const SizedBox(height: 16),
+                    isMobile 
+                      ? Column(
+                          children: [
+                            _buildModernCard(
                               SizedBox(
-                                height: screenHeight * 0.6, // 60% of screen height
+                                height: screenHeight * 0.3,
                                 child: const PinnedClientsSection(),
                               ),
-                            ],
-                          ),
+                            ),
+                            _buildModernCard(
+                              SizedBox(
+                                height: screenHeight * 0.3,
+                                child: const InvestorActivitySection(),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Pinned Clients (Left half on desktop)
+                            Expanded(
+                              child: _buildModernCard(
+                                SizedBox(
+                                  height: screenHeight * 0.35,
+                                  child: const PinnedClientsSection(),
+                                ),
+                              ),
+                            ),
+                            // Realtor Activity (Right half on desktop)
+                            Expanded(
+                              child: _buildModernCard(
+                                SizedBox(
+                                  height: screenHeight * 0.35,
+                                  child: const InvestorActivitySection(),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                    if (!isMobile) const SizedBox(height: 24),
+                    
+                    const SizedBox(height: 16),
+                    _buildModernCard(
+                      SizedBox(
+                        height: screenHeight * 0.4,
+                        child: const PropertyUpdatesSection(),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -79,6 +118,32 @@ class RealtorDashboardState extends State<RealtorDashboard> {
           },
         ),
       ),
+    );
+  }
+}
+
+class PropertyUpdatesSection extends StatelessWidget {
+  const PropertyUpdatesSection({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Property Updates",
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: ListView(
+            children: const [
+              // Add your property update items here
+              // Example: PropertyUpdateItem(address: "123 Main St", status: "Price reduced")
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

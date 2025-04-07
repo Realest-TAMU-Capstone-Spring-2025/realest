@@ -31,6 +31,8 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
   bool _isLoading = true;
   bool _showSearchBar = false;
   Timer? _batchUpdateTimer;
+  double _searchBarWidth = 0; //lags the search bar a little but
+
 
   @override
   void initState() {
@@ -156,6 +158,7 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
     });
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -172,9 +175,17 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
                     _searchController.text.isNotEmpty) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Text(
-                      'No results found',
-                      style: TextStyle(color: Colors.grey),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: 1,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          title: Text(
+                            'No results found',
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        );
+                      },
                     ),
                   );
                 }
@@ -223,7 +234,11 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
                       return SizedBox.shrink();
                     }
                     
+                    if (!snapshot.hasData || snapshot.data!.data() == null) {
+                      return SizedBox.shrink();
+                    }
                     final data = snapshot.data!.data() as Map<String, dynamic>;
+
                     final isName = 
                       (data['firstName']?.isNotEmpty == true &&
                         data['lastName']?.isNotEmpty == true);
@@ -271,116 +286,145 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
   }
 
   Widget _buildSearchBarInHeader() {
-    return RawAutocomplete<Map<String, dynamic>>(
-      focusNode: _searchFocusNode,
-      textEditingController: _searchController,
-      optionsBuilder: _searchClients,
-      displayStringForOption: (option) =>
-          '${option['firstName']} ${option['lastName']}',
-      fieldViewBuilder:
-          (context, controller, focusNode, onFieldSubmitted) {
-        return TextField(
-          controller: controller,
-          focusNode: focusNode,
-          decoration: InputDecoration(
-            hintText: 'Search clients...',
-            prefixIcon: const Icon(Icons.search),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: _toggleSearchBar,
-            ),
-            border: const OutlineInputBorder(),
+  final searchBarKey = GlobalKey();
+  
+  return RawAutocomplete<Map<String, dynamic>>(
+    focusNode: _searchFocusNode,
+    textEditingController: _searchController,
+    optionsBuilder: _searchClients,
+    displayStringForOption: (option) =>
+        '${option['firstName']} ${option['lastName']}',
+    fieldViewBuilder:
+        (context, controller, focusNode, onFieldSubmitted) {
+      return TextField(
+        key: searchBarKey,
+        controller: controller,
+        focusNode: focusNode,
+        decoration: InputDecoration(
+          hintText: 'Search clients...',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: _toggleSearchBar,
           ),
-        );
-      },
-      optionsViewBuilder: _buildSearchOptions,
-      onSelected: (option) {
-        _addClientToPin(option);
-        _toggleSearchBar();
-      },
-    );
-  }
+          border: const OutlineInputBorder(),
+        ),
+        onTap: () {
+          // After the widget is built, get its size
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (searchBarKey.currentContext != null) {
+              final RenderBox box = searchBarKey.currentContext!.findRenderObject() as RenderBox;
+              // Store the width for use in the options builder
+              _searchBarWidth = box.size.width;
+              setState(() {});
+            }
+          });
+        },
+      );
+    },
+    optionsViewBuilder: (context, onSelected, options) => 
+        _buildSearchOptions(context, onSelected, options),
+    onSelected: (option) {
+      _addClientToPin(option);
+      _toggleSearchBar();
+    },
+  );
+}
+
 
   Future<Iterable<Map<String, dynamic>>> _searchClients(
       TextEditingValue textEditingValue) async {
-    if (textEditingValue.text.isEmpty) return const [];
-    
-    final userProvider =
-        Provider.of<UserProvider>(context, listen: false);
-    final pinnedIds = _pinnedClients.map((ref) => ref.id).toList();
+      if (textEditingValue.text.isEmpty) return const [];
+      
+      final userProvider =
+          Provider.of<UserProvider>(context, listen: false);
+      final pinnedIds = _pinnedClients.map((ref) => ref.id).toList();
 
-    _searcher.applyState((state) => state.copyWith(
-          filterGroups: {
-            algolia.FilterGroup.facet(
-              filters: {
-                algolia.Filter.facet('realtorId', userProvider.uid),
-                ...pinnedIds.map((id) =>
-                    algolia.Filter.facet('objectID', id, isNegated: true)),
-              }.toSet(),
-            ),
-          },
-          query: textEditingValue.text,
-        ));
+      _searcher.applyState((state) => state.copyWith(
+            filterGroups: {
+              algolia.FilterGroup.facet(
+                filters: {
+                  algolia.Filter.facet('realtorId', userProvider.uid),
+                  ...pinnedIds.map((id) =>
+                      algolia.Filter.facet('objectID', id, isNegated: true)),
+                }.toSet(),
+              ),
+            },
+            query: textEditingValue.text,
+          ));
 
-    final snapshot = await _searcher.responses.first;
-    return snapshot.hits
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-  }
+      final snapshot = await _searcher.responses.first;
+      return snapshot.hits
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
 
-  void _addClientToPin(Map<String, dynamic> option) async {
-    final userProvider =
-        Provider.of<UserProvider>(context, listen: false);
-    final clientRef = FirebaseFirestore.instance.doc('investors/${option['objectID']}');
+    void _addClientToPin(Map<String, dynamic> option) async {
+      final userProvider =
+          Provider.of<UserProvider>(context, listen: false);
+      final clientRef = FirebaseFirestore.instance.doc('investors/${option['objectID']}');
 
-    setState(() {
-      _pinnedClients.add(clientRef);
-    });
-    
-    // Update both cache and Firestore
-    await _cacheClients(_pinnedClients);
-    await FirebaseFirestore.instance
-        .collection('realtors')
-        .doc(userProvider.uid)
-        .update({
-      'pinnedClients': FieldValue.arrayUnion([clientRef])
-    });
-  }
+      setState(() {
+        _pinnedClients.add(clientRef);
+      });
+      
+      await _cacheClients(_pinnedClients);
+      await FirebaseFirestore.instance
+          .collection('realtors')
+          .doc(userProvider.uid)
+          .update({
+        'pinnedClients': FieldValue.arrayUnion([clientRef])
+      });
+    }
 
-  Widget _buildSearchOptions(BuildContext context,
+    Widget _buildSearchOptions(BuildContext context,
       AutocompleteOnSelected<Map<String, dynamic>> onSelected,
       Iterable<Map<String, dynamic>> options) {
-    return Material(
-      elevation: 4,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 200),
-        child: options.isEmpty
-            ? Container(
-                padding: const EdgeInsets.all(16.0),
-                alignment: Alignment.center,
-                child: const Text(
-                  "No results found",
-                  style: TextStyle(color: Colors.grey),
+    // Get the available width from the parent container
+    final double availableWidth
+      = _searchBarWidth > 0 
+        ? _searchBarWidth 
+        : MediaQuery.of(context).size.width - 32;
+    
+    // Calculate the height based on the pinned clients section
+    // This will be constrained by the parent's height
+    final double maxHeight = MediaQuery.of(context).size.height * 0.5; // Limit to half the screen height
+    
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Material(
+        elevation: 4,
+        child: Container(
+          width: availableWidth,
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: options.isEmpty
+              ? Container(
+                  padding: const EdgeInsets.all(16.0),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    "No results found",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final option = options.elementAt(index);
+                    final isName = 
+                        (option['firstName']?.isNotEmpty == true &&
+                            option['lastName']?.isNotEmpty == true);
+                    return ListTile(
+                      title: Text(
+                      (isName) ? '${option['firstName']} ${option['lastName']}'
+                        : option['contactEmail'] ?? 'Unknown Client: ${option['objectID']}',
+                      ),
+                      subtitle: (isName) ? Text(option['contactEmail'] ?? '') : null,
+                      onTap: () => onSelected(option),
+                    );
+                  },
                 ),
-              )
-            : ListView.builder(
-                shrinkWrap: true,
-                itemCount: options.length,
-                itemBuilder: (context, index) {
-                  final option = options.elementAt(index);
-                  final isName = 
-                      (option['firstName']?.isNotEmpty == true &&
-                          option['lastName']?.isNotEmpty == true);
-                  return ListTile(
-                    title: Text(
-                    (isName) ? '${option['firstName']} ${option['lastName']}'
-                      : option['contactEmail'] ?? 'Unknown Client: ${option['objectID']}',
-                    ),
-                    subtitle: (isName) ? Text(option['contactEmail'] ?? '') : null,
-                    onTap: () => onSelected(option),
-                  );
-                },
-              ),
+        ),
       ),
     );
   }
