@@ -453,7 +453,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
   }
 
   void _updateFilteredQuery() {
-    print('[FirestoreQuery] Updating filtered query...');
+    // print('[FirestoreQuery] Updating filtered query...');
     final query = buildFilteredQuery(_filters);
     setState(() => _filteredQuery = query);
     _fetchAllFilteredPropertiesForMap();

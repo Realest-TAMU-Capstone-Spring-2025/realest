@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 class PropertyFilter {
   int? minPrice;
   int? maxPrice;

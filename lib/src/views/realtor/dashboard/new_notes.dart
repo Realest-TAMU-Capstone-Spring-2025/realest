@@ -1,0 +1,467 @@
+// import 'package:flutter/cupertino.dart';
+// import 'package:flutter/material.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:url_launcher/url_launcher.dart';
+// import 'package:intl/intl.dart';
+
+// class NewNotesSection extends StatelessWidget {
+//   const NewNotesSection({Key? key}) : super(key: key);
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final currentUser = FirebaseAuth.instance.currentUser;
+//     if (currentUser == null) {
+//       return const Center(child: Text('User not logged in'));
+//     }
+
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Text(
+//           "New Notes",
+//           style: Theme.of(context).textTheme.titleLarge,
+//         ),
+//         const SizedBox(height: 16),
+//         Expanded(
+//           child: StreamBuilder<QuerySnapshot>(
+//             stream: FirebaseFirestore.instance
+//                 .collection('realtors')
+//                 .doc(currentUser.uid)
+//                 .collection('notes')
+//                 .orderBy('timestamp', descending: true)
+//                 .limit(10)
+//                 .snapshots(),
+//             builder: (context, snapshot) {
+//               if (snapshot.connectionState == ConnectionState.waiting) {
+//                 return const Center(child: CircularProgressIndicator());
+//               }
+              
+//               if (snapshot.hasError) {
+//                 return Center(child: Text('Error: ${snapshot.error}'));
+//               }
+              
+//               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+//                 return const Center(child: Text('No notes available'));
+//               }
+              
+//               return ListView.builder(
+//                 itemCount: snapshot.data!.docs.length,
+//                 itemBuilder: (context, index) {
+//                   final noteDoc = snapshot.data!.docs[index];
+//                   final noteData = noteDoc.data() as Map<String, dynamic>;
+                  
+//                   return NoteCard(
+//                     investorId: noteData['investorId'] ?? 'Unknown',
+//                     note: noteData['note'] ?? 'No note content',
+//                     propertyId: noteData['propertyId'] ?? 'Unknown',
+//                     read: noteData['read'] ?? false,
+//                     timestamp: noteData['timestamp'] as Timestamp? ?? Timestamp.now(),
+//                   );
+//                 },
+//               );
+//             },
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+// }
+
+// class NoteCard extends StatelessWidget {
+//   final String investorId;
+//   final String note;
+//   final String propertyId;
+//   final bool read;
+//   final Timestamp timestamp;
+
+//   const NoteCard({
+//     Key? key,
+//     required this.investorId,
+//     required this.note,
+//     required this.propertyId,
+//     required this.read,
+//     required this.timestamp,
+//   }) : super(key: key);
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final theme = Theme.of(context);
+//     final formattedDate = DateFormat('MMM d, yyyy • h:mm a').format(timestamp.toDate());
+
+//     return Card(
+//       margin: const EdgeInsets.symmetric(vertical: 8),
+//       child: Padding(
+//         padding: const EdgeInsets.all(16),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Row(
+//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//               children: [
+//                 Text(
+//                   'Investor ID: $investorId',
+//                   style: theme.textTheme.titleMedium?.copyWith(
+//                     fontWeight: FontWeight.bold,
+//                   ),
+//                 ),
+//                 Icon(
+//                   read ? Icons.visibility : Icons.visibility_off,
+//                   color: read ? theme.colorScheme.primary : theme.disabledColor,
+//                 ),
+//               ],
+//             ),
+//             const SizedBox(height: 8),
+//             Text(
+//               note,
+//               style: theme.textTheme.bodyMedium,
+//             ),
+//             const SizedBox(height: 8),
+//             Row(
+//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//               children: [
+//                 Text(
+//                   'Property ID: $propertyId',
+//                   style: theme.textTheme.bodySmall,
+//                 ),
+//                 Text(
+//                   formattedDate,
+//                   style: theme.textTheme.bodySmall,
+//                 ),
+//               ],
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
+import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
+import 'package:realest/util/fetchPropertyData.dart';
+
+class NewNotesSection extends StatelessWidget {
+  const NewNotesSection({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      return const Center(child: Text('User not logged in'));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "New Notes",
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('realtors')
+                .doc(currentUser.uid)
+                .collection('notes')
+                .orderBy('timestamp', descending: true)
+                .limit(10)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(child: Text('No notes available'));
+              }
+              
+              return ListView.builder(
+                itemCount: snapshot.data!.docs.length,
+                itemBuilder: (context, index) {
+                  final noteDoc = snapshot.data!.docs[index];
+                  final noteData = noteDoc.data() as Map<String, dynamic>;
+                  
+                  return FutureBuilder<Map<String, dynamic>>(
+                    future: _getInvestorDetails(noteData['investorId']),
+                    builder: (context, investorSnapshot) {
+                      if (investorSnapshot.connectionState == ConnectionState.waiting) {
+                        return const NoteSkeletonCard();
+                      }
+                      
+                      final investorData = investorSnapshot.data ?? {};
+                      final hasName = investorData['firstName'] != null && investorData['lastName'] != null;
+                      final name = hasName 
+                          ? '${investorData['firstName']} ${investorData['lastName']}'
+                          : 'Unknown Investor';
+                      final email = investorData['contactEmail'] ?? 'No email';
+                      
+                      // Format timestamp
+                      final timestamp = noteData['timestamp'] as Timestamp?;
+                      final formattedDate = timestamp != null
+                          ? DateFormat('MMM d, yyyy • h:mm a').format(timestamp.toDate())
+                          : 'Unknown date';
+                      
+                      return NoteCard(
+                        name: name,
+                        email: email,
+                        note: noteData['note'] ?? 'No note content',
+                        propertyId: noteData['propertyId'] ?? 'Unknown',
+                        read: noteData['read'] ?? false,
+                        timestamp: formattedDate,
+                        onPropertyTap: () => _showPropertyDetails(context, noteData['propertyId']),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<Map<String, dynamic>> _getInvestorDetails(String? investorId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('investors')
+          .doc(investorId)
+          .get();
+      
+      if (doc.exists) {
+        return doc.data() ?? {};
+      }
+      return {};
+    } catch (e) {
+      print('Error fetching investor details: $e');
+      return {};
+    }
+  }
+
+  void _showPropertyDetails(BuildContext context, String? propertyId) {
+    if (propertyId == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => FutureBuilder<Map<String, dynamic>>(
+        future: fetchPropertyData(propertyId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No property data available'));
+          }
+          return DraggableScrollableSheet(
+            initialChildSize: 0.9,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            expand: false,
+            builder: (context, scrollController) {
+              return PropertyDetailSheet(
+                property: snapshot.data!,
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class NoteCard extends StatelessWidget {
+  final String name;
+  final String email;
+  final String note;
+  final String propertyId;
+  final bool read;
+  final String timestamp;
+  final VoidCallback onPropertyTap;
+
+  const NoteCard({
+    Key? key,
+    required this.name,
+    required this.email,
+    required this.note,
+    required this.propertyId,
+    required this.read,
+    required this.timestamp,
+    required this.onPropertyTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: TextStyle(color: theme.colorScheme.primary),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      GestureDetector(
+                        onTap: () => _launchEmail(email),
+                        child: Text(
+                          email,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.primary,
+                            decoration: TextDecoration.underline,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  read ? Icons.visibility : Icons.visibility_off,
+                  color: read ? theme.colorScheme.primary : theme.disabledColor,
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.home_outlined,
+                    color: theme.colorScheme.secondary,
+                  ),
+                  onPressed: onPropertyTap,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              note,
+              style: theme.textTheme.bodyMedium,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Property ID: $propertyId',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+                Text(
+                  timestamp,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _launchEmail(String email) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
+    );
+    
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    }
+  }
+}
+
+// Add NoteSkeletonCard similar to ClientActivitySkeletonCard
+class NoteSkeletonCard extends StatelessWidget {
+  const NoteSkeletonCard({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const CircleAvatar(
+                  backgroundColor: Colors.grey,
+                  radius: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    height: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              height: 16,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  height: 16,
+                  width: 100,
+                  color: Colors.grey,
+                ),
+                Container(
+                  height: 16,
+                  width: 100,
+                  color: Colors.grey,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

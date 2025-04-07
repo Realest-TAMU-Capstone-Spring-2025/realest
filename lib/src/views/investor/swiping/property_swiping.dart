@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'dart:ui';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
@@ -24,6 +24,10 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   List<Property> _properties = [];
   List<Property> _swipedProperties = [];
+  DateTime? _cardViewStartTime;
+  String? _currentPropertyId;
+  Timer? _longActivityTimer;
+  final int _longActivityThreshold = 50;
   bool _noMoreProperties = false;
   bool _noRealtorAssigned = true;
   bool _useRealtorDecisions = false;
@@ -32,6 +36,35 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   void initState() {
     super.initState();
     _loadProperties();
+  }
+  void _startCardViewTracking(String propertyId) {
+    _cardViewStartTime = DateTime.now();
+    _currentPropertyId = propertyId;
+  }
+  
+  Future<void> _checkAndRecordLongActivity() async {
+    if (_cardViewStartTime == null || _currentPropertyId == null) return;
+    
+    final duration = DateTime.now().difference(_cardViewStartTime!);
+    if (duration.inSeconds < _longActivityThreshold) return;
+    
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+    
+    try {
+      final investorDoc = await _db.collection('investors').doc(userId).get();
+      final realtorId = investorDoc.data()?['realtorId'] as String?;
+      if (realtorId == null) return;
+      
+      await _db.collection('realtors').doc(realtorId).collection('long_activity').add({
+        'timestamp': FieldValue.serverTimestamp(),
+        'propertyId': _currentPropertyId,
+        'clientId': userId,
+        'duration': duration.inSeconds,
+      });
+    } catch (e) {
+      print('Error recording long activity: $e');
+    }
   }
 
   Future<void> _loadProperties() async {
@@ -178,10 +211,19 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
   Future<bool> _handleSwipe(int previousIndex, int? currentIndex,
       CardSwiperDirection direction) async {
+    await _checkAndRecordLongActivity();
+
     final property = _properties[previousIndex];
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
     if (userId == null) return false;
+
+    if (currentIndex != null && currentIndex < _properties.length) {
+      _startCardViewTracking(_properties[currentIndex].id);
+    } else {
+      _cardViewStartTime = null;
+      _currentPropertyId = null;
+    }
 
     final isLiked = direction == CardSwiperDirection.right;
 
@@ -255,6 +297,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   @override
   void dispose() {
     _controller.dispose();
+    _longActivityTimer?.cancel();
     super.dispose();
   }
 
@@ -356,6 +399,9 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
         },
         cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
           final property = _properties[index];
+          if (index == 0) {
+            _startCardViewTracking(property.id);
+          }
           return PropertyCard(property: property, controller: _controller);
         },
       ),
@@ -595,50 +641,6 @@ class PropertyCard extends StatelessWidget {
           style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
       ],
-    );
-  }
-
-
-  Widget _buildDetailRow(String leftText, IconData leftIcon, String rightText, IconData rightIcon, bool isDarkMode) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Left-aligned item
-          Row(
-            children: [
-              Icon(leftIcon, size: 16, color: isDarkMode ? Colors.white : Colors.black),
-              const SizedBox(width: 8),
-              Text(
-                leftText,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  fontSize: 14,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-          // Right-aligned item
-          Row(
-            children: [
-              Text(
-                rightText,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  fontSize: 14,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(width: 8),
-              Icon(rightIcon, size: 16, color: isDarkMode ? Colors.white : Colors.black),
-            ],
-          ),
-        ],
-      ),
     );
   }
 

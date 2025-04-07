@@ -62,22 +62,19 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
         password: _passwordController.text.trim(),
       );
 
+      // Add buffer to make sure role is fetched
+      await Future.delayed(const Duration(milliseconds: 500));
       String uid = userCredential.user!.uid;
 
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
 
       if (userDoc.exists && mounted) {
-        setState(() {
-          _selectedRole = userDoc['role'];
-        });
+        final role = userDoc['role'];
+        Provider.of<UserProvider>(context, listen: false)
+          ..uid = uid
+          ..userRole = role;
 
-        Provider.of<UserProvider>(context, listen: false).fetchUserData();
-        if (_selectedRole == "realtor") {
-
-          context.go( "/realtorDashboard");
-        } else {
-          context.go( "/investorHome");
-        }
+        context.go("/home");
       } else if (mounted) {
         setState(() {
           _errorMessage = "User role not found. Please contact support.";
@@ -89,8 +86,6 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
       }
     }
   }
-
-
 
   Future<void> _createAccount() async {
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -113,11 +108,7 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     });
   }
   void _navigateAfterRegistration() {
-    if (_selectedRole == "investor") {
-      context.go('/investorSetup');
-    } else {
-      context.go("/realtorSetup");
-    }
+    context.go('/setup');
   }
 
 
