@@ -3,7 +3,8 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../properties/properties_view.dart';
+import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
+import 'package:realest/util/fetchPropertyData.dart';
 
 class PropertySwipingView extends StatefulWidget {
   const PropertySwipingView({super.key});
@@ -18,7 +19,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   List<Property> _properties = [];
   List<Property> _swipedProperties = [];
   bool _noMoreProperties = false;
-  bool _noRealtorAssigned = false;
+  bool _noRealtorAssigned = true;
   bool _useRealtorDecisions = false;
 
   @override
@@ -49,64 +50,41 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     }
 
     try {
-      // Get investor's realtor ID
-      final investorDoc = await _db.collection('investors').doc(userId).get();
-      if(investorDoc.data() == null) {
-        setState(() {
-          _noMoreProperties = true;
-          _noRealtorAssigned = true;
-        });
-        return;
-      }
-      final realtorId = investorDoc.data()?['realtorId'] as String?;
-      if (realtorId == null) {
-        setState(() {
-          _noMoreProperties = true;
-          _noRealtorAssigned = true;
-        });
-        return;
-      }
-
-      final userLikedPropertiesSnapshot = await _db
-          .collection('users')
+      //grab collection from investors, grab the document by userid, and then grab the collection of recommended properties from that document
+      final snapshot = await _db
+          .collection('investors')
           .doc(userId)
-          .collection('decisions')
-          .where('liked', isEqualTo: true)
+          .collection('recommended_properties')
+          .limit(20)
           .get();
-
-      final userLikedPropertyIds = userLikedPropertiesSnapshot.docs.map((doc) => doc.id).toSet();
-
-      // Get realtor's decisions
-      final decisionsSnapshot = await _db
-          .collection('users')
-          .doc(realtorId)
-          .collection('decisions')
-          .where('liked', isEqualTo: true)
-          .get();
-
-      final propertyIds = decisionsSnapshot.docs
-          .map((doc) => doc.id)
-          .where((id) => !userLikedPropertyIds.contains(id))
-          .toList();
-
-      if (propertyIds.isEmpty) {
+      if (snapshot.docs.isEmpty) {
         setState(() {
           _noMoreProperties = true;
+          _noRealtorAssigned = true; // No realtor assigned
         });
         return;
       }
-
-      // Fetch properties based on filtered realtor's decisions
-      final propertiesSnapshot = await _db
-          .collection('listings')
-          .where(FieldPath.documentId, whereIn: propertyIds)
-          .get();
-
+      //for each document in the snapshot, get the property id and then get the property from the listings collection
+      //need to make a call to the listings collection for each document in the snapshot
+      final propertyIds = snapshot.docs.map((doc) => doc['property_id'] as String).toList();
+      final propertySnapshots = await Future.wait(propertyIds.map((id) => _db.collection('listings').doc(id).get()));
+      if (propertySnapshots.isEmpty) {
+        setState(() {
+          _noMoreProperties = true;
+          _noRealtorAssigned = true; // No realtor assigned
+        });
+        return;
+      }
+      
       setState(() {
-        _properties = propertiesSnapshot.docs
+        _properties = propertySnapshots
+            .where((doc) => doc.exists)
             .map((doc) => Property.fromFirestore(doc))
             .toList();
+        _noRealtorAssigned = false; // Realtor assigned
+        _noMoreProperties = false; // Reset noMoreProperties state
       });
+
     } catch (e) {
       print('Error loading realtor properties: $e');
       setState(() {
@@ -372,7 +350,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
         },
         cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
           final property = _properties[index];
-          return PropertyCard(property: property);
+          return PropertyCard(property: property, controller: _controller);
         },
       ),
     );
@@ -381,96 +359,224 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
 class PropertyCard extends StatelessWidget {
   final Property property;
+  final CardSwiperController controller;
 
-  const PropertyCard({required this.property, super.key});
-
+  const PropertyCard({super.key, required this.property, required this.controller});
   @override
   Widget build(BuildContext context) {
-    String imageUrl = (property.primaryPhoto != null)
-        ? "${property.primaryPhoto}"
-        : 'https://via.placeholder.com/150';
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = MediaQuery.of(context).size.width < 600; // Define mobile screen size threshold
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double imageHeight = constraints.maxHeight * 0.75;
 
-    return GestureDetector(
-        onTap: () => _navigateToPropertyView(context),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Stack(
-            fit: StackFit.expand,
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: isDarkMode ? Colors.black : Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              CachedNetworkImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (context, url) =>
-                    Center(child: CircularProgressIndicator()),
-                errorWidget: (context, url, error) => Icon(Icons.error),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.black.withOpacity(0.6), Colors.transparent],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
+              // Image Section with Info Icon
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: CachedNetworkImage(
+                      imageUrl: property.primaryPhoto ?? 'https://placehold.co/600x400',
+                      height: imageHeight,
+                      width: double.infinity, // Ensure the image fits the card's width
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          const Center(child: CircularProgressIndicator()),
+                      errorWidget: (context, url, error) => const Icon(Icons.error),
+                    ),
                   ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      property.street ?? 'Unknown Address',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Tooltip(
+                      message: "Click for more information",
+                      child: InkWell(
+                        onTap: () => _navigateToPropertyView(context),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.info_outline,
+                            size: isMobile ? 20 : 24,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
-                    SizedBox(height: 8),
-                    _buildDetailRow('${property.beds ?? 0} beds', Icons.bed),
-                    _buildDetailRow(
-                        '${property.fullBaths ?? 0} baths', Icons.bathtub),
-                    _buildDetailRow(
-                        '${property.sqft ?? 0} sqft', Icons.square_foot),
-                    _buildDetailRow(
-                        '\$${property.listPrice?.toStringAsFixed(2) ?? 'N/A'}',
-                        Icons.attach_money),
-                  ],
+                  ),
+                ],
+              ),
+
+              // Bottom Section with Details and Swipe Buttons
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.all(isMobile ? 12 : 16),
+                  decoration: BoxDecoration(
+                    borderRadius:
+                        const BorderRadius.vertical(bottom: Radius.circular(16)),
+                    color: isDarkMode ? Colors.black : Colors.white,
+                  ),
+                  child: Column(
+                    children: [
+                      // Property Details (Adjust text size to fit)
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              property.street ?? 'Unknown Address',
+                              style: TextStyle(
+                                color: isDarkMode ? Colors.white : Colors.black,
+                                fontSize: isMobile ? 16 : 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 8),
+                            Column(
+                              children: [
+                                _buildDetailRow(
+                                  property.listPrice?.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (match) => '${match[1]},') ?? 'N/A',
+                                  Icons.attach_money,
+                                  '${property.sqft ?? 0} sqft', Icons.square_foot,
+                                  isDarkMode,
+                                ),
+                                _buildDetailRow(
+                                  '${property.beds ?? 0} beds', Icons.bed,
+                                  '${property.fullBaths ?? 0} baths', Icons.bathtub,
+                                  isDarkMode,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Swipe Buttons (Centered in the bottom part)
+                      if (!isMobile)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildSwipeButton(
+                              icon: Icons.thumb_down,
+                              color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                              tooltip: "Dislike",
+                              onPressed: () => controller.swipe(CardSwiperDirection.left),
+                              isMobile: isMobile,
+                            ),
+                            _buildSwipeButton(
+                              icon: Icons.favorite,
+                              color: isDarkMode ? Colors.red[400]! : Colors.red[200]!,
+                              tooltip: "Like",
+                              onPressed: () => controller.swipe(CardSwiperDirection.right),
+                              isMobile: isMobile,
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-        ));
+        );
+      },
+    );
   }
 
-  void _navigateToPropertyView(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PropertiesView(
-          propertyId: property.id,
-          showSaveIcon: false,
+  Widget _buildDetailRow(String leftText, IconData leftIcon, String rightText, IconData rightIcon, bool isDarkMode) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Left-aligned item
+          Row(
+            children: [
+              Icon(leftIcon, size: 16, color: isDarkMode ? Colors.white : Colors.black),
+              const SizedBox(width: 8),
+              Text(
+                leftText,
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black,
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+          // Right-aligned item
+          Row(
+            children: [
+              Text(
+                rightText,
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black,
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(width: 8),
+              Icon(rightIcon, size: 16, color: isDarkMode ? Colors.white : Colors.black),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwipeButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onPressed,
+    required bool isMobile,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: CircleAvatar(
+        radius: isMobile ? 20 : 28,
+        backgroundColor: color,
+        child: IconButton(
+          icon: Icon(icon, size: isMobile ? 20 : 24),
+          color: Colors.white,
+          onPressed: onPressed,
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(String text, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: Colors.white),
-          SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              text,
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+  Future<void> _navigateToPropertyView(BuildContext context) async {
+    final propertyData = await fetchPropertyData(property.id);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => PropertyDetailSheet(property: propertyData),
+      enableDrag: false,
     );
   }
 }
