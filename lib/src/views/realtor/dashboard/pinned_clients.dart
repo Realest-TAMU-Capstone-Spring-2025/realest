@@ -206,8 +206,7 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
   Widget _buildPinnedClientsList() {
     return _pinnedClients.isEmpty
         ? const Center(child: Text('No pinned clients'))
-        : Expanded(
-            child: Card(
+        : Card(
               margin: const EdgeInsets.all(16.0),
                 child: ReorderableListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -260,7 +259,6 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
                   );
                 },
               ),
-            ),
           );
   }
 
