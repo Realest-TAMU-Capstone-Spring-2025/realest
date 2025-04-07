@@ -12,6 +12,7 @@ import 'package:algolia_helper_flutter/algolia_helper_flutter.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' show FieldPath;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../util/property_fetch_helpers.dart';
 import '../../../models/property_filter.dart';
 import '../helpers/property_query_helpers.dart';
@@ -66,6 +67,35 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
 
   bool _isLoading = true;
 
+  Future<void> _loadFilters() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    const int defaultMinPrice = 100000;
+    const int defaultMaxPrice = 1000000;
+    const int minLimit = 100000;
+    const int maxLimit = 5000000;
+
+    final double minPriceRaw = prefs.getDouble('minPrice') ?? defaultMinPrice.toDouble();
+    final double maxPriceRaw = prefs.getDouble('maxPrice') ?? defaultMaxPrice.toDouble();
+
+    final int minPrice = min(maxPriceRaw.toInt(), max(minPriceRaw.toInt(), minLimit));
+    final int maxPrice = max(minPriceRaw.toInt(), min(maxPriceRaw.toInt(), maxLimit));
+
+    setState(() {
+      _filters = PropertyFilter(
+        minPrice: minPrice,
+        maxPrice: maxPrice,
+        minBeds: prefs.getInt('minBeds') ?? 2,
+        minBaths: prefs.getDouble('minBaths') ?? 2.0,
+        homeTypes: prefs.getStringList('homeTypes') ?? ['SINGLE_FAMILY', 'CONDOS'],
+        selectedStatuses: prefs.getStringList('selectedStatuses') ?? ['FOR_SALE'],
+      );
+    });
+  }
+
+
+
+
   @override
   void dispose() {
     _searcher.dispose();
@@ -81,13 +111,15 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     if (mapsImplementation is GoogleMapsFlutterAndroid) {
       mapsImplementation.useAndroidViewSurface = true;
     }
+
     _controller.addListener(() {
       _searcher.query(_controller.text);
     });
 
-    _updateFilteredQuery();
+    _loadFilters().then((_) async {
+      _updateFilteredQuery();
+      await _fetchAllFilteredPropertiesForMap();
 
-    _fetchAllFilteredPropertiesForMap().then((_) async {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null) {
         final realtorId = currentUser.uid;
@@ -106,14 +138,15 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
       }
 
       _refreshMarkers();
+
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-
     });
   }
+
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
@@ -180,16 +213,43 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     return markers;
   }
 
+  Future<void> _saveFilters() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Clamp min/max values
+    final int minPrice = (_filters.minPrice ?? 0).clamp(0, 2000000);
+    final int maxPrice = (_filters.maxPrice ?? 2000000).clamp(0, 2000000);
+
+    await prefs.setDouble('minPrice', minPrice.toDouble());
+    await prefs.setDouble('maxPrice', maxPrice.toDouble());
+    await prefs.setInt('minBeds', _filters.minBeds ?? 0);
+    await prefs.setDouble('minBaths', _filters.minBaths ?? 0.0);
+    await prefs.setStringList('homeTypes', _filters.homeTypes ?? []);
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     bool isSmallScreen = MediaQuery.of(context).size.width < 1000;
     if (_isLoading) {
       return const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'Hold on, generating cashflows...',
+                style: TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
         ),
       );
     }
+
 
     return Scaffold(
       body: Stack(
@@ -227,9 +287,18 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
                               IconButton(
                                 icon: Icon(Icons.tune, size: 28),
                                 tooltip: "More Filters",
-                                onPressed: () {
-                                  setState(() => _isFilterOpen = !_isFilterOpen);
-                                },
+                                  onPressed: () {
+                                    showFilterDrawer(
+                                      context: context,
+                                      filters: _filters,
+                                      onApply: (updatedFilters) async {
+                                        setState(() => _filters = updatedFilters);
+                                        await _saveFilters();
+                                        _fetchAllFilteredPropertiesForMap();
+                                        _updateFilteredQuery();
+                                      },
+                                    );
+                                  }
                               )
                             else
                               Wrap(
@@ -243,11 +312,12 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
                                     onEntryUpdate: (entry) {
                                       setState(() => _priceOverlayEntry = entry);
                                     },
-                                    onChanged: (minPrice, maxPrice) {
+                                    onChanged: (minPrice, maxPrice) async {
                                       setState(() {
                                         _filters.minPrice = minPrice;
                                         _filters.maxPrice = maxPrice;
                                       });
+                                      await _saveFilters();
                                       _fetchAllFilteredPropertiesForMap();
                                       _updateFilteredQuery();
                                     },
@@ -256,11 +326,12 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
                                     link: _bedBathLink,
                                     overlayEntry: _bedBathOverlayEntry,
                                     filters: _filters,
-                                    onChanged: (beds, baths) {
+                                    onChanged: (beds, baths) async {
                                       setState(() {
                                         _filters.minBeds = beds;
                                         _filters.minBaths = baths;
                                       });
+                                      await _saveFilters();
                                       _fetchAllFilteredPropertiesForMap();
                                       _updateFilteredQuery();
                                     },
@@ -271,10 +342,11 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
                                     filters: _filters,
                                     overlayEntry: _homeTypeOverlayEntry,
                                     onEntryUpdate: (entry) => setState(() => _homeTypeOverlayEntry = entry),
-                                    onChanged: (types) {
+                                    onChanged: (types) async {
                                       setState(() {
                                         _filters.homeTypes = types;
                                       });
+                                      await _saveFilters();
                                       _fetchAllFilteredPropertiesForMap();
                                       _updateFilteredQuery();
                                     },
@@ -299,8 +371,9 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
                                       showFilterDrawer(
                                         context: context,
                                         filters: _filters,
-                                        onApply: (updatedFilters) {
+                                        onApply: (updatedFilters) async {
                                           setState(() => _filters = updatedFilters);
+                                          await _saveFilters();
                                           _fetchAllFilteredPropertiesForMap();
                                           _updateFilteredQuery();
                                         },

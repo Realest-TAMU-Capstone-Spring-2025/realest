@@ -83,7 +83,7 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
     super.initState();
     final f = widget.filters;
     tempMinPrice = f.minPrice?.toDouble() ?? 100000;
-    tempMaxPrice = f.maxPrice?.toDouble() ?? 1000000;
+    tempMaxPrice = f.maxPrice?.toDouble() ?? 5000000;
     tempMinBeds = f.minBeds ?? 1;
     tempMinBaths = f.minBaths ?? 1.0;
     tempMinSqft = f.minSqft;
