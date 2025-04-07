@@ -46,7 +46,8 @@ class HomeTypeSelector extends StatelessWidget {
             side: const BorderSide(color: Colors.deepPurple),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
             minimumSize: const Size(160, 50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       ),
@@ -60,17 +61,17 @@ class HomeTypeSelector extends StatelessWidget {
       return;
     }
 
-    final List<String> homeTypeOptions = [
-      'SINGLE_FAMILY',
-      'MULTI_FAMILY',
-      'CONDOS',
-      'TOWNHOMES',
-      'DUPLEX_TRIPLEX',
-      'MOBILE',
-      'FARM',
-      'LAND',
-      'CONDO_TOWNHOME'
-    ];
+    final Map<String, String> prettyHomeTypeNames = {
+      'SINGLE_FAMILY': 'Single Family',
+      'MULTI_FAMILY': 'Multi Family',
+      'CONDOS': 'Condo',
+      'TOWNHOMES': 'Townhome',
+      'DUPLEX_TRIPLEX': 'Duplex/Triplex',
+      'MOBILE': 'Mobile Home',
+      'FARM': 'Farm',
+      'LAND': 'Land',
+      'CONDO_TOWNHOME': 'Condo/Townhome',
+    };
 
     List<String> tempSelectedTypes = List<String>.from(filters.homeTypes ?? []);
 
@@ -100,23 +101,29 @@ class HomeTypeSelector extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 child: StatefulBuilder(
                   builder: (context, setState) => Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 20),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.deepPurple.withAlpha(75)),
+                      border:
+                          Border.all(color: Colors.deepPurple.withAlpha(75)),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Home Type", style: Theme.of(context).textTheme.titleMedium),
+                        Text("Home Type",
+                            style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 10,
                           runSpacing: 10,
-                          children: homeTypeOptions.map((type) {
+                          children: prettyHomeTypeNames.entries.map((entry) {
+                            final type = entry.key;
+                            final prettyName = entry.value;
                             final isSelected = tempSelectedTypes.contains(type);
+
                             return GestureDetector(
                               onTap: () {
                                 setState(() {
@@ -126,18 +133,25 @@ class HomeTypeSelector extends StatelessWidget {
                                 });
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? Colors.deepPurple : Colors.grey.shade200,
+                                  color: isSelected
+                                      ? Colors.deepPurple
+                                      : Colors.grey.shade200,
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: isSelected ? Colors.deepPurple : Colors.grey.shade400,
+                                    color: isSelected
+                                        ? Colors.deepPurple
+                                        : Colors.grey.shade400,
                                   ),
                                 ),
                                 child: Text(
-                                  type,
+                                  prettyName,
                                   style: TextStyle(
-                                    color: isSelected ? Colors.white : Colors.black87,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.black87,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
