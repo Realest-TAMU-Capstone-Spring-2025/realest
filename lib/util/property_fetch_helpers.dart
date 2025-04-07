@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
   final propertyRef = FirebaseFirestore.instance.collection('listings').doc(propertyId);
@@ -17,6 +18,16 @@ Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
     altPhotos = List<String>.from(data['alt_photos']);
   }
 
+  // Conditionally apply CORS proxy in debug mode
+  if (kDebugMode) {
+    altPhotos = altPhotos.map((url) {
+      if (url.startsWith('http')) {
+        return 'http://localhost:8080/$url';
+      }
+      return url;
+    }).toList();
+  }
+
   return {
     'id': propertyId,
     'alt_photos': altPhotos,
@@ -28,6 +39,8 @@ Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
     'beds': data['beds'] ?? 0,
     'baths': data['full_baths'] ?? 0,
     'half_baths': data['half_baths'] ?? 0,
+    'full_baths': data['full_baths'] ?? 0,
+    'garage': data['garage'] ?? 0,
     'sqft': data['sqft'] ?? 0,
     'price_per_sqft': data['price_per_sqft'] ?? 0,
     'list_price': data['list_price'] ?? 0,
@@ -36,7 +49,19 @@ Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
     'hoa_fee': data['hoa_fee'] ?? 0,
     'list_date': data['list_date'] ?? 'N/A',
     'agent_name': data['agent_name'] ?? 'N/A',
+    'agent_email': data['agent_email'] ?? 'N/A',
+    'agent_mls_set': data['agent_mls_set'] ?? 'N/A',
+    'agent_nrds_id' : data['agent_nrds_id'] ?? 'N/A',
+    'agent_phones': data['agent_phones'] != null
+    ? List<Map<String, dynamic>>.from(data['agent_phones'])
+        : <Map<String, dynamic>>[],
     'office_name': data['office_name'] ?? 'N/A',
+    'office_email': data['office_email'] ?? 'N/A',
+    'office_phones': data['office_phones'] != null
+        ? List<Map<String, dynamic>>.from(data['office_phones'])
+        : <Map<String, dynamic>>[],
+    'office_mls_set': data['office_mls_set'] ?? 'N/A',
+    'office_id' : data['office_id'] ??'N/A',
     'broker_name': data['broker_name'] ?? 'N/A',
     'county': data['county'] ?? 'N/A',
     'latitude': data['latitude'] ?? 0.0,
