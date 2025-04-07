@@ -1,10 +1,16 @@
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
+import 'package:realest/src/views/realtor/widgets/property_card/cashflow_badge.dart';
 import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
-import 'package:realest/util/fetchPropertyData.dart';
+
+import '../../../../util/property_fetch_helpers.dart';
 
 class PropertySwipingView extends StatefulWidget {
   const PropertySwipingView({super.key});
@@ -364,6 +370,8 @@ class PropertyCard extends StatelessWidget {
   const PropertyCard({super.key, required this.property, required this.controller});
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final currencyFormat = NumberFormat("#,##0", "en_US");
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isMobile = MediaQuery.of(context).size.width < 600; // Define mobile screen size threshold
     return LayoutBuilder(
@@ -385,21 +393,97 @@ class PropertyCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Image Section with Info Icon
+              // Image + Address/Price Overlay
               Stack(
                 children: [
+                  // Your main image or content
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                     child: CachedNetworkImage(
-                      imageUrl: property.primaryPhoto ?? 'https://placehold.co/600x400',
+                      imageUrl: property.primaryPhoto != null
+                          ? (kDebugMode
+                          ? 'http://localhost:8080/${property.primaryPhoto}'
+                          : property.primaryPhoto!)
+                          : 'https://placehold.co/600x400',
                       height: imageHeight,
-                      width: double.infinity, // Ensure the image fits the card's width
+                      width: double.infinity,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) =>
-                          const Center(child: CircularProgressIndicator()),
+                      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
                       errorWidget: (context, url, error) => const Icon(Icons.error),
                     ),
                   ),
+
+                  // Positioned Price
+                  Positioned(
+                    left: 10,
+                    bottom: 60,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        property.listPrice != null
+                            ? "\$ ${NumberFormat("#,##0").format(property.listPrice)}"
+                            : "N/A",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 30,
+                          color: Colors.deepPurple,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Positioned NOI badge
+                  Positioned(
+                    right: 10,
+                    bottom: 60,
+                    child: CashFlowBadge(propertyId: property.id),
+                  ),
+
+                  // Address + Price Overlay
+                  Positioned(
+                    left: 0,
+                    bottom: 0,
+                    right: 0,
+                    child: ClipRRect(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          color: Colors.black.withOpacity(0.4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                property.street ?? "Unknown Address",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Info icon
                   Positioned(
                     top: 12,
                     right: 12,
@@ -426,54 +510,44 @@ class PropertyCard extends StatelessWidget {
                 ],
               ),
 
-              // Bottom Section with Details and Swipe Buttons
+              // Bottom Section (details + buttons)
               Expanded(
                 child: Container(
                   padding: EdgeInsets.all(isMobile ? 12 : 16),
                   decoration: BoxDecoration(
-                    borderRadius:
-                        const BorderRadius.vertical(bottom: Radius.circular(16)),
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
                     color: isDarkMode ? Colors.black : Colors.white,
                   ),
                   child: Column(
                     children: [
-                      // Property Details (Adjust text size to fit)
                       Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              property.street ?? 'Unknown Address',
-                              style: TextStyle(
-                                color: isDarkMode ? Colors.white : Colors.black,
-                                fontSize: isMobile ? 16 : 18,
-                                fontWeight: FontWeight.bold,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.black54.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildStat(icon: Icons.king_bed, label: "${property.beds} Beds", theme: theme),
+                              _verticalDivider(),
+                              _buildStat(
+                                icon: Icons.bathtub,
+                                label: "${(property.fullBaths! + (property.halfBaths ?? 0) / 2)} Baths",
+                                theme: theme,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 8),
-                            Column(
-                              children: [
-                                _buildDetailRow(
-                                  property.listPrice?.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (match) => '${match[1]},') ?? 'N/A',
-                                  Icons.attach_money,
-                                  '${property.sqft ?? 0} sqft', Icons.square_foot,
-                                  isDarkMode,
-                                ),
-                                _buildDetailRow(
-                                  '${property.beds ?? 0} beds', Icons.bed,
-                                  '${property.fullBaths ?? 0} baths', Icons.bathtub,
-                                  isDarkMode,
-                                ),
-                              ],
-                            ),
-                          ],
+                              _verticalDivider(),
+                              _buildStat(
+                                icon: Icons.square_foot,
+                                label: "${currencyFormat.format(property.sqft)} sqft",
+                                theme: theme,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-
-                      // Swipe Buttons (Centered in the bottom part)
+                      const SizedBox(height: 25),
                       if (!isMobile)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -500,10 +574,30 @@ class PropertyCard extends StatelessWidget {
               ),
             ],
           ),
+
         );
       },
     );
   }
+  Widget _verticalDivider() => Container(
+    width: 1,
+    height: 20,
+    color: Colors.grey[400],
+    margin: const EdgeInsets.symmetric(horizontal: 12),
+  );
+  Widget _buildStat({required IconData icon, required String label, required ThemeData theme}) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: theme.colorScheme.primary),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
 
   Widget _buildDetailRow(String leftText, IconData leftIcon, String rightText, IconData rightIcon, bool isDarkMode) {
     return Padding(
@@ -573,10 +667,15 @@ class PropertyCard extends StatelessWidget {
     final propertyData = await fetchPropertyData(property.id);
     showModalBottomSheet(
       context: context,
+      constraints: BoxConstraints(
+        maxWidth:  1000,
+      ),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => PropertyDetailSheet(property: propertyData),
+      //disable swipe to close
       enableDrag: false,
+
     );
   }
 }
@@ -587,6 +686,7 @@ class Property {
   final double? listPrice;
   final int? beds;
   final int? fullBaths;
+  final int? halfBaths;
   final String? street;
   final int? sqft;
   final double? tax;
@@ -597,6 +697,7 @@ class Property {
     this.listPrice,
     this.beds,
     this.fullBaths,
+    this.halfBaths,
     this.street,
     this.sqft,
     this.tax,
@@ -610,6 +711,7 @@ class Property {
       listPrice: (data['list_price'] as num?)?.toDouble(),
       beds: data['beds'] as int?,
       fullBaths: data['full_baths'] as int?,
+      halfBaths: data['half_baths'] as int?,
       street: data['street'],
       sqft: data['sqft'] as int?,
       tax: (data['tax'] as num?)?.toDouble(),
