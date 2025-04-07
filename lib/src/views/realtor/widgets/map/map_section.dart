@@ -17,8 +17,8 @@ class MapSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return GoogleMap(
       initialCameraPosition: const CameraPosition(
-        target: LatLng(30.6280, -96.3344),
-        zoom: 12,
+        target: LatLng(30.575437, -96.294686),
+        zoom: 13,
       ),
       onMapCreated: onMapCreated,
       markers: markers,

@@ -1,142 +1,3 @@
-// import 'package:flutter/cupertino.dart';
-// import 'package:flutter/material.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:url_launcher/url_launcher.dart';
-// import 'package:intl/intl.dart';
-
-// class NewNotesSection extends StatelessWidget {
-//   const NewNotesSection({Key? key}) : super(key: key);
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final currentUser = FirebaseAuth.instance.currentUser;
-//     if (currentUser == null) {
-//       return const Center(child: Text('User not logged in'));
-//     }
-
-//     return Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         Text(
-//           "New Notes",
-//           style: Theme.of(context).textTheme.titleLarge,
-//         ),
-//         const SizedBox(height: 16),
-//         Expanded(
-//           child: StreamBuilder<QuerySnapshot>(
-//             stream: FirebaseFirestore.instance
-//                 .collection('realtors')
-//                 .doc(currentUser.uid)
-//                 .collection('notes')
-//                 .orderBy('timestamp', descending: true)
-//                 .limit(10)
-//                 .snapshots(),
-//             builder: (context, snapshot) {
-//               if (snapshot.connectionState == ConnectionState.waiting) {
-//                 return const Center(child: CircularProgressIndicator());
-//               }
-              
-//               if (snapshot.hasError) {
-//                 return Center(child: Text('Error: ${snapshot.error}'));
-//               }
-              
-//               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-//                 return const Center(child: Text('No notes available'));
-//               }
-              
-//               return ListView.builder(
-//                 itemCount: snapshot.data!.docs.length,
-//                 itemBuilder: (context, index) {
-//                   final noteDoc = snapshot.data!.docs[index];
-//                   final noteData = noteDoc.data() as Map<String, dynamic>;
-                  
-//                   return NoteCard(
-//                     investorId: noteData['investorId'] ?? 'Unknown',
-//                     note: noteData['note'] ?? 'No note content',
-//                     propertyId: noteData['propertyId'] ?? 'Unknown',
-//                     read: noteData['read'] ?? false,
-//                     timestamp: noteData['timestamp'] as Timestamp? ?? Timestamp.now(),
-//                   );
-//                 },
-//               );
-//             },
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-// class NoteCard extends StatelessWidget {
-//   final String investorId;
-//   final String note;
-//   final String propertyId;
-//   final bool read;
-//   final Timestamp timestamp;
-
-//   const NoteCard({
-//     Key? key,
-//     required this.investorId,
-//     required this.note,
-//     required this.propertyId,
-//     required this.read,
-//     required this.timestamp,
-//   }) : super(key: key);
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final theme = Theme.of(context);
-//     final formattedDate = DateFormat('MMM d, yyyy • h:mm a').format(timestamp.toDate());
-
-//     return Card(
-//       margin: const EdgeInsets.symmetric(vertical: 8),
-//       child: Padding(
-//         padding: const EdgeInsets.all(16),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 Text(
-//                   'Investor ID: $investorId',
-//                   style: theme.textTheme.titleMedium?.copyWith(
-//                     fontWeight: FontWeight.bold,
-//                   ),
-//                 ),
-//                 Icon(
-//                   read ? Icons.visibility : Icons.visibility_off,
-//                   color: read ? theme.colorScheme.primary : theme.disabledColor,
-//                 ),
-//               ],
-//             ),
-//             const SizedBox(height: 8),
-//             Text(
-//               note,
-//               style: theme.textTheme.bodyMedium,
-//             ),
-//             const SizedBox(height: 8),
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 Text(
-//                   'Property ID: $propertyId',
-//                   style: theme.textTheme.bodySmall,
-//                 ),
-//                 Text(
-//                   formattedDate,
-//                   style: theme.textTheme.bodySmall,
-//                 ),
-//               ],
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -221,6 +82,9 @@ class NewNotesSection extends StatelessWidget {
                         read: noteData['read'] ?? false,
                         timestamp: formattedDate,
                         onPropertyTap: () => _showPropertyDetails(context, noteData['propertyId']),
+                        profilePicUrl: investorData['profilePicUrl'] != null ?
+                        investorData['profilePicUrl']!
+                            :  'assets/images/profile.png',
                       );
                     },
                   );
@@ -295,6 +159,7 @@ class NoteCard extends StatelessWidget {
   final bool read;
   final String timestamp;
   final VoidCallback onPropertyTap;
+  final String? profilePicUrl;
 
   const NoteCard({
     Key? key,
@@ -305,6 +170,7 @@ class NoteCard extends StatelessWidget {
     required this.read,
     required this.timestamp,
     required this.onPropertyTap,
+    this.profilePicUrl,
   }) : super(key: key);
 
   @override
@@ -322,10 +188,10 @@ class NoteCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                  child: Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : '?',
-                    style: TextStyle(color: theme.colorScheme.primary),
-                  ),
+                    backgroundImage: profilePicUrl != null ?
+                    NetworkImage(profilePicUrl!)
+                        : const AssetImage('assets/images/profile.png') as ImageProvider,
+
                 ),
                 const SizedBox(width: 12),
                 Expanded(

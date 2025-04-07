@@ -66,7 +66,7 @@ class PriceSelector extends StatelessWidget {
     }
 
     double tempMin = filters.minPrice?.toDouble() ?? 100000;
-    double tempMax = filters.maxPrice?.toDouble() ?? 1000000;
+    double tempMax = filters.maxPrice?.toDouble() ?? 5000000;
 
     late OverlayEntry entry;
     entry = OverlayEntry(
