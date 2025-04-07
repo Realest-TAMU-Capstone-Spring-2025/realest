@@ -48,7 +48,12 @@ class PropertyCard extends StatelessWidget {
               ],
             ),
             StatusBadge(listingType: property['status']),
-            CashFlowBadge(propertyId: property["id"], price: property["price"]),
+            Positioned(
+              right: 10,
+              top: 10,
+              child: CashFlowBadge(propertyId: property["id"]),
+
+            ),
           ],
         ),
       ),

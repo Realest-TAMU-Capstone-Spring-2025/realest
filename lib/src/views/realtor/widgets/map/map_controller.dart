@@ -3,7 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
-import '../../helpers/property_fetch_helpers.dart';
+import '../../../../../util/property_fetch_helpers.dart';
 import '../marker/property_marker.dart';
 import '../property_detail_sheet.dart';
 import '../../../../models/property_filter.dart';
