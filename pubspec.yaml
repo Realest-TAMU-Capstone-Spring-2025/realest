@@ -78,6 +78,8 @@ dependencies:
   random_password_generator: ^0.2.1
   cloud_functions: ^5.4.0
   flutter_colorpicker: ^1.0.3
+  flutter_cache_manager: ^3.4.1
+  flutter_dotenv: ^5.2.1
 
 
 
@@ -109,6 +111,7 @@ flutter:
     - assets/videos/
     - assets/demo/
     - assets/dark_map_style.json
+    - .env
 
   fonts:
     - family: globalFont

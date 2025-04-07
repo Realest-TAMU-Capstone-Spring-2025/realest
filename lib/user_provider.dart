@@ -60,15 +60,16 @@ class UserProvider extends ChangeNotifier {
 
   Future<void> initializeUser() async {
   // Load local data first
+    isLoading = true;
+    notifyListeners();
     await loadUserData();
 
     // Then fetch fresh data from Firebase if needed
     if (_uid != null) {
       await fetchUserData();
-    } else {
-      isLoading = false;
-      notifyListeners();
     }
+    isLoading = false;
+    notifyListeners();
   }
 
   Future<void> saveUserData() async {
@@ -98,87 +99,66 @@ class UserProvider extends ChangeNotifier {
 
   Future<void> loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
+
+    // Load all fields at once
     _userRole = prefs.getString('userRole');
     _uid = prefs.getString('uid');
     _firstName = prefs.getString('firstName');
-    _lastName = prefs.getString('lastName');
-    _contactEmail = prefs.getString('contactEmail');
-    _contactPhone = prefs.getString('contactPhone');
-    _profilePicUrl = prefs.getString('profilePicUrl');
-    _invitationCode = prefs.getString('invitationCode');
-    _agencyName = prefs.getString('agencyName');
-    _licenseNumber = prefs.getString('licenseNumber');
-    _address = prefs.getString('address');
-    _investorNotes = prefs.getString('investorNotes');
-    _realtorId = prefs.getString('realtorId');
-    _status = prefs.getString('status');
-    _createdAt = prefs.getString('createdAt');
-    _tempPassword = prefs.getString('tempPassword');
-
-    // Load clients and tags from SharedPreferences
+    
+    // Load clients and tags
     List<String>? clientIds = prefs.getStringList('clients');
     if (clientIds != null) {
-      _clients = clientIds.map((id) {
-        return {
-          'id': id,
-          'name': prefs.getString('clientName_$id') ?? 'Unnamed Client',
-          'email': prefs.getString('clientEmail_$id') ?? '',
-          'contactPhone': prefs.getString('clientPhone_$id') ?? '',
-          'createdAt': prefs.getString('clientCreatedAt_$id') ?? '',
-          'notes': prefs.getString('clientNotes_$id') ?? '',
-          'realtorId': prefs.getString('clientRealtorId_$id') ?? '',
-          'status': prefs.getString('clientStatus_$id') ?? '',
-          'tempPassword': prefs.getString('clientTempPassword_$id') ?? '',
-        };
-      }).toList();
+      _clients = clientIds.map((id) => {'id': id}).toList();
     }
 
     List<String>? tagIds = prefs.getStringList('tags');
     if (tagIds != null) {
-      _tags = tagIds.map((id) {
-        return {
-          'id': id,
-          'name': prefs.getString('tagName_$id') ?? id,
-          'color': prefs.getString('tagColor_$id') ?? '#FFFFFF',
-          'investors': prefs.getStringList('tagInvestors_$id') ?? [],
-        };
-      }).toList();
+      _tags = tagIds.map((id) => {'id': id, 'name': '', 'color': '#FFFFFF', 'investors': []}).toList();
     }
+
     notifyListeners();
   }
 
   Future<void> fetchUserData() async {
-    isLoading = true;
-    notifyListeners();
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+    try {
+      isLoading = true;
 
-      if (userDoc.exists) {
-        final data = userDoc.data() as Map<String, dynamic>;
-        _contactEmail = data['email'];
-        _userRole = data['role'];
-        _uid = user.uid;
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
 
-        String userRole = data['role'];
-        if (userRole == 'realtor') {
-          await _fetchRealtorData(user.uid);
-          await _fetchClients(user.uid);
-          await _fetchTags(user.uid); // Fetch tags for realtor
-        } else if (userRole == 'investor') {
-          await _fetchInvestorData(user.uid);
+        if (userDoc.exists) {
+          final data = userDoc.data() as Map<String, dynamic>;
+          _contactEmail = data['email'];
+          _userRole = data['role'];
+          _uid = user.uid;
+
+          String userRole = data['role'];
+          if (userRole == 'realtor') {
+            await _fetchRealtorData(user.uid);
+            await _fetchClients(user.uid);
+            await _fetchTags(user.uid); // Fetch tags for realtor
+          } else if (userRole == 'investor') {
+            await _fetchInvestorData(user.uid);
+          }
+
+          await saveUserData();
         }
-
-        await saveUserData();
-
-        isLoading = false;
-        notifyListeners();
       }
+    } catch (e) {
+      print('Error fetching user data: $e');
+    } finally {
+      isLoading = false;
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      isLoading = false;
+      notifyListeners();
+    });
   }
+
 
   Future<void> _fetchRealtorData(String uid) async {
     DocumentSnapshot realtorDoc = await FirebaseFirestore.instance

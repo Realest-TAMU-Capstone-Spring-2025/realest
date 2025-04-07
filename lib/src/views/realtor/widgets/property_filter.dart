@@ -1,5 +1,3 @@
-// lib/src/views/realtor/widgets/property_filter.dart
-
 import 'package:flutter/material.dart';
 
 class PropertyFilter {
