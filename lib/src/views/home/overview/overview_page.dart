@@ -39,7 +39,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _initializeVideos() {
-    print('Starting video initialization...');
+    // print('Starting video initialization...');
     _headerController = VideoPlayerController.asset('assets/videos/triangle.mp4');
     _overviewController1 = VideoPlayerController.asset('assets/videos/triangle.mp4');
     _overviewController2 = VideoPlayerController.asset('assets/videos/triangle.mp4');
@@ -51,7 +51,7 @@ class _HomePageState extends State<HomePage> {
       _overviewController2.initialize(),
       _overviewController3.initialize(),
     ]).then((_) {
-      print('All videos initialized successfully');
+      // print('All videos initialized successfully');
       setState(() {
         _isVideoInitialized = true;
         _statusMessage = 'Videos loaded';
@@ -65,13 +65,13 @@ class _HomePageState extends State<HomePage> {
         _overviewController3.play();
       });
     }).catchError((error) {
-      print('Error during video initialization: $error');
+      // print('Error during video initialization: $error');
       setState(() {
         _isVideoInitialized = false;
         _statusMessage = 'Error initializing videos: $error';
       });
     }).timeout(const Duration(seconds: 5), onTimeout: () {
-      print('Video initialization timed out');
+      // print('Video initialization timed out');
       setState(() {
         _isVideoInitialized = false;
         _statusMessage = 'Video initialization timed out';
@@ -97,7 +97,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    print('Disposing video controllers and scroll controller');
+    // print('Disposing video controllers and scroll controller');
     _scrollController.removeListener(_updateVideoOpacity);
     _scrollController.dispose();
     _headerController.dispose();
