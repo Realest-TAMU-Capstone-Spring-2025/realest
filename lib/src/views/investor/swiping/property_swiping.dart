@@ -323,82 +323,6 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     return doc.exists && doc.data()?['liked'] == true;
   }
 
-  // Future<bool> _handleUndo() async {
-  //   if (_swipedProperties.isEmpty) return false;
-  //
-  //   final last = _swipedProperties.removeLast();
-  //   final Property lastProperty = last['property'];
-  //   final bool fromRealtor = last['fromRealtor'] == true;
-  //
-  //
-  //   final userId = FirebaseAuth.instance.currentUser?.uid;
-  //   if (userId == null) return false;
-  //
-  //   try {
-  //     final investorRef = _db
-  //         .collection('investors')
-  //         .doc(userId)
-  //         .collection('property_interactions')
-  //         .doc(lastProperty.id);
-  //
-  //     final investorDoc = await _db.collection('investors').doc(userId).get();
-  //     final realtorId = investorDoc.data()?['realtorId'] as String?;
-  //
-  //     final batch = _db.batch();
-  //
-  //     if (fromRealtor) {
-  //       // Restore status to "sent"
-  //       batch.set(investorRef, {
-  //         'propertyId': lastProperty.id,
-  //         'investorId': userId,
-  //         'status': 'sent',
-  //         'timestamp': FieldValue.serverTimestamp(),
-  //       });
-  //
-  //       if (realtorId != null) {
-  //         final realtorRef = _db
-  //             .collection('realtors')
-  //             .doc(realtorId)
-  //             .collection('interactions')
-  //             .doc('${lastProperty.id}_$userId');
-  //
-  //         batch.set(realtorRef, {
-  //           'propertyId': lastProperty.id,
-  //           'investorId': userId,
-  //           'realtorId': realtorId,
-  //           'status': 'sent',
-  //           'timestamp': FieldValue.serverTimestamp(),
-  //         });
-  //       }
-  //     } else {
-  //       // Not from realtor: just delete the like/dislike interaction
-  //       batch.delete(investorRef);
-  //       if (realtorId != null) {
-  //         final realtorRef = _db
-  //             .collection('realtors')
-  //             .doc(realtorId)
-  //             .collection('interactions')
-  //             .doc('${lastProperty.id}_$userId');
-  //         batch.delete(realtorRef);
-  //       }
-  //     }
-  //
-  //     await batch.commit();
-  //
-  //     if (mounted) {
-  //       setState(() {
-  //         _properties.insert(0, lastProperty);
-  //         _noMoreProperties = false;
-  //       });
-  //     }
-  //
-  //     return true;
-  //   } catch (e) {
-  //     debugPrint('Undo failed: $e');
-  //     return false;
-  //   }
-  // }
-
   @override
   void dispose() {
     _controller.dispose();
@@ -452,8 +376,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           : CardSwiper(
               controller: _controller,
               cardsCount: _properties.length,
-              numberOfCardsDisplayed:
-                  (_properties.length >= 2) ? 2 : 1, // Ensure valid card count
+              numberOfCardsDisplayed: 1, // Ensure valid card count
               backCardOffset: const Offset(0, 40),
               scale: 0.9,
               padding: const EdgeInsets.all(24),
@@ -467,8 +390,11 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
                   _noMoreProperties = true;
                 });
               },
-              cardBuilder:
-                  (context, index, percentThresholdX, percentThresholdY) {
+              cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
+                if (index >= _properties.length) {
+                  return const SizedBox.shrink(); // Safeguard
+                }
+
                 final property = _properties[index];
                 if (index == 0) {
                   _startCardViewTracking(property.id);
