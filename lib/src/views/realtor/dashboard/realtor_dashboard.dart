@@ -33,6 +33,7 @@ class RealtorDashboardState extends State<RealtorDashboard> {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
+      color: Colors.grey[200],
       margin: const EdgeInsets.all(8),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
