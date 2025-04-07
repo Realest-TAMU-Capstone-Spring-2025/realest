@@ -22,26 +22,20 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _contactEmailController = TextEditingController();
   final TextEditingController _contactPhoneController = TextEditingController();
-  final List<TextEditingController> _invitationCodeControllers =
-  List.generate(8, (_) => TextEditingController());
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
   Uint8List? _profileImageBytes;
-
-  String? _verifiedRealtorId;
-  String? _verifiedRealtorName;
-  String? _verifiedRealtorProfilePicUrl;
+  String? _tempPassword; // To store the temp password for re-authentication
 
   static const Color neonPurple = Color(0xFFa78cde);
 
   @override
   void initState() {
     super.initState();
-    User? currentUser = _auth.currentUser;
-    if (currentUser != null && currentUser.email != null) {
-      _contactEmailController.text = currentUser.email!;
-    }
+    _prefillUserData();
   }
 
   @override
@@ -50,10 +44,31 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     _lastNameController.dispose();
     _contactEmailController.dispose();
     _contactPhoneController.dispose();
-    for (var controller in _invitationCodeControllers) {
-      controller.dispose();
-    }
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _prefillUserData() async {
+    User? currentUser = _auth.currentUser;
+    if (currentUser != null && currentUser.email != null) {
+      _contactEmailController.text = currentUser.email!;
+      QuerySnapshot investorQuery = await _firestore
+          .collection('investors')
+          .where('contactEmail', isEqualTo: currentUser.email!)
+          .limit(1)
+          .get();
+
+      if (investorQuery.docs.isNotEmpty) {
+        DocumentSnapshot investorDoc = investorQuery.docs.first;
+        Map<String, dynamic> data = investorDoc.data() as Map<String, dynamic>;
+        setState(() {
+          _firstNameController.text = data['firstName'] ?? '';
+          _lastNameController.text = data['lastName'] ?? '';
+          _tempPassword = data['tempPassword']; // Fetch temp password for re-authentication
+        });
+      }
+    }
   }
 
   Future<void> _pickImage() async {
@@ -66,123 +81,30 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     }
   }
 
-  String _getInvitationCode() {
-    String code = '';
-    for (var controller in _invitationCodeControllers) {
-      code += controller.text.trim();
-    }
-    return code;
-  }
-
-  Future<void> _verifyInvitationCode() async {
-    final code = _getInvitationCode();
-    if (code.length != 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Invitation code is invalid. Please enter an 8-character code.",
-            style: GoogleFonts.poppins(color: Colors.white),
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      setState(() {
-        _errorMessage = null;
-      });
-      return;
-    }
-
+  Future<void> _reAuthenticateUser(String email, String tempPassword) async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('realtors')
-          .where('invitationCode', isEqualTo: code)
-          .limit(1)
-          .get();
-
-      if (querySnapshot.docs.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Realtor not found. Please check your invitation code.",
-              style: GoogleFonts.poppins(color: Colors.white),
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-        setState(() {
-          _errorMessage = null;
-        });
-        return;
-      }
-
-      final realtorDoc = querySnapshot.docs.first;
-      final realtorData = realtorDoc.data() as Map<String, dynamic>;
-      final realtorFirstName = realtorData['firstName'] ?? '';
-      final realtorLastName = realtorData['lastName'] ?? '';
-      final realtorProfilePicUrl = realtorData['profilePicUrl'] ?? '';
-      final realtorId = realtorDoc.id;
-
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            backgroundColor: Colors.grey[900],
-            title: Text("Confirm Realtor", style: GoogleFonts.poppins(color: Colors.white)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (realtorProfilePicUrl != '')
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(realtorProfilePicUrl),
-                    radius: 80,
-                  ),
-                const SizedBox(height: 20),
-                Text(
-                  "$realtorFirstName $realtorLastName",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 22,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _verifiedRealtorId = realtorId;
-                    _verifiedRealtorName = "$realtorFirstName $realtorLastName";
-                    _verifiedRealtorProfilePicUrl = realtorProfilePicUrl;
-                    _errorMessage = null;
-                  });
-                  Navigator.of(context).pop();
-                },
-                child: Text("Confirm", style: GoogleFonts.poppins(color: neonPurple)),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text("Cancel", style: GoogleFonts.poppins(color: neonPurple)),
-              ),
-            ],
-          );
-        },
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: email,
+        password: tempPassword,
       );
+      await _auth.currentUser!.reauthenticateWithCredential(credential);
     } catch (e) {
-      setState(() {
-        _errorMessage = "Error verifying invitation code: $e";
-      });
-      print("Verification error: $e");
+      throw Exception("Re-authentication failed: $e");
     }
   }
 
   void _saveInvestorData() async {
-    if (_verifiedRealtorId == null) {
+    // Validate passwords
+    if (_newPasswordController.text != _confirmPasswordController.text) {
       setState(() {
-        _errorMessage = "Please verify your invitation code to link a realtor before saving.";
+        _errorMessage = "Passwords do not match.";
+      });
+      return;
+    }
+
+    if (_newPasswordController.text.isEmpty) {
+      setState(() {
+        _errorMessage = "Please enter a new password.";
       });
       return;
     }
@@ -197,6 +119,21 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
       String uid = user.uid;
 
       try {
+        // Re-authenticate the user before updating the password
+        if (_tempPassword == null || _tempPassword!.isEmpty) {
+          throw Exception("Temporary password not found. Please contact support.");
+        }
+
+        await _reAuthenticateUser(_contactEmailController.text.trim(), _tempPassword!);
+
+        // Update the user's password in Firebase Auth
+        await user.updatePassword(_newPasswordController.text.trim());
+
+        // Clear the tempPassword in Firestore after successful password update
+        await _firestore.collection('investors').doc(uid).update({
+          'tempPassword': null, // Invalidate temp password
+        });
+
         String profilePicUrl = '';
         if (_profileImageBytes != null) {
           Reference storageRef = FirebaseStorage.instance
@@ -211,22 +148,23 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           profilePicUrl = await snapshot.ref.getDownloadURL();
         }
 
+        // Update the completedSetup flag in the users collection
         await _firestore.collection('users').doc(uid).update({
           'completedSetup': true,
         });
 
+        // Update or set investor data (realtorId preserved from invite)
         await _firestore.collection('investors').doc(uid).set({
           'uid': uid,
           'firstName': _firstNameController.text.trim(),
           'lastName': _lastNameController.text.trim(),
           'contactEmail': _contactEmailController.text.trim(),
           'contactPhone': _contactPhoneController.text.trim(),
-          'realtorId': _verifiedRealtorId,
           'profilePicUrl': profilePicUrl,
           'createdAt': FieldValue.serverTimestamp(),
           'status': 'Update',
           'notes': 'Account Created',
-        });
+        }, SetOptions(merge: true)); // Merge to preserve existing realtorId
 
         if (mounted) {
           context.go('/investorHome');
@@ -260,6 +198,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
       String label, {
         TextInputType keyboardType = TextInputType.text,
         bool readOnly = false,
+        bool obscureText = false,
         required bool isMobile,
       }) {
     return Column(
@@ -268,18 +207,19 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
         Text(
           label,
           style: GoogleFonts.poppins(
-            fontSize: isMobile ? 16 : 18, // Reduced from 18 to 16
+            fontSize: isMobile ? 16 : 18,
             color: Colors.white,
           ),
         ),
         const SizedBox(height: 8),
         SizedBox(
-          width: isMobile ? 400 : 800, // Reduced width for mobile
+          width: isMobile ? 400 : 800,
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
             readOnly: readOnly,
-            style: TextStyle(color: Colors.white, fontSize: isMobile ? 14 : 16), // Reduced font size
+            obscureText: obscureText,
+            style: TextStyle(color: Colors.white, fontSize: isMobile ? 14 : 16),
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.grey[900],
@@ -295,100 +235,6 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildInvitationCodeInput(bool isMobile) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(8, (index) {
-            return Container(
-              width: isMobile ? 40 : 50, // Reduced from 50 to 40
-              height: isMobile ? 35 : 40, // Reduced from 40 to 35
-              child: TextField(
-                controller: _invitationCodeControllers[index],
-                textAlign: TextAlign.center,
-                maxLength: 1,
-                style: TextStyle(color: Colors.white, fontSize: isMobile ? 14 : 16), // Reduced font size
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.grey[900],
-                  counterText: "",
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5.0),
-                    borderSide: const BorderSide(color: neonPurple, width: 1),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5.0),
-                    borderSide: const BorderSide(color: neonPurple, width: 2),
-                  ),
-                ),
-                onChanged: (value) {
-                  if (value.length == 1 && index < 7) {
-                    FocusScope.of(context).nextFocus();
-                  } else if (value.isEmpty && index > 0) {
-                    FocusScope.of(context).previousFocus();
-                  }
-                },
-              ),
-            );
-          }),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: isMobile ? 100 : 100, // Reduced from 100 to 80
-          height: isMobile ? 50 : 45, // Reduced from 45 to 40
-          child: ElevatedButton(
-            onPressed: _verifyInvitationCode,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: neonPurple,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-                side: const BorderSide(color: Colors.black, width: 2),
-              ),
-              textStyle: GoogleFonts.poppins(
-                fontSize: isMobile ? 14 : 16, // Reduced from 16 to 14
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            child: const Text("Verify"),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildVerifiedRealtorInfo(bool isMobile) {
-    if (_verifiedRealtorId == null) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            "Realtor:   ",
-            style: GoogleFonts.poppins(fontSize: isMobile ? 20 : 24, color: Colors.white), // Reduced from 24 to 20
-          ),
-          if (_verifiedRealtorProfilePicUrl != null && _verifiedRealtorProfilePicUrl != '')
-            CircleAvatar(
-              backgroundImage: NetworkImage(_verifiedRealtorProfilePicUrl!),
-              radius: isMobile ? 30 : 35, // Reduced from 35 to 30
-            ),
-          const SizedBox(width: 8),
-          Text(
-            _verifiedRealtorName ?? '',
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: isMobile ? 18 : 22, // Reduced from 22 to 18
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -424,73 +270,20 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     );
   }
 
-  // Mobile layout with left-aligned logo in scrolling content
   Widget _buildMobileLayout(bool isMobile) {
     return Container(
       color: const Color(0xFF1f1e25),
       child: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0), // Reduced padding
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight,
-              ),
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: SizedBox(
-                width: 400, // Reduced max width for mobile
+                width: 400,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, // Left-align logo and content
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Logo aligned to the left
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.real_estate_agent,
-                          size: 32,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'RealEst',
-                          style: GoogleFonts.poppins(
-                            fontSize: isMobile ? 20 : 24, // Reduced from 24 to 20
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: isMobile ? 20 : 40), // Reduced spacing
-                    ..._buildFormChildren(isMobile),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // Desktop layout with left-aligned logo in scrolling content
-  Widget _buildFormColumn(bool isMobile) {
-    return Container(
-      color: const Color(0xFF1f1e25),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            // padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-            padding: const EdgeInsets.only(left: 100, right: 100, top: 20, bottom: 100),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight,
-              ),
-              child: SizedBox(
-                width: 500,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, // Left-align logo and content
-                  children: [
-                    // Logo aligned to the left
                     Row(
                       children: [
                         const Icon(
@@ -509,7 +302,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: isMobile ? 20 : 40), // Space after logo
+                    SizedBox(height: isMobile ? 20 : 40),
                     ..._buildFormChildren(isMobile),
                   ],
                 ),
@@ -521,7 +314,50 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     );
   }
 
-  // Form children (without logo)
+  Widget _buildFormColumn(bool isMobile) {
+    return Container(
+      color: const Color(0xFF1f1e25),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.only(left: 100, right: 100, top: 20, bottom: 100),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: SizedBox(
+                width: 500,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.real_estate_agent,
+                          size: 32,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'RealEst',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 20 : 24,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isMobile ? 20 : 40),
+                    ..._buildFormChildren(isMobile),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   List<Widget> _buildFormChildren(bool isMobile) {
     return [
       Center(
@@ -529,7 +365,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           textAlign: TextAlign.center,
           'Set Up Your Investor Profile',
           style: GoogleFonts.poppins(
-            fontSize: isMobile ? 28 : 32, // Reduced from 32 to 28
+            fontSize: isMobile ? 28 : 32,
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
@@ -540,80 +376,82 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
         child: Text(
           _errorMessage ?? 'Complete your profile',
           style: _errorMessage != null
-              ? TextStyle(color: Colors.red, fontSize: isMobile ? 12 : 14) // Reduced from 14 to 12
-              : GoogleFonts.poppins(fontSize: isMobile ? 16 : 20, color: Colors.white70), // Reduced from 20 to 16
+              ? TextStyle(color: Colors.red, fontSize: isMobile ? 12 : 14)
+              : GoogleFonts.poppins(fontSize: isMobile ? 16 : 20, color: Colors.white70),
         ),
       ),
-      SizedBox(height: isMobile ? 20 : 40), // Reduced spacing
+      SizedBox(height: isMobile ? 20 : 40),
       Center(
         child: GestureDetector(
           onTap: _pickImage,
           child: CircleAvatar(
-            radius: isMobile ? 50 : 60, // Reduced from 60 to 50
+            radius: isMobile ? 50 : 60,
             backgroundColor: Colors.black,
             backgroundImage: _profileImageBytes != null ? MemoryImage(_profileImageBytes!) : null,
             child: _profileImageBytes == null
-                ? Icon(Icons.camera_alt, size: isMobile ? 30 : 40, color: Colors.white70) // Reduced from 40 to 30
+                ? Icon(Icons.camera_alt, size: isMobile ? 30 : 40, color: Colors.white70)
                 : null,
           ),
         ),
       ),
-      SizedBox(height: isMobile ? 20 : 30), // Reduced spacing
+      SizedBox(height: isMobile ? 20 : 30),
       Row(
         children: [
           Expanded(
             child: _buildTextField(_firstNameController, "First Name", isMobile: isMobile),
           ),
-          SizedBox(width: isMobile ? 12 : 16), // Reduced spacing
+          SizedBox(width: isMobile ? 12 : 16),
           Expanded(
             child: _buildTextField(_lastNameController, "Last Name", isMobile: isMobile),
           ),
         ],
       ),
-      SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
+      SizedBox(height: isMobile ? 12 : 16),
       _buildTextField(
         _contactEmailController,
         "Contact Email",
         keyboardType: TextInputType.emailAddress,
+        readOnly: true,
         isMobile: isMobile,
       ),
-      SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
+      SizedBox(height: isMobile ? 12 : 16),
       _buildTextField(
         _contactPhoneController,
         "Contact Phone",
         keyboardType: TextInputType.phone,
         isMobile: isMobile,
       ),
-      SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
-      Center(
-        child: Text(
-          "Enter Your Invitation Code",
-          style: GoogleFonts.poppins(
-            fontSize: isMobile ? 16 : 18, // Reduced from 18 to 16
-            color: Colors.white,
-          ),
-        ),
+      SizedBox(height: isMobile ? 12 : 16),
+      _buildTextField(
+        _newPasswordController,
+        "New Password",
+        obscureText: true,
+        isMobile: isMobile,
       ),
-      SizedBox(height: isMobile ? 12 : 16), // Reduced spacing
-      _buildInvitationCodeInput(isMobile),
-      _buildVerifiedRealtorInfo(isMobile),
-      SizedBox(height: isMobile ? 20 : 30), // Reduced spacing
+      SizedBox(height: isMobile ? 12 : 16),
+      _buildTextField(
+        _confirmPasswordController,
+        "Confirm Password",
+        obscureText: true,
+        isMobile: isMobile,
+      ),
+      SizedBox(height: isMobile ? 20 : 30),
       Center(
         child: SizedBox(
-          width: isMobile ? 400 : 500, // Reduced width for mobile
-          height: isMobile ? 45 : 50, // Reduced height for mobile
+          width: isMobile ? 400 : 500,
+          height: isMobile ? 45 : 50,
           child: ElevatedButton(
             onPressed: _isLoading ? null : _saveInvestorData,
             style: ElevatedButton.styleFrom(
               backgroundColor: neonPurple,
               foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 15), // Adjusted padding
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 15),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15),
                 side: const BorderSide(color: Colors.black, width: 2),
               ),
               textStyle: GoogleFonts.poppins(
-                fontSize: isMobile ? 18 : 22, // Reduced from 22 to 18
+                fontSize: isMobile ? 18 : 22,
                 fontWeight: FontWeight.bold,
               ),
             ),

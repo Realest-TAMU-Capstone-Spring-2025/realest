@@ -1,3 +1,5 @@
+import 'dart:io' show Platform; // For platform detection
+import 'package:flutter/foundation.dart' show kIsWeb; // For web detection
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -25,6 +27,7 @@ import 'package:realest/src/views/realtor/realtor_settings.dart';
 // Common views
 import 'package:realest/src/views/custom_login_page.dart';
 import 'package:realest/src/views/navbar.dart'; // Sidebar navigation
+import 'package:realest/src/views/mobile_home_page.dart';
 
 // Provider and user-related imports
 import 'user_provider.dart';
@@ -94,12 +97,25 @@ class _MyAppState extends State<MyApp> {
   }
 
   GoRouter _createRouter(VoidCallback toggleTheme, ThemeMode themeMode) {
+    // Determine the initial route based on the platform
+    String initialRoute = '/';
+    if (!kIsWeb) {
+      // If not on web, check if the platform is Android or iOS (mobile)
+      if (Platform.isAndroid || Platform.isIOS) {
+        initialRoute = '/mobileHome'; // Redirect mobile users to the login page
+      }
+    }
+
     return GoRouter(
-      initialLocation: '/',
+      initialLocation: initialRoute, // Set the platform-specific initial route
       routes: [
         GoRoute(
           path: '/',
           builder: (context, state) => const HomePage(),
+        ),
+        GoRoute(
+          path: '/mobileHome',
+          builder: (context, state) => const MobileHomePage(),
         ),
         GoRoute(
           path: '/login',

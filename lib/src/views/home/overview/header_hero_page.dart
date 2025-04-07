@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'package:go_router/go_router.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'feature_container.dart';
 
 class HeaderHeroPage extends StatefulWidget {
-  final VideoPlayerController videoController;
-  final bool isVideoInitialized;
-  final double videoOpacity;
+  final double gifOpacity;
 
   const HeaderHeroPage({
-    required this.videoController,
-    required this.isVideoInitialized,
-    required this.videoOpacity,
+    required this.gifOpacity,
     super.key,
   });
 
@@ -31,7 +26,6 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
   late Animation<double> _featuresAnimation;
 
   bool _hasTyped = false;
-  bool _isVideoReady = false;
 
   @override
   void initState() {
@@ -80,43 +74,6 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
     Future.delayed(const Duration(milliseconds: 3200), () {
       if (mounted) _featuresController.forward();
     });
-
-    _isVideoReady = widget.isVideoInitialized;
-    if (_isVideoReady) {
-      _startVideoPlayback();
-    } else {
-      widget.videoController.addListener(_onVideoControllerUpdate);
-    }
-  }
-
-  void _onVideoControllerUpdate() {
-    if (widget.videoController.value.isInitialized && !_isVideoReady) {
-      if (!mounted) return;
-      setState(() {
-        _isVideoReady = true;
-      });
-      _startVideoPlayback();
-      widget.videoController.removeListener(_onVideoControllerUpdate);
-    }
-  }
-
-  void _startVideoPlayback() {
-    widget.videoController.setLooping(true);
-    widget.videoController.play();
-  }
-
-  @override
-  void didUpdateWidget(HeaderHeroPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.videoController != oldWidget.videoController) {
-      oldWidget.videoController.removeListener(_onVideoControllerUpdate);
-      _isVideoReady = widget.videoController.value.isInitialized;
-      if (_isVideoReady) {
-        _startVideoPlayback();
-      } else {
-        widget.videoController.addListener(_onVideoControllerUpdate);
-      }
-    }
   }
 
   @override
@@ -125,7 +82,6 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
     _subtitleController.dispose();
     _buttonController.dispose();
     _featuresController.dispose();
-    widget.videoController.removeListener(_onVideoControllerUpdate);
     super.dispose();
   }
 
@@ -136,7 +92,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
       onPressed: () {},
       child: Text(
         title,
-        style: const TextStyle(color: Colors.white, fontSize: 16),
+        style: const TextStyle(color: Colors.white, fontSize: 20),
       ),
     );
   }
@@ -152,26 +108,17 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
           height: MediaQuery.of(context).size.height + AppBar().preferredSize.height,
           child: Stack(
             children: [
-              if (_isVideoReady)
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: widget.videoOpacity.clamp(0.0, 1.0),
-                    child: AspectRatio(
-                      aspectRatio: widget.videoController.value.aspectRatio,
-                      child: FittedBox(
-                        fit: BoxFit.cover,
-                        clipBehavior: Clip.hardEdge,
-                        child: SizedBox(
-                          width: widget.videoController.value.size.width,
-                          height: widget.videoController.value.size.height,
-                          child: VideoPlayer(widget.videoController),
-                        ),
-                      ),
-                    ),
+              Positioned.fill(
+                child: Opacity(
+                  opacity: widget.gifOpacity.clamp(0.0, 1.0),
+                  child: Image.asset(
+                    'assets/videos/triangle.gif',
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
                   ),
-                )
-              else
-                Container(color: Colors.black),
+                ),
+              ),
               Positioned.fill(
                 child: SingleChildScrollView(
                   child: Column(
@@ -375,13 +322,13 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
                                   title: '10 Hours Saved Weekly',
                                   cta: 'Learn More',
                                 ),
-                                const SizedBox(width: 12), // Reduced from 16
+                                const SizedBox(width: 12),
                                 FeatureContainer(
                                   icon: Icons.lightbulb,
                                   title: 'Swipe-to-Invest',
                                   cta: 'Watch Demo',
                                 ),
-                                const SizedBox(width: 12), // Reduced from 16
+                                const SizedBox(width: 12),
                                 FeatureContainer(
                                   icon: Icons.handshake,
                                   title: 'Branded Collaboration',
