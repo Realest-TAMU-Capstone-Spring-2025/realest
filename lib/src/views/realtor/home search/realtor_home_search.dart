@@ -106,9 +106,12 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
       }
 
       _refreshMarkers();
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+
     });
   }
 
@@ -415,7 +418,8 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     final snapshot = await buildFilteredQuery(_filters).get();
 
 
-    final List<Map<String, dynamic>> fetchedProperties = snapshot.docs.map((doc) {
+    final List<Map<String, dynamic>> fetchedProperties = snapshot.docs.map((
+        doc) {
       final data = doc.data() as Map<String, dynamic>;
 
       return {
@@ -431,31 +435,35 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
       };
     }).toList();
 
-    setState(() {
-      allFilteredPropertiesForMap = fetchedProperties.where((property) {
-        final price = property["price"] ?? 0;
-        final beds = property["beds"] ?? 0;
-        final baths = property["baths"] ?? 0;
+    if (mounted) {
+      setState(() {
+        allFilteredPropertiesForMap = fetchedProperties.where((property) {
+          final price = property["price"] ?? 0;
+          final beds = property["beds"] ?? 0;
+          final baths = property["baths"] ?? 0;
 
-        final minPrice = _filters.minPrice ?? 0;
-        final maxPrice = _filters.maxPrice ?? double.infinity;
-        final minBeds = _filters.minBeds ?? 0;
-        final minBaths = _filters.minBaths ?? 0.0;
+          final minPrice = _filters.minPrice ?? 0;
+          final maxPrice = _filters.maxPrice ?? double.infinity;
+          final minBeds = _filters.minBeds ?? 0;
+          final minBaths = _filters.minBaths ?? 0.0;
 
-        return price >= minPrice &&
-            price <= maxPrice &&
-            beds >= minBeds &&
-            baths >= minBaths;
-      }).toList();
-    });
+          return price >= minPrice &&
+              price <= maxPrice &&
+              beds >= minBeds &&
+              baths >= minBaths;
+        }).toList();
+      });
 
-    _refreshMarkers(); // ✅ move this here
+      _refreshMarkers(); // ✅ move this here
+    }
   }
 
   void _updateFilteredQuery() {
     // print('[FirestoreQuery] Updating filtered query...');
     final query = buildFilteredQuery(_filters);
-    setState(() => _filteredQuery = query);
+    if (mounted) {
+      setState(() => _filteredQuery = query);
+    }
     _fetchAllFilteredPropertiesForMap();
   }
 
@@ -466,14 +474,13 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
   }) async {
     final firestore = FirebaseFirestore.instance;
 
-    for (int i = 0; i < listings.length; i += 10) {
-      final chunk = listings.skip(i).take(10).toList();
+    Future<void> processChunk(List<Map<String, dynamic>> chunk) async {
       final ids = chunk.map((l) => l['id'] as String).toList();
 
-      final snapshot = await (firestore
+      final snapshot = await firestore
           .collection('realtors')
           .doc(realtorId)
-          .collection('cashflow_analysis'))
+          .collection('cashflow_analysis')
           .where(FieldPath.documentId, whereIn: ids)
           .get();
 
@@ -486,19 +493,19 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
         final rent = property['rent_estimate'];
 
         if (existingIds.contains(listingId)) {
-          print("⏩ Skipping $listingId: Already exists");
+          // print("⏩ Skipping $listingId: Already exists");
           continue;
         }
         if (status != 'FOR_SALE') {
-          print("⏩ Skipping $listingId: Not for sale (status: $status)");
+          // print("⏩ Skipping $listingId: Not for sale (status: $status)");
           continue;
         }
         if (rent == null) {
-          print("⏩ Skipping $listingId: No rent_estimate");
+          // print("⏩ Skipping $listingId: No rent_estimate");
           continue;
         }
 
-        print("✅ Creating cashflow for $listingId...");
+        // print("✅ Creating cashflow for $listingId...");
 
         tasks.add(() async {
           final double purchasePrice = (property['price'] ?? 0).toDouble();
@@ -568,9 +575,28 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
         }());
       }
 
-      await Future.wait(tasks); // run all 10 in parallel
+      await Future.wait(tasks);
+    }
+
+    // Process first 2 chunks (up to 20 listings) eagerly
+    final initialChunks = listings.take(20).toList();
+    for (int i = 0; i < initialChunks.length; i += 10) {
+      final chunk = initialChunks.skip(i).take(10).toList();
+      await processChunk(chunk);
+    }
+
+    // Defer the rest in background
+    final remaining = listings.skip(20).toList();
+    if (remaining.isNotEmpty) {
+      Future(() async {
+        for (int i = 0; i < remaining.length; i += 10) {
+          final chunk = remaining.skip(i).take(10).toList();
+          await processChunk(chunk);
+        }
+      });
     }
   }
+
 
 
 
