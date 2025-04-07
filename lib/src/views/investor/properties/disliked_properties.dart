@@ -9,14 +9,14 @@ import '../../realtor/widgets/property_detail_sheet.dart';
 import 'properties_view.dart'; // Import PropertiesView
 import '../swiping/property_swiping.dart';
 
-class SavedProperties extends StatefulWidget {
-  const SavedProperties({super.key});
+class DislikedProperties extends StatefulWidget {
+  const DislikedProperties({super.key});
 
   @override
-  State<SavedProperties> createState() => _SavedPropertiesState();
+  State<DislikedProperties> createState() => _DislikedPropertiesState();
 }
 
-class _SavedPropertiesState extends State<SavedProperties> {
+class _DislikedPropertiesState extends State<DislikedProperties> {
   final NumberFormat currencyFormat = NumberFormat('#,##0', 'en_US');
   late final String? uid = FirebaseAuth.instance.currentUser?.uid;
   late final Stream<QuerySnapshot> _interactionsStream;
@@ -31,7 +31,7 @@ class _SavedPropertiesState extends State<SavedProperties> {
           .collection('investors')
           .doc(uid)
           .collection('property_interactions')
-          .where('status', isEqualTo: 'liked')
+          .where('status', isEqualTo: 'disliked')
           .snapshots();
     }
   }
@@ -45,7 +45,7 @@ class _SavedPropertiesState extends State<SavedProperties> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Saved Properties')),
+      appBar: AppBar(title: const Text('Disliked Properties')),
       body: StreamBuilder<QuerySnapshot>(
         stream: _interactionsStream,
         builder: (context, snapshot) {
@@ -55,7 +55,7 @@ class _SavedPropertiesState extends State<SavedProperties> {
 
           final decisionDocs = snapshot.data!.docs;
           if (decisionDocs.isEmpty) {
-            return const Center(child: Text('No saved properties.'));
+            return const Center(child: Text('No disliked properties.'));
           }
 
           _cachedPropertiesFuture ??= _fetchProperties(decisionDocs);
@@ -131,11 +131,11 @@ class _SavedPropertiesState extends State<SavedProperties> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('What would you like to do?'),
-            content: const Text('Choose an action for this saved property.'),
+            content: const Text('Choose an action for this disliked property.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, 'dislike'),
-                child: const Text('Move to Disliked'),
+                child: const Text('Move to Liked'),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, 'details'),
@@ -156,7 +156,7 @@ class _SavedPropertiesState extends State<SavedProperties> {
               .doc(uid)
               .collection('property_interactions')
               .doc(property.id)
-              .update({'status': 'disliked'});
+              .update({'status': 'liked'});
 
           // Get investor document to retrieve realtorId
           final investorDoc = await FirebaseFirestore.instance
@@ -173,7 +173,7 @@ class _SavedPropertiesState extends State<SavedProperties> {
                 .doc(realtorId)
                 .collection('interactions')
                 .doc(interactionDocId)
-                .update({'status': 'disliked'});
+                .update({'status': 'liked'});
           }
 
           setState(() {
