@@ -135,7 +135,7 @@ class _CustomLoginPageState extends State<CustomLoginPage>
 
         // Fetch user data and redirect to investor setup
         Provider.of<UserProvider>(context, listen: false).fetchUserData();
-        if (mounted) context.go('/investorSetup');
+        if (mounted) context.go('/setup');
       } else {
         // Regular login flow
         UserCredential userCredential = await _auth.signInWithEmailAndPassword(
@@ -153,9 +153,9 @@ class _CustomLoginPageState extends State<CustomLoginPage>
           Provider.of<UserProvider>(context, listen: false).fetchUserData();
 
           if (role == 'realtor') {
-            context.go(completedSetup ? '/realtorDashboard' : '/realtorSetup');
+            context.go(completedSetup ? '/home' : '/setup');
           } else if (role == 'investor') {
-            context.go(completedSetup ? '/investorHome' : '/investorSetup');
+            context.go(completedSetup ? '/home' : '/setup');
           }
         } else if (mounted) {
           setState(() {
@@ -193,7 +193,7 @@ class _CustomLoginPageState extends State<CustomLoginPage>
   }
 
   void _navigateAfterRegistration() {
-    if (mounted) context.go('/realtorSetup');
+    if (mounted) context.go('/setup');
   }
 
   String _getAuthErrorMessage(FirebaseAuthException e) {
