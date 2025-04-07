@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
+import 'package:realest/util/fetchPropertyData.dart';
 
 class InvestorActivitySection extends StatelessWidget {
   const InvestorActivitySection({Key? key}) : super(key: key);
@@ -84,7 +86,7 @@ class InvestorActivitySection extends StatelessWidget {
                         propertyId: activityData['listingId'] ?? 'Unknown',
                         timestamp: formattedDate,
                         duration: formattedDuration,
-                        onPropertyTap: () => _showPropertyDetails(context, activityData['listingId']),
+                        onPropertyTap: () => _showPropertyDetails(context, activityData['propertyId']),
                       );
                     },
                   );
@@ -128,7 +130,6 @@ class InvestorActivitySection extends StatelessWidget {
 
   void _showPropertyDetails(BuildContext context, String? propertyId) {
     if (propertyId == null) return;
-    
     // Show property detail sheet
     showModalBottomSheet(
       context: context,
@@ -136,15 +137,28 @@ class InvestorActivitySection extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) {
-          return PropertyDetailSheet(
-            propertyId: propertyId,
-            scrollController: scrollController,
+      builder: (context) => FutureBuilder<Map<String, dynamic>>(
+        future: fetchPropertyData(propertyId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No property data available'));
+          }
+          return DraggableScrollableSheet(
+            initialChildSize: 0.9,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            expand: false,
+            builder: (context, scrollController) {
+              return PropertyDetailSheet(
+                property: snapshot.data!,
+              );
+            },
           );
         },
       ),
@@ -296,7 +310,6 @@ class ClientActivityCard extends StatelessWidget {
   }
 }
 
-// Skeleton loader for client activity card
 class ClientActivitySkeletonCard extends StatelessWidget {
   const ClientActivitySkeletonCard({Key? key}) : super(key: key);
 
@@ -383,152 +396,6 @@ class SkeletonCircle extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.grey.withOpacity(0.2),
         shape: BoxShape.circle,
-      ),
-    );
-  }
-}
-
-// Property Detail Sheet
-class PropertyDetailSheet extends StatelessWidget {
-  final String propertyId;
-  final ScrollController scrollController;
-
-  const PropertyDetailSheet({
-    Key? key,
-    required this.propertyId,
-    required this.scrollController,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('listings')
-          .doc(propertyId)
-          .get(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-        
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const Center(child: Text('Property not found'));
-        }
-        
-        final propertyData = snapshot.data!.data() as Map<String, dynamic>;
-        
-        return ListView(
-          controller: scrollController,
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Handle bar for draggable sheet
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            
-            // Property details
-            Text(
-              propertyData['address'] ?? 'No Address',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Property ID: $propertyId',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            
-            // Property image if available
-            if (propertyData['imageUrl'] != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  propertyData['imageUrl'],
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 200,
-                    color: Colors.grey.withOpacity(0.2),
-                    child: const Center(child: Icon(Icons.image_not_supported)),
-                  ),
-                ),
-              ),
-            
-            const SizedBox(height: 16),
-            
-            // Property details
-            _buildPropertyDetailRow(
-              context,
-              'Price',
-              propertyData['price'] != null
-                  ? '\$${NumberFormat('#,###').format(propertyData['price'])}'
-                  : 'Not available',
-            ),
-            _buildPropertyDetailRow(
-              context,
-              'Beds',
-              propertyData['beds']?.toString() ?? 'N/A',
-            ),
-            _buildPropertyDetailRow(
-              context,
-              'Baths',
-              propertyData['baths']?.toString() ?? 'N/A',
-            ),
-            _buildPropertyDetailRow(
-              context,
-              'Square Feet',
-              propertyData['sqft'] != null
-                  ? NumberFormat('#,###').format(propertyData['sqft'])
-                  : 'N/A',
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Property description
-            Text(
-              'Description',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              propertyData['description'] ?? 'No description available',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildPropertyDetailRow(BuildContext context, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Text(
-            '$label: ',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
       ),
     );
   }

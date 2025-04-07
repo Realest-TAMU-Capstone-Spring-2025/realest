@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:realest/src/views/realtor/dashboard/pinned_clients.dart';
 import 'package:realest/src/views/realtor/dashboard/investor_activity.dart';
+import 'package:realest/src/views/realtor/dashboard/new_notes.dart';
 
 class RealtorDashboard extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -108,7 +109,7 @@ class RealtorDashboardState extends State<RealtorDashboard> {
                     _buildModernCard(
                       SizedBox(
                         height: screenHeight * 0.4,
-                        child: const PropertyUpdatesSection(),
+                        child: const NewNotesSection(),
                       ),
                     ),
                   ],
@@ -118,32 +119,6 @@ class RealtorDashboardState extends State<RealtorDashboard> {
           },
         ),
       ),
-    );
-  }
-}
-
-class PropertyUpdatesSection extends StatelessWidget {
-  const PropertyUpdatesSection({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Property Updates",
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: ListView(
-            children: const [
-              // Add your property update items here
-              // Example: PropertyUpdateItem(address: "123 Main St", status: "Price reduced")
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
