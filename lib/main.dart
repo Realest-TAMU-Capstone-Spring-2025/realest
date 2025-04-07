@@ -154,10 +154,6 @@ class _MyAppState extends State<MyApp> {
             _showAccessDenied(context, 'Reports only available to realtors');
             return '/home';
           }
-          if (currentPath == '/search' && userProvider.userRole != 'realtor') {
-            _showAccessDenied(context, 'Property search only available to realtors');
-            return '/home';
-          }
         }
         return null; // No redirection needed
       },
@@ -283,19 +279,7 @@ class _MyAppState extends State<MyApp> {
             ),
             GoRoute(
               path: '/search',
-              builder: (context, state) {
-                final userProvider = Provider.of<UserProvider>(context);
-                if (userProvider.userRole != 'realtor') {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Property search only available to realtors')),
-                    );
-                    context.go('/home'); // Redirect back to home
-                  });
-                  return const SizedBox.shrink(); // Temporary empty widget
-                }
-                return const RealtorHomeSearch();
-              },
+              builder: (context, state) => const RealtorHomeSearch(),
             ),
           ],
         ),

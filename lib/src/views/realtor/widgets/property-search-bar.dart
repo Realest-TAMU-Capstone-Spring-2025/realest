@@ -70,7 +70,7 @@ class PropertySearchBar extends StatelessWidget {
           controller: controller,
           focusNode: focusNode,
           decoration: InputDecoration(
-            hintText: 'Search by address...',
+            hintText: 'Search by address, MLS ID, or Neighborhood...',
             prefixIcon: Icon(Icons.search),
             contentPadding: const EdgeInsets.symmetric(vertical: 14),
             border: OutlineInputBorder(
