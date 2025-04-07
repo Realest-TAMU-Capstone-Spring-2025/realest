@@ -1,14 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:realest/user_provider.dart';
 
 class CashFlowBadge extends StatefulWidget {
   final String propertyId;
-  final num price;
 
   const CashFlowBadge({
     super.key,
     required this.propertyId,
-    required this.price,
   });
 
   @override
@@ -16,16 +17,46 @@ class CashFlowBadge extends StatefulWidget {
 }
 
 class _CashFlowBadgeState extends State<CashFlowBadge> {
-  double? _cashFlow;
+  double? _netOperatingIncome;
 
   @override
   void initState() {
     super.initState();
-    _loadCashFlow();
+    _loadNOI();
   }
 
-  Future<void> _loadCashFlow() async {
+  @override
+  void didUpdateWidget(covariant CashFlowBadge oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.propertyId != oldWidget.propertyId) {
+      _loadNOI(); // reload if the propertyId changes
+    }
+  }
+
+  Future<void> _loadNOI() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final userRole = Provider.of<UserProvider>(context, listen: false).userRole;
+    String? targetRealtorId;
+
+    if (userRole == "realtor") {
+      targetRealtorId = currentUser.uid;
+    } else {
+      final investorDoc = await FirebaseFirestore.instance
+          .collection('investors')
+          .doc(currentUser.uid)
+          .get();
+      if (investorDoc.exists) {
+        targetRealtorId = investorDoc.data()?['realtorId'];
+      }
+    }
+
+    if (targetRealtorId == null) return;
+
     final doc = await FirebaseFirestore.instance
+        .collection('realtors')
+        .doc(targetRealtorId)
         .collection('cashflow_analysis')
         .doc(widget.propertyId)
         .get();
@@ -33,54 +64,33 @@ class _CashFlowBadgeState extends State<CashFlowBadge> {
     if (!doc.exists || !mounted) return;
 
     final data = doc.data()!;
-    final expenses = data['monthlyExpenseBreakdown'] ?? {};
-
-    final estimatedRent = (widget.price).toDouble() * 0.0086;
-
-    final totalExpenses = [
-      expenses['loanInterest'],
-      expenses['loanPrinciple'],
-      expenses['propertyTax'],
-      expenses['insurance'],
-      expenses['hoaFee'],
-      expenses['maintenance'],
-      expenses['managementFee'],
-      expenses['otherCosts'],
-    ].map((v) => (v ?? 0).toDouble()).reduce((a, b) => a + b);
-
-    final cashFlow = estimatedRent - totalExpenses;
+    final noi = (data['netOperatingIncome'] ?? 0).toDouble();
 
     setState(() {
-      _cashFlow = cashFlow;
+      _netOperatingIncome = noi;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_cashFlow == null) return const SizedBox();
+    if (_netOperatingIncome == null) return const SizedBox();
 
-    return Positioned(
-      top: 10,
-      right: 10,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade900.withOpacity(0.85),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: _cashFlow! >= 0
-                ? Colors.green
-                : Colors.red,
-            width: 4,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade900.withOpacity(0.85),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: _netOperatingIncome! >= 0 ? Colors.green : Colors.red,
+          width: 4,
         ),
-        child: Text(
-          "${_cashFlow! >= 0 ? '+ ' : '- '}\$${_cashFlow!.abs().toStringAsFixed(0)}",
-          style: TextStyle(
-            color: _cashFlow! >= 0 ? Colors.green : Colors.red,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+      ),
+      child: Text(
+        "${_netOperatingIncome! >= 0 ? '+ ' : '- '}\$${_netOperatingIncome!.abs().toStringAsFixed(0)}",
+        style: TextStyle(
+          color: _netOperatingIncome! >= 0 ? Colors.green : Colors.red,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
         ),
       ),
     );
