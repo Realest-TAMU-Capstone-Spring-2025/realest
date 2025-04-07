@@ -1,10 +1,16 @@
 import 'dart:async';
+import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../properties/properties_view.dart';
+import 'package:intl/intl.dart';
+import 'package:realest/src/views/realtor/widgets/property_card/cashflow_badge.dart';
+import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
+
+import '../../../../util/property_fetch_helpers.dart';
 
 class PropertySwipingView extends StatefulWidget {
   const PropertySwipingView({super.key});
@@ -23,7 +29,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   Timer? _longActivityTimer;
   final int _longActivityThreshold = 50;
   bool _noMoreProperties = false;
-  bool _noRealtorAssigned = false;
+  bool _noRealtorAssigned = true;
   bool _useRealtorDecisions = false;
 
   @override
@@ -83,64 +89,41 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     }
 
     try {
-      // Get investor's realtor ID
-      final investorDoc = await _db.collection('investors').doc(userId).get();
-      if(investorDoc.data() == null) {
-        setState(() {
-          _noMoreProperties = true;
-          _noRealtorAssigned = true;
-        });
-        return;
-      }
-      final realtorId = investorDoc.data()?['realtorId'] as String?;
-      if (realtorId == null) {
-        setState(() {
-          _noMoreProperties = true;
-          _noRealtorAssigned = true;
-        });
-        return;
-      }
-
-      final userLikedPropertiesSnapshot = await _db
-          .collection('users')
+      //grab collection from investors, grab the document by userid, and then grab the collection of recommended properties from that document
+      final snapshot = await _db
+          .collection('investors')
           .doc(userId)
-          .collection('decisions')
-          .where('liked', isEqualTo: true)
+          .collection('recommended_properties')
+          .limit(20)
           .get();
-
-      final userLikedPropertyIds = userLikedPropertiesSnapshot.docs.map((doc) => doc.id).toSet();
-
-      // Get realtor's decisions
-      final decisionsSnapshot = await _db
-          .collection('users')
-          .doc(realtorId)
-          .collection('decisions')
-          .where('liked', isEqualTo: true)
-          .get();
-
-      final propertyIds = decisionsSnapshot.docs
-          .map((doc) => doc.id)
-          .where((id) => !userLikedPropertyIds.contains(id))
-          .toList();
-
-      if (propertyIds.isEmpty) {
+      if (snapshot.docs.isEmpty) {
         setState(() {
           _noMoreProperties = true;
+          _noRealtorAssigned = true; // No realtor assigned
         });
         return;
       }
-
-      // Fetch properties based on filtered realtor's decisions
-      final propertiesSnapshot = await _db
-          .collection('listings')
-          .where(FieldPath.documentId, whereIn: propertyIds)
-          .get();
-
+      //for each document in the snapshot, get the property id and then get the property from the listings collection
+      //need to make a call to the listings collection for each document in the snapshot
+      final propertyIds = snapshot.docs.map((doc) => doc['property_id'] as String).toList();
+      final propertySnapshots = await Future.wait(propertyIds.map((id) => _db.collection('listings').doc(id).get()));
+      if (propertySnapshots.isEmpty) {
+        setState(() {
+          _noMoreProperties = true;
+          _noRealtorAssigned = true; // No realtor assigned
+        });
+        return;
+      }
+      
       setState(() {
-        _properties = propertiesSnapshot.docs
+        _properties = propertySnapshots
+            .where((doc) => doc.exists)
             .map((doc) => Property.fromFirestore(doc))
             .toList();
+        _noRealtorAssigned = false; // Realtor assigned
+        _noMoreProperties = false; // Reset noMoreProperties state
       });
+
     } catch (e) {
       print('Error loading realtor properties: $e');
       setState(() {
@@ -419,7 +402,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           if (index == 0) {
             _startCardViewTracking(property.id);
           }
-          return PropertyCard(property: property);
+          return PropertyCard(property: property, controller: _controller);
         },
       ),
     );
@@ -428,96 +411,273 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
 class PropertyCard extends StatelessWidget {
   final Property property;
+  final CardSwiperController controller;
 
-  const PropertyCard({required this.property, super.key});
-
+  const PropertyCard({super.key, required this.property, required this.controller});
   @override
   Widget build(BuildContext context) {
-    String imageUrl = (property.primaryPhoto != null)
-        ? "${property.primaryPhoto}"
-        : 'https://via.placeholder.com/150';
+    final theme = Theme.of(context);
+    final currencyFormat = NumberFormat("#,##0", "en_US");
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = MediaQuery.of(context).size.width < 600; // Define mobile screen size threshold
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double imageHeight = constraints.maxHeight * 0.75;
 
-    return GestureDetector(
-        onTap: () => _navigateToPropertyView(context),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Stack(
-            fit: StackFit.expand,
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: isDarkMode ? Colors.black : Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              CachedNetworkImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (context, url) =>
-                    Center(child: CircularProgressIndicator()),
-                errorWidget: (context, url, error) => Icon(Icons.error),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.black.withOpacity(0.6), Colors.transparent],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
+              // Image + Address/Price Overlay
+              Stack(
+                children: [
+                  // Your main image or content
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: CachedNetworkImage(
+                      imageUrl: property.primaryPhoto != null
+                          ? (kDebugMode
+                          ? 'http://localhost:8080/${property.primaryPhoto}'
+                          : property.primaryPhoto!)
+                          : 'https://placehold.co/600x400',
+                      height: imageHeight,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                      errorWidget: (context, url, error) => const Icon(Icons.error),
+                    ),
                   ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      property.street ?? 'Unknown Address',
-                      style: TextStyle(
+
+                  // Positioned Price
+                  Positioned(
+                    left: 10,
+                    bottom: 60,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
                         color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        property.listPrice != null
+                            ? "\$ ${NumberFormat("#,##0").format(property.listPrice)}"
+                            : "N/A",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 30,
+                          color: Colors.deepPurple,
+                        ),
                       ),
                     ),
-                    SizedBox(height: 8),
-                    _buildDetailRow('${property.beds ?? 0} beds', Icons.bed),
-                    _buildDetailRow(
-                        '${property.fullBaths ?? 0} baths', Icons.bathtub),
-                    _buildDetailRow(
-                        '${property.sqft ?? 0} sqft', Icons.square_foot),
-                    _buildDetailRow(
-                        '\$${property.listPrice?.toStringAsFixed(2) ?? 'N/A'}',
-                        Icons.attach_money),
-                  ],
+                  ),
+
+                  // Positioned NOI badge
+                  Positioned(
+                    right: 10,
+                    bottom: 60,
+                    child: CashFlowBadge(propertyId: property.id),
+                  ),
+
+                  // Address + Price Overlay
+                  Positioned(
+                    left: 0,
+                    bottom: 0,
+                    right: 0,
+                    child: ClipRRect(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          color: Colors.black.withOpacity(0.4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                property.street ?? "Unknown Address",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Info icon
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Tooltip(
+                      message: "Click for more information",
+                      child: InkWell(
+                        onTap: () => _navigateToPropertyView(context),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.info_outline,
+                            size: isMobile ? 20 : 24,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Bottom Section (details + buttons)
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.all(isMobile ? 12 : 16),
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                    color: isDarkMode ? Colors.black : Colors.white,
+                  ),
+                  child: Column(
+                    children: [
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.black54.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildStat(icon: Icons.king_bed, label: "${property.beds} Beds", theme: theme),
+                              _verticalDivider(),
+                              _buildStat(
+                                icon: Icons.bathtub,
+                                label: "${(property.fullBaths! + (property.halfBaths ?? 0) / 2)} Baths",
+                                theme: theme,
+                              ),
+                              _verticalDivider(),
+                              _buildStat(
+                                icon: Icons.square_foot,
+                                label: "${currencyFormat.format(property.sqft)} sqft",
+                                theme: theme,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 25),
+                      if (!isMobile)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildSwipeButton(
+                              icon: Icons.thumb_down,
+                              color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                              tooltip: "Dislike",
+                              onPressed: () => controller.swipe(CardSwiperDirection.left),
+                              isMobile: isMobile,
+                            ),
+                            _buildSwipeButton(
+                              icon: Icons.favorite,
+                              color: isDarkMode ? Colors.red[400]! : Colors.red[200]!,
+                              tooltip: "Like",
+                              onPressed: () => controller.swipe(CardSwiperDirection.right),
+                              isMobile: isMobile,
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-        ));
+
+        );
+      },
+    );
+  }
+  Widget _verticalDivider() => Container(
+    width: 1,
+    height: 20,
+    color: Colors.grey[400],
+    margin: const EdgeInsets.symmetric(horizontal: 12),
+  );
+  Widget _buildStat({required IconData icon, required String label, required ThemeData theme}) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: theme.colorScheme.primary),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
   }
 
-  void _navigateToPropertyView(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PropertiesView(
-          propertyId: property.id,
-          showSaveIcon: false,
+  Widget _buildSwipeButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onPressed,
+    required bool isMobile,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: CircleAvatar(
+        radius: isMobile ? 20 : 28,
+        backgroundColor: color,
+        child: IconButton(
+          icon: Icon(icon, size: isMobile ? 20 : 24),
+          color: Colors.white,
+          onPressed: onPressed,
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(String text, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: Colors.white),
-          SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              text,
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
+  Future<void> _navigateToPropertyView(BuildContext context) async {
+    final propertyData = await fetchPropertyData(property.id);
+    showModalBottomSheet(
+      context: context,
+      constraints: BoxConstraints(
+        maxWidth:  1000,
       ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => PropertyDetailSheet(property: propertyData),
+      //disable swipe to close
+      enableDrag: false,
+
     );
   }
 }
@@ -528,6 +688,7 @@ class Property {
   final double? listPrice;
   final int? beds;
   final int? fullBaths;
+  final int? halfBaths;
   final String? street;
   final int? sqft;
   final double? tax;
@@ -538,6 +699,7 @@ class Property {
     this.listPrice,
     this.beds,
     this.fullBaths,
+    this.halfBaths,
     this.street,
     this.sqft,
     this.tax,
@@ -551,6 +713,7 @@ class Property {
       listPrice: (data['list_price'] as num?)?.toDouble(),
       beds: data['beds'] as int?,
       fullBaths: data['full_baths'] as int?,
+      halfBaths: data['half_baths'] as int?,
       street: data['street'],
       sqft: data['sqft'] as int?,
       tax: (data['tax'] as num?)?.toDouble(),

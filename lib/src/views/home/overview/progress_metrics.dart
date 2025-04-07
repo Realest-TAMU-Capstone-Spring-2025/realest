@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class ProgressMetricsSection extends StatefulWidget {
   final ScrollController? scrollController;
@@ -9,8 +10,7 @@ class ProgressMetricsSection extends StatefulWidget {
   _ProgressMetricsSectionState createState() => _ProgressMetricsSectionState();
 }
 
-class _ProgressMetricsSectionState extends State<ProgressMetricsSection>
-    with SingleTickerProviderStateMixin {
+class _ProgressMetricsSectionState extends State<ProgressMetricsSection> with SingleTickerProviderStateMixin {
   static const Color neonPurple = Color(0xFFD500F9);
   late AnimationController _controller;
   late Animation<double> _fadeScaleAnimation;
@@ -55,13 +55,10 @@ class _ProgressMetricsSectionState extends State<ProgressMetricsSection>
       final widgetTop = position.dy;
       final widgetBottom = widgetTop + renderBox.size.height;
 
-      // Check if widget is at least 80% visible to start animation
       if (widgetTop < screenHeight * 0.8 && widgetBottom > 0 && !_isVisible) {
         setState(() => _isVisible = true);
         _controller.forward();
-      }
-      // Reset animation when widget is completely out of view
-      else if ((widgetBottom < 0 || widgetTop > screenHeight) && _isVisible) {
+      } else if ((widgetBottom < 0 || widgetTop > screenHeight) && _isVisible) {
         setState(() => _isVisible = false);
         _controller.reset();
       }
@@ -77,42 +74,25 @@ class _ProgressMetricsSectionState extends State<ProgressMetricsSection>
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+      padding: EdgeInsets.symmetric(
+        vertical: isMobile ? 30 : 60,
+        horizontal: isMobile ? 10 : 20,
+      ),
       color: Colors.black,
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildMetricColumn(
-                _countAnimation1,
-                'Time Reduction on Initial Analysis',
-                'Pilot Study Result',
-                isPercentage: true,
-              ),
-              _buildMetricColumn(
-                _countAnimation2,
-                'Client Satisfaction with Swipe UI',
-                'User Testing Data',
-                isPercentage: true,
-              ),
-              _buildMetricColumn(
-                _countAnimation3,
-                'Avg. Properties Reviewed/Month',
-                'Industry Benchmark',
-                isPercentage: false,
-              ),
-            ],
-          ),
-          const SizedBox(height: 80),
+          _buildMetricsSection(isMobile),
+          SizedBox(height: isMobile ? 40 : 80),
           Column(
             children: [
-              const Text(
+              Text(
                 'Join 400+ Agents Who’ve Reclaimed 1,200+ Hours This Year',
                 style: TextStyle(
                   color: neonPurple,
-                  fontSize: 24,
+                  fontSize: isMobile ? 18 : 24,
                   fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
@@ -120,23 +100,23 @@ class _ProgressMetricsSectionState extends State<ProgressMetricsSection>
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  // Add your navigation logic here
+                  context.go('/login');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: neonPurple,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
-                    vertical: 15,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 20 : 30,
+                    vertical: isMobile ? 12 : 15,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'Get Started',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: isMobile ? 16 : 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -148,69 +128,116 @@ class _ProgressMetricsSectionState extends State<ProgressMetricsSection>
     );
   }
 
+  Widget _buildMetricsSection(bool isMobile) {
+    final metrics = [
+      _buildMetricColumn(
+        _countAnimation1,
+        'Time Reduction on Initial Analysis',
+        'Pilot Study Result',
+        isPercentage: true,
+        isMobile: isMobile,
+      ),
+      _buildMetricColumn(
+        _countAnimation2,
+        'Client Satisfaction with Swipe UI',
+        'User Testing Data',
+        isPercentage: true,
+        isMobile: isMobile,
+      ),
+      _buildMetricColumn(
+        _countAnimation3,
+        'Avg. Properties Reviewed/Month',
+        'Industry Benchmark',
+        isPercentage: false,
+        isMobile: isMobile,
+      ),
+    ];
+
+    return isMobile
+        ? Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        metrics[0],
+        SizedBox(height: isMobile ? 50 : 40),
+        metrics[1],
+        SizedBox(height: isMobile ? 50 : 40),
+        metrics[2],
+      ],
+    )
+        : Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Expanded(child: metrics[0]),
+        const SizedBox(width: 40),
+        Expanded(child: metrics[1]),
+        const SizedBox(width: 40),
+        Expanded(child: metrics[2]),
+      ],
+    );
+  }
+
   Widget _buildMetricColumn(
       Animation<int> countAnimation,
       String title,
       String subtitle, {
         required bool isPercentage,
+        required bool isMobile,
       }) {
-    return Expanded(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: _fadeScaleAnimation.value,
-                child: Opacity(
-                  opacity: _fadeScaleAnimation.value,
-                  child: ShaderMask(
-                    shaderCallback: (Rect bounds) {
-                      return const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        stops: [0.0, 0.7, 1.0],
-                        colors: [neonPurple, Colors.white, Colors.white],
-                      ).createShader(bounds);
-                    },
-                    child: Text(
-                      isPercentage
-                          ? '${countAnimation.value}%'
-                          : '${countAnimation.value}',
-                      style: const TextStyle(
-                        fontSize: 72,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _fadeScaleAnimation.value,
+              child: Opacity(
+                opacity: _fadeScaleAnimation.value,
+                child: ShaderMask(
+                  shaderCallback: (Rect bounds) {
+                    return const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: [0.0, 0.7, 1.0],
+                      colors: [neonPurple, Colors.white, Colors.white],
+                    ).createShader(bounds);
+                  },
+                  child: Text(
+                    isPercentage
+                        ? '${countAnimation.value}%'
+                        : '${countAnimation.value}',
+                    style: TextStyle(
+                      fontSize: isMobile ? 48 : 72,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-              );
-            },
+              ),
+            );
+          },
+        ),
+        SizedBox(height: isMobile ? 20 : 30),
+        Text(
+          title,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: isMobile ? 16 : 20,
+            fontWeight: FontWeight.w500,
           ),
-          const SizedBox(height: 30),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 5),
+        Text(
+          subtitle,
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: isMobile ? 14 : 16,
           ),
-          const SizedBox(height: 5),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

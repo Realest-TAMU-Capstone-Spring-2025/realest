@@ -9,17 +9,13 @@ import 'realtor_stats.dart';
 import '../footer.dart';
 
 class HomePage extends StatefulWidget {
-
-  const HomePage({
-    super.key,
-  });
-
+  const HomePage({super.key});
 
   @override
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   static const Color neonPurple = Color(0xFFD500F9);
   late VideoPlayerController _headerController;
   late VideoPlayerController _overviewController1;
@@ -29,54 +25,56 @@ class _HomePageState extends State<HomePage> {
   String? _statusMessage;
   late ScrollController _scrollController;
   double _videoOpacity = 1.0;
+  late Future<void> _videosInitialization;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _scrollController = ScrollController();
     _scrollController.addListener(_updateVideoOpacity);
-    _initializeVideos();
+    _videosInitialization = _initializeVideos();
   }
 
-  void _initializeVideos() {
-    // print('Starting video initialization...');
-    _headerController = VideoPlayerController.asset('assets/videos/triangle.mp4');
-    _overviewController1 = VideoPlayerController.asset('assets/videos/triangle.mp4');
-    _overviewController2 = VideoPlayerController.asset('assets/videos/triangle.mp4');
-    _overviewController3 = VideoPlayerController.asset('assets/videos/triangle.mp4');
+  Future<void> _initializeVideos() async {
+    debugPrint('Starting video initialization...');
+    _headerController =
+        VideoPlayerController.asset('assets/videos/triangle.mp4');
+    _overviewController1 =
+        VideoPlayerController.asset('assets/videos/triangle.mp4');
+    _overviewController2 =
+        VideoPlayerController.asset('assets/videos/triangle.mp4');
+    _overviewController3 =
+        VideoPlayerController.asset('assets/videos/triangle.mp4');
 
-    Future.wait([
-      _headerController.initialize(),
-      _overviewController1.initialize(),
-      _overviewController2.initialize(),
-      _overviewController3.initialize(),
-    ]).then((_) {
-      // print('All videos initialized successfully');
+    try {
+      await Future.wait([
+        _headerController.initialize(),
+        _overviewController1.initialize(),
+        _overviewController2.initialize(),
+        _overviewController3.initialize(),
+      ]);
+      debugPrint('All videos initialized successfully');
       setState(() {
         _isVideoInitialized = true;
         _statusMessage = 'Videos loaded';
-        _headerController.setLooping(true);
-        _headerController.play();
-        _overviewController1.setLooping(true);
-        _overviewController1.play();
-        _overviewController2.setLooping(true);
-        _overviewController2.play();
-        _overviewController3.setLooping(true);
-        _overviewController3.play();
       });
-    }).catchError((error) {
-      // print('Error during video initialization: $error');
+      // Set looping and start playback.
+      _headerController.setLooping(true);
+      _headerController.play();
+      _overviewController1.setLooping(true);
+      _overviewController1.play();
+      _overviewController2.setLooping(true);
+      _overviewController2.play();
+      _overviewController3.setLooping(true);
+      _overviewController3.play();
+    } catch (error) {
+      debugPrint('Error during video initialization: $error');
       setState(() {
         _isVideoInitialized = false;
         _statusMessage = 'Error initializing videos: $error';
       });
-    }).timeout(const Duration(seconds: 5), onTimeout: () {
-      // print('Video initialization timed out');
-      setState(() {
-        _isVideoInitialized = false;
-        _statusMessage = 'Video initialization timed out';
-      });
-    });
+    }
   }
 
   void _updateVideoOpacity() {
@@ -88,7 +86,8 @@ class _HomePageState extends State<HomePage> {
       if (scrollOffset < fadeStart) {
         _videoOpacity = 1.0;
       } else if (scrollOffset >= fadeStart && scrollOffset <= fadeEnd) {
-        _videoOpacity = 1.0 - ((scrollOffset - fadeStart) / (fadeEnd - fadeStart));
+        _videoOpacity =
+            1.0 - ((scrollOffset - fadeStart) / (fadeEnd - fadeStart));
       } else {
         _videoOpacity = 0.0;
       }
@@ -96,8 +95,27 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_isVideoInitialized) return;
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('App resumed, restarting video playback');
+      _headerController.play();
+      _overviewController1.play();
+      _overviewController2.play();
+      _overviewController3.play();
+    } else if (state == AppLifecycleState.paused) {
+      debugPrint('App paused, pausing video playback');
+      _headerController.pause();
+      _overviewController1.pause();
+      _overviewController2.pause();
+      _overviewController3.pause();
+    }
+  }
+
+  @override
   void dispose() {
-    // print('Disposing video controllers and scroll controller');
+    debugPrint('Disposing video controllers and scroll controller');
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.removeListener(_updateVideoOpacity);
     _scrollController.dispose();
     _headerController.dispose();
@@ -111,56 +129,89 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Theme(
       data: ThemeData(
-        textTheme: Theme.of(context).textTheme.apply(fontFamily: 'homePage'),
-        buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+        textTheme:
+        Theme.of(context).textTheme.apply(fontFamily: 'homePage'),
+        buttonTheme:
+        const ButtonThemeData(textTheme: ButtonTextTheme.primary),
       ),
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: SingleChildScrollView(
-          controller: _scrollController,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              HeaderHeroPage(
-                videoController: _headerController,
-                isVideoInitialized: _isVideoInitialized,
-                videoOpacity: _videoOpacity,
-              ),
-              if (_statusMessage != null && _statusMessage!.startsWith('Error'))
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    _statusMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 16),
-                  ),
+        body: FutureBuilder<void>(
+          future: _videosInitialization,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: neonPurple,
                 ),
-              const Divider(height: 10, color: neonPurple, indent: 100, endIndent: 100),
-              AppOverview(),
-              const Divider(height: 10, color: neonPurple, indent: 100, endIndent: 100),
-              ValuePropositions(),
-              const SizedBox(height: 100),
-              // const Divider(height: 10, color: neonPurple, indent: 100, endIndent: 100),
-              ProgressMetricsSection(scrollController: _scrollController),
-              // Wave separation before Footer
-              const SizedBox(height: 40),
-              const Divider(height: 10, color: neonPurple, indent: 100, endIndent: 100),
-              RealtorStats(scrollController: _scrollController),
-              const SizedBox(height: 80),
-              ClipPath(
-                clipper: WaveClipper(),
-                child: Container(
-                  height: 100, // Height of the wave section
-                  color: const Color(0x33D500F9), // Match Footer's background color
+              );
+            } else if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Error initializing videos: ${snapshot.error}',
+                  style: const TextStyle(color: Colors.red, fontSize: 16),
                 ),
-              ),
-              Container(
-                // Ensure Footer starts immediately after the wave
-                margin: EdgeInsets.zero, // Remove any default margin
-                padding: EdgeInsets.zero, // Remove any default padding
-                child: Footer(),
-              ),
-            ],
-          ),
+              );
+            } else {
+              return SingleChildScrollView(
+                controller: _scrollController,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    HeaderHeroPage(
+                      videoController: _headerController,
+                      isVideoInitialized: _isVideoInitialized,
+                      videoOpacity: _videoOpacity,
+                    ),
+                    if (_statusMessage != null &&
+                        _statusMessage!.startsWith('Error'))
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          _statusMessage!,
+                          style: const TextStyle(
+                              color: Colors.red, fontSize: 16),
+                        ),
+                      ),
+                    const Divider(
+                        height: 10,
+                        color: neonPurple,
+                        indent: 100,
+                        endIndent: 100),
+                    AppOverview(),
+                    const Divider(
+                        height: 10,
+                        color: neonPurple,
+                        indent: 100,
+                        endIndent: 100),
+                    ValuePropositions(),
+                    const SizedBox(height: 100),
+                    ProgressMetricsSection(scrollController: _scrollController),
+                    const SizedBox(height: 40),
+                    const Divider(
+                        height: 10,
+                        color: neonPurple,
+                        indent: 100,
+                        endIndent: 100),
+                    RealtorStats(scrollController: _scrollController),
+                    const SizedBox(height: 80),
+                    ClipPath(
+                      clipper: WaveClipper(),
+                      child: Container(
+                        height: 100,
+                        color: const Color(0x33D500F9),
+                      ),
+                    ),
+                    Container(
+                      margin: EdgeInsets.zero,
+                      padding: EdgeInsets.zero,
+                      child: Footer(),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
         ),
       ),
     );

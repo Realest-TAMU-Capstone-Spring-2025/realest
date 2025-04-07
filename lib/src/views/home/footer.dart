@@ -5,21 +5,29 @@ class Footer extends StatelessWidget {
 
   const Footer({super.key});
 
-  Widget _footerLink(String title) {
+  Widget _footerLink(String title, {required bool isMobile}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 5),
       child: TextButton(
         onPressed: () {},
-        child: Text(title, style: const TextStyle(fontSize: 18, color: Colors.white)),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: isMobile ? 12 : 18, // Smaller font for mobile
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 800;
+
     return Container(
-      color: Color(0x33D500F9),
-      padding: const EdgeInsets.all(40),
+      color: const Color(0x33D500F9),
+      padding: EdgeInsets.all(isMobile ? 20 : 40), // Reduced padding for mobile
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -27,16 +35,27 @@ class Footer extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.real_estate_agent, color: neonPurple, size: 54),
-                const SizedBox(height: 10),
-                const Text(
+                Icon(
+                  Icons.real_estate_agent,
+                  color: neonPurple,
+                  size: isMobile ? 40 : 54, // Smaller icon for mobile
+                ),
+                SizedBox(height: isMobile ? 8 : 10),
+                Text(
                   'RealEst',
-                  style: TextStyle(fontSize: 30, color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: isMobile ? 20 : 30, // Smaller font for mobile
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 10),
-                const Text(
+                SizedBox(height: isMobile ? 8 : 10),
+                Text(
                   '© 2025 RealEst',
-                  style: TextStyle(fontSize: 24, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: isMobile ? 16 : 24, // Smaller font for mobile
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -45,15 +64,19 @@ class Footer extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Quick Links',
-                  style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: isMobile ? 14 : 22, // Smaller font for mobile
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 10),
-                _footerLink('Overview'),
-                _footerLink('Policies'),
-                _footerLink('Terms of Use'),
-                _footerLink('Contact Us'),
+                SizedBox(height: isMobile ? 8 : 10),
+                _footerLink('Overview', isMobile: isMobile),
+                _footerLink('Policies', isMobile: isMobile),
+                _footerLink('Terms of Use', isMobile: isMobile),
+                _footerLink('Contact Us', isMobile: isMobile),
               ],
             ),
           ),
@@ -61,25 +84,38 @@ class Footer extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Sign Up for Newsletter',
-                  style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: isMobile ? 14 : 18, // Smaller font for mobile
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  decoration: InputDecoration(
-                    hintText: 'Enter your email',
-                    hintStyle: const TextStyle(color: Colors.white),
-                    filled: true,
-                    fillColor: Colors.black,
-                    border: OutlineInputBorder(
-                      borderSide: const BorderSide(color: neonPurple),
-                      borderRadius: BorderRadius.circular(8),
+                SizedBox(height: isMobile ? 10 : 20),
+                SizedBox(
+                  width: isMobile ? 200 : null, // Smaller width for mobile, null for desktop (full width)
+                  child: TextFormField(
+                    decoration: InputDecoration(
+                      hintText: 'Enter your email',
+                      hintStyle: TextStyle(
+                        color: Colors.white,
+                        fontSize: isMobile ? 12 : 16, // Smaller hint font for mobile
+                      ),
+                      filled: true,
+                      fillColor: Colors.black,
+                      border: OutlineInputBorder(
+                        borderSide: const BorderSide(color: neonPurple),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: isMobile ? 14 : 16, // Smaller text for mobile
                     ),
                   ),
-                  style: const TextStyle(color: Colors.white),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: isMobile ? 10 : 20),
                 Center(
                   child: ElevatedButton(
                     onPressed: () {},
@@ -88,8 +124,18 @@ class Footer extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       backgroundColor: neonPurple,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 10 : 30, // Smaller padding for mobile
+                        vertical: isMobile ? 5 : 15,
+                      ),
                     ),
-                    child: const Text('Subscribe', style: TextStyle(color: Colors.white)),
+                    child: Text(
+                      'Subscribe',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isMobile ? 14 : 16, // Smaller font for mobile
+                      ),
+                    ),
                   ),
                 ),
               ],
