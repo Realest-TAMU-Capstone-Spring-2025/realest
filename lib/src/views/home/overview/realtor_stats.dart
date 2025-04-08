@@ -11,7 +11,7 @@ class RealtorStats extends StatefulWidget {
 }
 
 class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderStateMixin {
-  static const Color neonPurple = Color(0xFFD500F9);
+  static const Color neonPurple = Color(0xFFa78cde);
   static const Color darkPurple = Color(0xFF4A0072);
 
   late AnimationController _animationController;
@@ -25,7 +25,7 @@ class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 2300),
       vsync: this,
     );
 
@@ -90,7 +90,7 @@ class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderSt
         horizontal: MediaQuery.of(context).size.width < 800 ? 20 : 100,
         vertical: 40,
       ),
-      color: Colors.black,
+      color: const Color(0xFF1f1e25),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

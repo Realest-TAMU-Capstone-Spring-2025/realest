@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class Footer extends StatelessWidget {
-  static const Color neonPurple = Color(0xFFD500F9);
+  static const Color neonPurple =  Color(0xFFD500F9);
 
   const Footer({super.key});
 
@@ -26,7 +26,7 @@ class Footer extends StatelessWidget {
     final isMobile = MediaQuery.of(context).size.width < 800;
 
     return Container(
-      color: const Color(0x33D500F9),
+      color: const Color(0xFFa78cde),
       padding: EdgeInsets.all(isMobile ? 20 : 40), // Reduced padding for mobile
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,7 +37,7 @@ class Footer extends StatelessWidget {
               children: [
                 Icon(
                   Icons.real_estate_agent,
-                  color: neonPurple,
+                  color: Colors.white,
                   size: isMobile ? 40 : 54, // Smaller icon for mobile
                 ),
                 SizedBox(height: isMobile ? 8 : 10),

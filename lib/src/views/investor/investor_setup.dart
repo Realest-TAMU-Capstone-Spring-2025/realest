@@ -4,7 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import '../../../user_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 
 class InvestorSetupPage extends StatefulWidget {
   const InvestorSetupPage({Key? key}) : super(key: key);
@@ -21,29 +22,20 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _contactEmailController = TextEditingController();
   final TextEditingController _contactPhoneController = TextEditingController();
-  // Removed the single invitation code controller
-
-  // Create eight controllers for the invitation code boxes
-  final List<TextEditingController> _invitationCodeControllers =
-  List.generate(8, (_) => TextEditingController());
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
   Uint8List? _profileImageBytes;
+  String? _tempPassword; // To store the temp password for re-authentication
 
-  // Store the verified realtor id, name, and profile pic URL.
-  String? _verifiedRealtorId;
-  String? _verifiedRealtorName;
-  String? _verifiedRealtorProfilePicUrl;
+  static const Color neonPurple = Color(0xFFa78cde);
 
   @override
   void initState() {
     super.initState();
-    // Autofill contact email from authenticated user
-    User? currentUser = _auth.currentUser;
-    if (currentUser != null && currentUser.email != null) {
-      _contactEmailController.text = currentUser.email!;
-    }
+    _prefillUserData();
   }
 
   @override
@@ -52,15 +44,35 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     _lastNameController.dispose();
     _contactEmailController.dispose();
     _contactPhoneController.dispose();
-    for (var controller in _invitationCodeControllers) {
-      controller.dispose();
-    }
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
+  Future<void> _prefillUserData() async {
+    User? currentUser = _auth.currentUser;
+    if (currentUser != null && currentUser.email != null) {
+      _contactEmailController.text = currentUser.email!;
+      QuerySnapshot investorQuery = await _firestore
+          .collection('investors')
+          .where('contactEmail', isEqualTo: currentUser.email!)
+          .limit(1)
+          .get();
+
+      if (investorQuery.docs.isNotEmpty) {
+        DocumentSnapshot investorDoc = investorQuery.docs.first;
+        Map<String, dynamic> data = investorDoc.data() as Map<String, dynamic>;
+        setState(() {
+          _firstNameController.text = data['firstName'] ?? '';
+          _lastNameController.text = data['lastName'] ?? '';
+          _tempPassword = data['tempPassword']; // Fetch temp password for re-authentication
+        });
+      }
+    }
+  }
+
   Future<void> _pickImage() async {
-    final pickedFile =
-    await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       Uint8List bytes = await pickedFile.readAsBytes();
       setState(() {
@@ -69,111 +81,30 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     }
   }
 
-  /// Concatenates the values from the eight boxes into one string.
-  String _getInvitationCode() {
-    String code = '';
-    for (var controller in _invitationCodeControllers) {
-      code += controller.text.trim();
-    }
-    return code;
-  }
-
-  /// Verifies the invitation code by querying the 'realtors' collection.
-  Future<void> _verifyInvitationCode() async {
-    final code = _getInvitationCode();
-    if (code.length != 8) {
-      setState(() {
-        _errorMessage =
-        "Please enter the complete 8-character invitation code.";
-      });
-      return;
-    }
-
+  Future<void> _reAuthenticateUser(String email, String tempPassword) async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('realtors')
-          .where('invitationCode', isEqualTo: code)
-          .limit(1)
-          .get();
-
-      if (querySnapshot.docs.isEmpty) {
-        setState(() {
-          _errorMessage =
-          "Invitation code not found. Please check and try again.";
-        });
-        return;
-      }
-
-      // Get the realtor document.
-      final realtorDoc = querySnapshot.docs.first;
-      final realtorData = realtorDoc.data() as Map<String, dynamic>;
-      final realtorFirstName = realtorData['firstName'] ?? '';
-      final realtorLastName = realtorData['lastName'] ?? '';
-      final realtorProfilePicUrl = realtorData['profilePicUrl'] ?? '';
-      final realtorId = realtorDoc.id; // This is the realtor id
-
-      // Show a confirmation dialog with the realtor’s details.
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text("Confirm Realtor"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (realtorProfilePicUrl != '')
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(realtorProfilePicUrl),
-                    radius: 40,
-                  ),
-                const SizedBox(height: 20),
-                Text(
-                  "$realtorFirstName $realtorLastName",
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyLarge
-                      ?.copyWith(fontWeight: FontWeight.bold, fontSize: 22),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  // On confirmation, store the realtor id, name, and profile pic URL.
-                  setState(() {
-                    _verifiedRealtorId = realtorId;
-                    _verifiedRealtorName = "$realtorFirstName $realtorLastName";
-                    _verifiedRealtorProfilePicUrl = realtorProfilePicUrl;
-                    _errorMessage = null;
-                  });
-                  Navigator.of(context).pop();
-                },
-                child: const Text("Confirm"),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Dismiss dialog
-                },
-                child: const Text("Cancel"),
-              ),
-            ],
-          );
-        },
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: email,
+        password: tempPassword,
       );
+      await _auth.currentUser!.reauthenticateWithCredential(credential);
     } catch (e) {
-      setState(() {
-        _errorMessage =
-        "Error verifying invitation code. Please try again.";
-      });
+      throw Exception("Re-authentication failed: $e");
     }
   }
 
   void _saveInvestorData() async {
-    // Ensure that a realtor has been linked before saving.
-    if (_verifiedRealtorId == null) {
+    // Validate passwords
+    if (_newPasswordController.text != _confirmPasswordController.text) {
       setState(() {
-        _errorMessage =
-        "Please verify your invitation code to link a realtor before saving.";
+        _errorMessage = "Passwords do not match.";
+      });
+      return;
+    }
+
+    if (_newPasswordController.text.isEmpty) {
+      setState(() {
+        _errorMessage = "Please enter a new password.";
       });
       return;
     }
@@ -188,6 +119,21 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
       String uid = user.uid;
 
       try {
+        // Re-authenticate the user before updating the password
+        if (_tempPassword == null || _tempPassword!.isEmpty) {
+          throw Exception("Temporary password not found. Please contact support.");
+        }
+
+        await _reAuthenticateUser(_contactEmailController.text.trim(), _tempPassword!);
+
+        // Update the user's password in Firebase Auth
+        await user.updatePassword(_newPasswordController.text.trim());
+
+        // Clear the tempPassword in Firestore after successful password update
+        await _firestore.collection('investors').doc(uid).update({
+          'tempPassword': null, // Invalidate temp password
+        });
+
         String profilePicUrl = '';
         if (_profileImageBytes != null) {
           Reference storageRef = FirebaseStorage.instance
@@ -202,232 +148,319 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           profilePicUrl = await snapshot.ref.getDownloadURL();
         }
 
+        // Update the completedSetup flag in the users collection
         await _firestore.collection('users').doc(uid).update({
           'completedSetup': true,
         });
 
-        // Save the investor data with the realtor id, status, and notes.
+        // Update or set investor data (realtorId preserved from invite)
         await _firestore.collection('investors').doc(uid).set({
           'uid': uid,
           'firstName': _firstNameController.text.trim(),
           'lastName': _lastNameController.text.trim(),
           'contactEmail': _contactEmailController.text.trim(),
           'contactPhone': _contactPhoneController.text.trim(),
-          'realtorId': _verifiedRealtorId,
           'profilePicUrl': profilePicUrl,
           'createdAt': FieldValue.serverTimestamp(),
-          'status': 'Update', // Add status field set to "Active"
-          'notes': 'Account Created', // Add notes field set to "Account Created"
-        });
+          'status': 'client',
+          'notes': 'Account Created',
+        }, SetOptions(merge: true)); // Merge to preserve existing realtorId
 
-        Navigator.pushReplacementNamed(context, '/investorHome');
+        if (mounted) {
+          context.go('/home');
+        }
       } catch (e) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = "Error saving data: $e";
+          });
+          print("Save error: $e");
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } else {
+      if (mounted) {
         setState(() {
-          _errorMessage = "Error saving data. Please try again.";
+          _isLoading = false;
+          _errorMessage = "No authenticated user found.";
         });
       }
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
-  Widget _buildTextField(TextEditingController controller, String label,
-      {TextInputType keyboardType = TextInputType.text, bool readOnly = false}) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      readOnly: readOnly,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.grey[200],
-        labelText: label,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10.0),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
-
-  /// Builds the row of 8 square input boxes and the Verify button.
-  Widget _buildInvitationCodeInput() {
+  Widget _buildTextField(
+      TextEditingController controller,
+      String label, {
+        TextInputType keyboardType = TextInputType.text,
+        bool readOnly = false,
+        bool obscureText = false,
+        required bool isMobile,
+      }) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(8, (index) {
-            return Container(
-              width: 40,
-              height: 40,
-              child: TextField(
-                controller: _invitationCodeControllers[index],
-                textAlign: TextAlign.center,
-                maxLength: 1,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.grey[200],
-                  counterText: "",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5.0),
-                  ),
-                ),
-                onChanged: (value) {
-                  if (value.length == 1 && index < 7) {
-                    FocusScope.of(context).nextFocus();
-                  } else if (value.isEmpty && index > 0) {
-                    FocusScope.of(context).previousFocus();
-                  }
-                },
-              ),
-            );
-          }),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 16 : 18,
+            color: Colors.white,
+          ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         SizedBox(
-          width: 100,
-          height: 45,
-          child: ElevatedButton(
-            onPressed: _verifyInvitationCode,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              textStyle:
-              const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          width: isMobile ? 400 : 800,
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            readOnly: readOnly,
+            obscureText: obscureText,
+            style: TextStyle(color: Colors.white, fontSize: isMobile ? 14 : 16),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.grey[900],
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15.0),
+                borderSide: const BorderSide(color: neonPurple, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15.0),
+                borderSide: const BorderSide(color: neonPurple, width: 2),
+              ),
             ),
-            child: const Text("Verify"),
           ),
         ),
       ],
     );
   }
 
-  /// Displays the verified realtor's info in a single row.
-  Widget _buildVerifiedRealtorInfo() {
-    if (_verifiedRealtorId == null) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 16.0),
-      child: Row(
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 800;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: isMobile
+          ? _buildMobileLayout(isMobile)
+          : Row(
         children: [
-          const Text(
-            "Realtor: ",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Expanded(
+            flex: 1,
+            child: _buildFormColumn(isMobile),
           ),
-          if (_verifiedRealtorProfilePicUrl != null &&
-              _verifiedRealtorProfilePicUrl != '')
-            CircleAvatar(
-              backgroundImage: NetworkImage(_verifiedRealtorProfilePicUrl!),
-              radius: 20,
+          Expanded(
+            flex: 1,
+            child: Container(
+              color: const Color(0x33D500F9),
+              child: Image.asset(
+                'assets/images/login.png',
+                fit: BoxFit.cover,
+                height: double.infinity,
+                width: double.infinity,
+              ),
             ),
-          const SizedBox(width: 8),
-          Text(
-            _verifiedRealtorName ?? '',
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
           ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'Set Up Your Account',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Text(
-              "Complete Your Investor Profile",
-              style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black),
-            ),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: _pickImage,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.grey[300],
-                backgroundImage: _profileImageBytes != null
-                    ? MemoryImage(_profileImageBytes!)
-                    : null,
-                child: _profileImageBytes == null
-                    ? const Icon(Icons.camera_alt,
-                    size: 40, color: Colors.black54)
-                    : null,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                    child: _buildTextField(_firstNameController, "First Name")),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: _buildTextField(_lastNameController, "Last Name")),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(_contactEmailController, "Contact Email",
-                keyboardType: TextInputType.emailAddress),
-            const SizedBox(height: 16),
-            _buildTextField(_contactPhoneController, "Contact Phone Number",
-                keyboardType: TextInputType.phone),
-            const SizedBox(height: 16),
-            Text("Enter Your Invitation Code: ",
-                style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 16),
-            // Invitation code input widget.
-            _buildInvitationCodeInput(),
-            // Display verified realtor info once confirmed.
-            _buildVerifiedRealtorInfo(),
-            const SizedBox(height: 24),
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 16),
+  Widget _buildMobileLayout(bool isMobile) {
+    return Container(
+      color: const Color(0xFF1f1e25),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: SizedBox(
+                width: 400,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.real_estate_agent,
+                          size: 32,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'RealEst',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 20 : 24,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isMobile ? 20 : 40),
+                    ..._buildFormChildren(isMobile),
+                  ],
                 ),
               ),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _saveInvestorData,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  textStyle: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("Save & Continue"),
-              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
+  }
+
+  Widget _buildFormColumn(bool isMobile) {
+    return Container(
+      color: const Color(0xFF1f1e25),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.only(left: 100, right: 100, top: 20, bottom: 100),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: SizedBox(
+                width: 500,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.real_estate_agent,
+                          size: 32,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'RealEst',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 20 : 24,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isMobile ? 20 : 40),
+                    ..._buildFormChildren(isMobile),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _buildFormChildren(bool isMobile) {
+    return [
+      Center(
+        child: Text(
+          textAlign: TextAlign.center,
+          'Set Up Your Investor Profile',
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 28 : 32,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      Center(
+        child: Text(
+          _errorMessage ?? 'Complete your profile',
+          style: _errorMessage != null
+              ? TextStyle(color: Colors.red, fontSize: isMobile ? 12 : 14)
+              : GoogleFonts.poppins(fontSize: isMobile ? 16 : 20, color: Colors.white70),
+        ),
+      ),
+      SizedBox(height: isMobile ? 20 : 40),
+      Center(
+        child: GestureDetector(
+          onTap: _pickImage,
+          child: CircleAvatar(
+            radius: isMobile ? 50 : 60,
+            backgroundColor: Colors.black,
+            backgroundImage: _profileImageBytes != null ? MemoryImage(_profileImageBytes!) : null,
+            child: _profileImageBytes == null
+                ? Icon(Icons.camera_alt, size: isMobile ? 30 : 40, color: Colors.white70)
+                : null,
+          ),
+        ),
+      ),
+      SizedBox(height: isMobile ? 20 : 30),
+      Row(
+        children: [
+          Expanded(
+            child: _buildTextField(_firstNameController, "First Name", isMobile: isMobile),
+          ),
+          SizedBox(width: isMobile ? 12 : 16),
+          Expanded(
+            child: _buildTextField(_lastNameController, "Last Name", isMobile: isMobile),
+          ),
+        ],
+      ),
+      SizedBox(height: isMobile ? 12 : 16),
+      _buildTextField(
+        _contactEmailController,
+        "Contact Email",
+        keyboardType: TextInputType.emailAddress,
+        readOnly: true,
+        isMobile: isMobile,
+      ),
+      SizedBox(height: isMobile ? 12 : 16),
+      _buildTextField(
+        _contactPhoneController,
+        "Contact Phone",
+        keyboardType: TextInputType.phone,
+        isMobile: isMobile,
+      ),
+      SizedBox(height: isMobile ? 12 : 16),
+      _buildTextField(
+        _newPasswordController,
+        "New Password",
+        obscureText: true,
+        isMobile: isMobile,
+      ),
+      SizedBox(height: isMobile ? 12 : 16),
+      _buildTextField(
+        _confirmPasswordController,
+        "Confirm Password",
+        obscureText: true,
+        isMobile: isMobile,
+      ),
+      SizedBox(height: isMobile ? 20 : 30),
+      Center(
+        child: SizedBox(
+          width: isMobile ? 400 : 500,
+          height: isMobile ? 45 : 50,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _saveInvestorData,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: neonPurple,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+                side: const BorderSide(color: Colors.black, width: 2),
+              ),
+              textStyle: GoogleFonts.poppins(
+                fontSize: isMobile ? 18 : 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text('SAVE & CONTINUE'),
+          ),
+        ),
+      ),
+    ];
   }
 }

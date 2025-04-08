@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:math';
+import 'package:google_fonts/google_fonts.dart';
 
 class RealtorSetupPage extends StatefulWidget {
   const RealtorSetupPage({Key? key}) : super(key: key);
@@ -31,23 +32,11 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
   String? _errorMessage;
   Uint8List? _profileImageBytes;
 
-  String _generateInvitationCode() {
-    const String chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    Random random = Random();
-    return String.fromCharCodes(
-      Iterable.generate(
-        8,
-            (_) => chars.codeUnitAt(random.nextInt(chars.length)),
-      ),
-    );
-  }
+  static const Color neonPurple = Color(0xFFa78cde);
 
   @override
   void initState() {
     super.initState();
-    // Generate invitation code
-    _invitationCodeController.text = _generateInvitationCode();
-    // Autofill contact email from authenticated user
     User? currentUser = _auth.currentUser;
     if (currentUser != null && currentUser.email != null) {
       _contactEmailController.text = currentUser.email!;
@@ -57,7 +46,6 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      // Read image bytes directly (web only)
       Uint8List bytes = await pickedFile.readAsBytes();
       setState(() {
         _profileImageBytes = bytes;
@@ -76,27 +64,24 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
       String uid = user.uid;
 
       try {
-        // Upload profile image if available
         String profilePicUrl = '';
         if (_profileImageBytes != null) {
           Reference storageRef = FirebaseStorage.instance
               .ref()
-              .child('Profile_Pics') // Folder name in Storage
+              .child('Profile_Pics')
               .child('$uid.jpg');
           UploadTask uploadTask = storageRef.putData(
             _profileImageBytes!,
-            SettableMetadata(contentType: 'image/jpeg'), // or 'image/png'
+            SettableMetadata(contentType: 'image/jpeg'),
           );
           TaskSnapshot snapshot = await uploadTask;
           profilePicUrl = await snapshot.ref.getDownloadURL();
         }
 
-        // Update the user document in 'users' collection
         await _firestore.collection('users').doc(uid).update({
           'completedSetup': true,
         });
 
-        // Create a document in the 'realtors' collection
         await _firestore.collection('realtors').doc(uid).set({
           'uid': uid,
           'firstName': _firstNameController.text.trim(),
@@ -109,7 +94,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
           'profilePicUrl': profilePicUrl,
           'invitationCode': _invitationCodeController.text,
           'createdAt': FieldValue.serverTimestamp(),
-          'cashFlowDefaults' :{
+          'cashFlowDefaults': {
             'useLoan': true,
             'downPayment': 0.20,
             'interestRate': 0.06,
@@ -132,149 +117,307 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
           }
         });
 
-        context.go("/realtorDashboard");
+        if (mounted) {
+          context.go("/home");
+        }
       } catch (e) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = "Error saving data: $e";
+          });
+          print("Save error: $e");
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } else {
+      if (mounted) {
         setState(() {
-          _errorMessage = "Error saving data. Please try again.";
+          _isLoading = false;
+          _errorMessage = "No authenticated user found.";
         });
       }
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
-  // Reusable text field widget
-  Widget _buildTextField(TextEditingController controller, String label,
-      {TextInputType keyboardType = TextInputType.text, bool readOnly = false}) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      readOnly: readOnly,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.grey[200],
-        labelText: label,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10.0),
-          borderSide: BorderSide.none,
+  Widget _buildTextField(
+      TextEditingController controller,
+      String label, {
+        TextInputType keyboardType = TextInputType.text,
+        bool readOnly = false,
+        required bool isMobile,
+      }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 16 : 18,
+            color: Colors.white,
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: isMobile ? 400 : 700,
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            readOnly: readOnly,
+            style: TextStyle(color: Colors.white, fontSize: isMobile ? 14 : 16),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.grey[900],
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15.0),
+                borderSide: const BorderSide(color: neonPurple, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15.0),
+                borderSide: const BorderSide(color: neonPurple, width: 2),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 800;
+
     return Scaffold(
-      backgroundColor: Colors.white, // Matches login screen theme
-      appBar: AppBar(
-        automaticallyImplyLeading: false, // Removes back arrow
-        title: const Text(
-          'Set Up Your Account',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black),
+      backgroundColor: Colors.black,
+      body: isMobile
+          ? _buildMobileLayout(isMobile)
+          : Row(
+        children: [
+          Expanded(
+            flex: 1,
+            child: _buildFormColumn(isMobile),
+          ),
+          Expanded(
+            flex: 1,
+            child: Container(
+              color: const Color(0x33D500F9),
+              child: Image.asset(
+                'assets/images/login.png',
+                fit: BoxFit.cover,
+                height: double.infinity,
+                width: double.infinity,
+              ),
+            ),
+          ),
+        ],
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Container(
-            // Constrain overall width for three columns
-            constraints: const BoxConstraints(maxWidth: 1200),
-            child: Row(
-              // Center children vertically in the row
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Left Column: Logo and Company Name (centered)
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    padding: const EdgeInsets.all(24.0),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(12.0),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+    );
+  }
+
+  // Mobile layout with left-aligned logo in scrolling content
+  Widget _buildMobileLayout(bool isMobile) {
+    return Container(
+      color: const Color(0xFF1f1e25),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: SizedBox(
+                width: 400,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, // Aligns logo and content to the left
+                  children: [
+                    // Logo aligned to the left
+                    Row(
                       children: [
-                        const Text(
-                          "Complete Your Realtor Profile",
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
+                        const Icon(
+                          Icons.real_estate_agent,
+                          size: 32,
+                          color: Colors.white,
                         ),
-                        const SizedBox(height: 20),
-                        // Profile Image Picker
-                        GestureDetector(
-                          onTap: _pickImage,
-                          child: CircleAvatar(
-                            radius: 50,
-                            backgroundColor: Colors.grey[300],
-                            backgroundImage: _profileImageBytes != null ? MemoryImage(_profileImageBytes!) : null,
-                            child: _profileImageBytes == null
-                                ? const Icon(Icons.camera_alt, size: 40, color: Colors.black54)
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        // First Name & Last Name Fields
-                        Row(
-                          children: [
-                            Expanded(child: _buildTextField(_firstNameController, "First Name")),
-                            const SizedBox(width: 10),
-                            Expanded(child: _buildTextField(_lastNameController, "Last Name")),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(_agencyNameController, "Agency Name"),
-                        const SizedBox(height: 16),
-                        _buildTextField(_licenseNumberController, "License Number"),
-                        const SizedBox(height: 16),
-                        _buildTextField(_contactEmailController, "Contact Email", keyboardType: TextInputType.emailAddress),
-                        const SizedBox(height: 16),
-                        _buildTextField(_contactPhoneController, "Contact Phone Number", keyboardType: TextInputType.phone),
-                        const SizedBox(height: 16),
-                        _buildTextField(_addressController, "Address"),
-                        const SizedBox(height: 16),
-                        _buildTextField(_invitationCodeController, "Invitation Code", readOnly: true),
-                        const SizedBox(height: 24),
-                        if (_errorMessage != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16.0),
-                            child: Text(
-                              _errorMessage!,
-                              style: const TextStyle(color: Colors.red, fontSize: 16),
-                            ),
-                          ),
-                        SizedBox(
-                          width: 200,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _saveRealtorData,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              backgroundColor: Colors.black,
-                              foregroundColor: Colors.white,
-                              textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            child: _isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text("Save & Continue"),
+                        const SizedBox(width: 8),
+                        Text(
+                          'RealEst',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 20 : 24,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
                     ),
-                  ),
+                    SizedBox(height: isMobile ? 20 : 40), // Space after logo
+                    ..._buildFormChildren(isMobile),
+                  ],
                 ),
-                const SizedBox(width: 100),
-              ],
+              ),
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Desktop layout with left-aligned logo in scrolling content
+  Widget _buildFormColumn(bool isMobile) {
+    return Container(
+      color: const Color(0xFF1f1e25),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.only(left: 100, right: 100, top: 20, bottom: 100),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: SizedBox(
+                width: 500,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, // Aligns logo and content to the left
+                  children: [
+                    // Logo aligned to the left
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.real_estate_agent,
+                          size: 32,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'RealEst',
+                          style: GoogleFonts.poppins(
+                            fontSize: isMobile ? 20 : 24,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isMobile ? 20 : 40), // Space after logo
+                    ..._buildFormChildren(isMobile),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Form children (without logo)
+  List<Widget> _buildFormChildren(bool isMobile) {
+    return [
+      Center(
+        child: Text(
+          textAlign: TextAlign.center,
+          'Complete Your Realtor Profile',
+          style: GoogleFonts.poppins(
+            fontSize: isMobile ? 28 : 32,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
-    );
+      const SizedBox(height: 10),
+      Center(
+        child: Text(
+          _errorMessage ?? 'Complete your profile',
+          style: _errorMessage != null
+              ? TextStyle(color: Colors.red, fontSize: isMobile ? 12 : 14)
+              : GoogleFonts.poppins(fontSize: isMobile ? 16 : 20, color: Colors.white70),
+        ),
+      ),
+      SizedBox(height: isMobile ? 20 : 40),
+      Center(
+        child: GestureDetector(
+          onTap: _pickImage,
+          child: CircleAvatar(
+            radius: isMobile ? 50 : 60,
+            backgroundColor: Colors.black,
+            backgroundImage: _profileImageBytes != null ? MemoryImage(_profileImageBytes!) : null,
+            child: _profileImageBytes == null
+                ? Icon(Icons.camera_alt, size: isMobile ? 30 : 40, color: Colors.white70)
+                : null,
+          ),
+        ),
+      ),
+      SizedBox(height: isMobile ? 20 : 30),
+      Row(
+        children: [
+          Expanded(
+            child: _buildTextField(_firstNameController, "First Name", isMobile: isMobile),
+          ),
+          SizedBox(width: isMobile ? 12 : 16),
+          Expanded(
+            child: _buildTextField(_lastNameController, "Last Name", isMobile: isMobile),
+          ),
+        ],
+      ),
+      SizedBox(height: isMobile ? 12 : 16),
+      Row(
+        children: [
+          Expanded(
+            child: _buildTextField(_agencyNameController, "Agency Name", isMobile: isMobile),
+          ),
+          SizedBox(width: isMobile ? 12 : 16),
+          Expanded(
+            child: _buildTextField(_licenseNumberController, "License Number", isMobile: isMobile),
+          ),
+        ],
+      ),
+      SizedBox(height: isMobile ? 12 : 16),
+      _buildTextField(
+        _contactEmailController,
+        "Contact Email",
+        keyboardType: TextInputType.emailAddress,
+        isMobile: isMobile,
+      ),
+      SizedBox(height: isMobile ? 12 : 16),
+      _buildTextField(
+        _contactPhoneController,
+        "Contact Phone",
+        keyboardType: TextInputType.phone,
+        isMobile: isMobile,
+      ),
+      SizedBox(height: isMobile ? 12 : 16),
+      _buildTextField(_addressController, "Address", isMobile: isMobile),
+      SizedBox(height: isMobile ? 20 : 30),
+      Center(
+        child: SizedBox(
+          width: isMobile ? 400 : 700,
+          height: isMobile ? 45 : 50,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _saveRealtorData,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: neonPurple,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+                side: const BorderSide(color: Colors.black, width: 2),
+              ),
+              textStyle: GoogleFonts.poppins(
+                fontSize: isMobile ? 18 : 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text('COMPLETE SETUP'),
+          ),
+        ),
+      ),
+    ];
   }
 }
