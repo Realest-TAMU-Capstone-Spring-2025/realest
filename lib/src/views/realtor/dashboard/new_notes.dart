@@ -73,7 +73,7 @@ class NewNotesSection extends StatelessWidget {
                       final formattedDate = timestamp != null
                           ? DateFormat('MMM d, yyyy • h:mm a').format(timestamp.toDate())
                           : 'Unknown date';
-                      
+
                       return NoteCard(
                         name: name,
                         email: email,
@@ -82,10 +82,33 @@ class NewNotesSection extends StatelessWidget {
                         read: noteData['read'] ?? false,
                         timestamp: formattedDate,
                         onPropertyTap: () => _showPropertyDetails(context, noteData['propertyId']),
-                        profilePicUrl: investorData['profilePicUrl'] != null ?
-                        investorData['profilePicUrl']!
-                            :  'assets/images/profile.png',
+                        profilePicUrl: investorData['profilePicUrl'] != null
+                            ? investorData['profilePicUrl']!
+                            : 'assets/images/profile.png',
+                        onDelete: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text("Delete Note"),
+                              content: const Text("Are you sure you want to delete this note?"),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
+                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Delete")),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true) {
+                            await FirebaseFirestore.instance
+                                .collection('realtors')
+                                .doc(currentUser.uid)
+                                .collection('notes')
+                                .doc(noteDoc.id)
+                                .delete();
+                          }
+                        },
                       );
+
                     },
                   );
                 },
@@ -114,40 +137,38 @@ class NewNotesSection extends StatelessWidget {
     }
   }
 
-  void _showPropertyDetails(BuildContext context, String? propertyId) {
-    if (propertyId == null) return;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => FutureBuilder<Map<String, dynamic>>(
-        future: fetchPropertyData(propertyId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No property data available'));
-          }
-          return DraggableScrollableSheet(
-            initialChildSize: 0.9,
-            minChildSize: 0.5,
-            maxChildSize: 0.95,
-            expand: false,
-            builder: (context, scrollController) {
-              return PropertyDetailSheet(
-                property: snapshot.data!,
-              );
-            },
-          );
-        },
-      ),
-    );
+  Future<void> _showPropertyDetails(BuildContext context, String propertyId) async {
+    try {
+      // Get the property from Firestore
+      final propertyRef = FirebaseFirestore.instance.collection('listings').doc(propertyId);
+      final snapshot = await propertyRef.get();
+
+      if (!snapshot.exists) {
+        print("Property not found");
+        return;
+      }
+
+      // Optional: set some state here if needed
+      // setState(() => _selectedPropertyId = propertyId);
+
+      // Fetch full property data
+      final propertyData = await fetchPropertyData(propertyId);
+
+      // Show the modal bottom sheet
+      await showModalBottomSheet(
+        context: context,
+        constraints: const BoxConstraints(maxWidth: 1000),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        enableDrag: false,
+        builder: (_) => PropertyDetailSheet(property: propertyData),
+      );
+    } catch (e) {
+      print('Error fetching property details: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load property details')),
+      );
+    }
   }
 }
 
@@ -159,6 +180,7 @@ class NoteCard extends StatelessWidget {
   final bool read;
   final String timestamp;
   final VoidCallback onPropertyTap;
+  final VoidCallback onDelete; // <- NEW
   final String? profilePicUrl;
 
   const NoteCard({
@@ -170,6 +192,7 @@ class NoteCard extends StatelessWidget {
     required this.read,
     required this.timestamp,
     required this.onPropertyTap,
+    required this.onDelete, // <- NEW
     this.profilePicUrl,
   }) : super(key: key);
 
@@ -188,10 +211,9 @@ class NoteCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                    backgroundImage: profilePicUrl != null ?
-                    NetworkImage(profilePicUrl!)
-                        : const AssetImage('assets/images/profile.png') as ImageProvider,
-
+                  backgroundImage: profilePicUrl != null
+                      ? NetworkImage(profilePicUrl!)
+                      : const AssetImage('assets/images/profile.png') as ImageProvider,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -221,9 +243,11 @@ class NoteCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(
-                  read ? Icons.visibility : Icons.visibility_off,
-                  color: read ? theme.colorScheme.primary : theme.disabledColor,
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  color: theme.colorScheme.error,
+                  onPressed: onDelete,
+                  tooltip: 'Delete note',
                 ),
                 IconButton(
                   icon: Icon(
@@ -266,11 +290,7 @@ class NoteCard extends StatelessWidget {
   }
 
   void _launchEmail(String email) async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: email,
-    );
-    
+    final Uri emailUri = Uri(scheme: 'mailto', path: email);
     if (await canLaunchUrl(emailUri)) {
       await launchUrl(emailUri);
     }

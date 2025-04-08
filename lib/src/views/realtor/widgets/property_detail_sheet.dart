@@ -158,16 +158,34 @@ class PropertyDetailSheet extends StatelessWidget {
                 .collection('interactions')
                 .doc('${propertyId}_$clientId');
 
-            final interactionData = {
+            // Create the interaction data for realtor
+            final interactionDataRealtor = {
               'propertyId': propertyId,
               'investorId': clientId,
               'realtorId': realtorId,
               'status': 'sent',
               'timestamp': FieldValue.serverTimestamp(),
+              'sentByRealtor': true,
+              'propertyDetails':
+              {
+                'price': property['price'] ?? 0,
+                'address': property['address'] ?? '',
+                'status': property['status'] ?? '',
+              }
             };
 
-            batch.set(investorRef, interactionData);
-            batch.set(realtorRef, interactionData);
+            //create the interaction data for investor
+            final interactionDataInvestor = {
+              'propertyId': propertyId,
+              'investorId': clientId,
+              'realtorId': realtorId,
+              'status': 'sent',
+              'timestamp': FieldValue.serverTimestamp(),
+              'sentByRealtor': true,
+            };
+
+            batch.set(investorRef, interactionDataInvestor);
+            batch.set(realtorRef, interactionDataRealtor);
           }
 
           await batch.commit();
@@ -248,6 +266,7 @@ class PropertyDetailSheet extends StatelessWidget {
                   'note': noteController.text.trim(),
                   'timestamp': FieldValue.serverTimestamp(),
                   'read': false,
+
                 });
                 
                 ScaffoldMessenger.of(context).showSnackBar(
