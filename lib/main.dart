@@ -37,11 +37,19 @@ final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.light
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase with platform-specific options
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Load environment variables from .env file
   await dotenv.load(fileName: ".env");
-  await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+
+  // Set Firebase Auth persistence only on web platforms
+  if (kIsWeb) {
+    await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+  }
 
   runApp(
     MultiProvider(
@@ -71,7 +79,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     userProvider = Provider.of<UserProvider>(context, listen: false);
     _router = _createRouter(
-      () {
+          () {
         setState(() {
           themeModeNotifier.value = themeModeNotifier.value == ThemeMode.light
               ? ThemeMode.dark
@@ -97,6 +105,7 @@ class _MyAppState extends State<MyApp> {
       },
     );
   }
+
   void _showAccessDenied(BuildContext context, String message) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -118,14 +127,14 @@ class _MyAppState extends State<MyApp> {
     return GoRouter(
       initialLocation: initialRoute, // Set the platform-specific initial route
       redirect: (context, state) {
-        if(userProvider.isLoading) return null;
+        if (userProvider.isLoading) return null;
         final isLoggedIn = userProvider.userRole != null;
         final currentPath = state.uri.path;
 
         if (currentPath == '/') return null;
 
         // Redirect logic for '/login'
-        if (currentPath == '/login' && isLoggedIn){
+        if (currentPath == '/login' && isLoggedIn) {
           _showAccessDenied(context, "You are already logged in");
           return '/home';
         }
@@ -196,9 +205,9 @@ class _MyAppState extends State<MyApp> {
                 return userProvider.userRole == 'investor'
                     ? const PropertySwipingView()
                     : RealtorDashboard(
-                        toggleTheme: toggleTheme,
-                        isDarkMode: themeMode == ThemeMode.dark,
-                      );
+                  toggleTheme: toggleTheme,
+                  isDarkMode: themeMode == ThemeMode.dark,
+                );
               },
             ),
             GoRoute(
@@ -216,13 +225,13 @@ class _MyAppState extends State<MyApp> {
                 final userProvider = Provider.of<UserProvider>(context);
                 return userProvider.userRole == 'investor'
                     ? InvestorSettings(
-                        toggleTheme: toggleTheme,
-                        isDarkMode: themeMode == ThemeMode.dark,
-                      )
+                  toggleTheme: toggleTheme,
+                  isDarkMode: themeMode == ThemeMode.dark,
+                )
                     : RealtorSettings(
-                        toggleTheme: toggleTheme,
-                        isDarkMode: themeMode == ThemeMode.dark,
-                      );
+                  toggleTheme: toggleTheme,
+                  isDarkMode: themeMode == ThemeMode.dark,
+                );
               },
             ),
             GoRoute(
@@ -303,6 +312,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
+
 class MainLayout extends StatelessWidget {
   final Widget child;
   final VoidCallback toggleTheme;

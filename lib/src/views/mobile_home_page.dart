@@ -66,30 +66,30 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     const dividerHeight = 12.0;
-    final panelHeight = (screenHeight - dividerHeight) / 2;
+    final bottomPanelHeight = screenHeight / 8; // Bottom panel is 1/10th of screen height
+    final topPanelHeight = screenHeight - bottomPanelHeight - dividerHeight; // Top panel takes the rest
 
-    // Single image provider to avoid loading the image twice.
+    // Single image provider for the top panel
     final imageProvider = AssetImage('assets/images/login.png');
 
     return Scaffold(
       body: Stack(
         children: [
-          // Base background.
+          // Base background
           Container(
             width: double.infinity,
             height: double.infinity,
             color: const Color(0xFF1f1e25),
           ),
-          // Top panel: show top half of the image.
+          // Top panel: extends down to the divider with text near the top
           SlideTransition(
             position: _topPanelAnimation,
             child: Container(
-              height: panelHeight,
+              height: topPanelHeight,
               width: double.infinity,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Clip to show only the top half of the image.
                   ClipRect(
                     child: OverflowBox(
                       maxHeight: screenHeight,
@@ -102,10 +102,10 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
                       ),
                     ),
                   ),
-                  // Content on top of the image.
-                  Center(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 50), // Move text up with some padding from the top
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: const [
                         Text(
                           'Welcome to RealEst',
@@ -131,65 +131,40 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
               ),
             ),
           ),
-          // Bottom panel: show bottom half of the image.
+          // Bottom panel: grey background only, no image or text
           Align(
             alignment: Alignment.bottomCenter,
             child: SlideTransition(
               position: _bottomPanelAnimation,
               child: Container(
-                height: panelHeight,
+                height: bottomPanelHeight,
                 width: double.infinity,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Clip to show only the bottom half of the image.
-                    ClipRect(
-                      child: OverflowBox(
-                        maxHeight: screenHeight,
-                        alignment: Alignment.bottomCenter,
-                        child: Image(
-                          image: imageProvider,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: screenHeight,
-                        ),
-                      ),
-                    ),
-                    // Content on top of the image.
-                    const Center(
-                      child: Text(
-                        'Click on logo to get started',
-                        style: TextStyle(
-                          fontSize: 24,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
+                color: const Color(0xFF1f1e25), // Grey background
               ),
             ),
           ),
-          // Center divider.
-          Align(
-            alignment: Alignment.center,
+          // Divider: positioned at screenHeight / 10 from the bottom
+          Positioned(
+            bottom: bottomPanelHeight,
+            left: 0, // Ensure fully constrained horizontally
+            right: 0, // Ensure fully constrained horizontally
             child: Container(
-              width: double.infinity,
               height: dividerHeight,
               color: const Color(0xFF1f1e25),
             ),
           ),
-          // Centered circular logo with fade-out effect.
-          Center(
+          // Copyright info: positioned above the bottom panel
+          // Centered circular logo with fade-out effect
+          Positioned(
+            bottom: bottomPanelHeight - 75, // Center logo over the divider
+            left: MediaQuery.of(context).size.width / 2 - 75, // Center horizontally
             child: GestureDetector(
               onTap: _onLogoTap,
               child: FadeTransition(
                 opacity: _fadeAnimation,
                 child: Container(
-                  width: 200,
-                  height: 200,
+                  width: 150,
+                  height: 150,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     color: Color(0xFF1f1e25),
@@ -197,32 +172,10 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
                   child: const Center(
                     child: Icon(
                       Icons.real_estate_agent,
-                      size: 120,
+                      size: 100,
                       color: Colors.white,
                     ),
                   ),
-                ),
-              ),
-            ),
-          ),
-          // Copyright info.
-          SlideTransition(
-            position: _bottomPanelAnimation,
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 40),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Text(
-                      '© 2025 RealEst',
-                      style: TextStyle(
-                        fontSize: 24,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ),
