@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:realest/firebase_options.dart';
+import 'package:realest/src/views/home/overview/overview_page.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Views related to the investor
 import 'package:realest/src/views/investor/investor_settings.dart';
 import 'package:realest/src/views/investor/investor_setup.dart';
+import 'package:realest/src/views/investor/properties/disliked_properties.dart';
 import 'package:realest/src/views/investor/properties/saved_properties.dart';
 import 'package:realest/src/views/investor/swiping/property_swiping.dart';
 
 // Views related to the realtor
 import 'package:realest/src/views/realtor/dashboard/realtor_dashboard.dart';
-import 'package:realest/src/views/realtor/realtor_home_search.dart';
+import 'package:realest/src/views/realtor/home search/realtor_home_search.dart';
 import 'package:realest/src/views/realtor/realtor_setup.dart';
 import 'package:realest/src/views/calculators/calculators.dart';
 import 'package:realest/src/views/realtor/clients/realtor_clients.dart';
@@ -28,145 +30,263 @@ import 'package:realest/src/views/navbar.dart'; // Sidebar navigation
 // Provider and user-related imports
 import 'user_provider.dart';
 
-import 'package:flutter/cupertino.dart';
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.light);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await dotenv.load(fileName: ".env");
+  await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => UserProvider()),
+        ChangeNotifierProvider(
+          create: (context) => UserProvider()..initializeUser(),
+        ),
       ],
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
-  _MyAppState createState() => _MyAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.light; // Default Theme
-
-  void _toggleTheme() {
-    setState(() {
-      _themeMode = _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
-    });
-  }
+  late final GoRouter _router;
+  late final UserProvider userProvider;
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      themeMode: _themeMode,
-      theme: _lightTheme(),
-      darkTheme: _darkTheme(),
-      routerConfig: _router(_toggleTheme, _themeMode), // Ensure this is the correct GoRouter configuration
+  void initState() {
+    super.initState();
+    userProvider = Provider.of<UserProvider>(context, listen: false);
+    _router = _createRouter(
+      () {
+        setState(() {
+          themeModeNotifier.value = themeModeNotifier.value == ThemeMode.light
+              ? ThemeMode.dark
+              : ThemeMode.light;
+        });
+      },
+      themeModeNotifier.value,
     );
   }
-}
-
-/// **GoRouter Configuration**
-GoRouter _router(VoidCallback toggleTheme, ThemeMode themeMode) {
-  return GoRouter(
-    initialLocation: '/',
-    routes: [
-      GoRoute(
-        path: '/',
-        builder: (context, state) => AuthGate(toggleTheme: toggleTheme, themeMode: themeMode),
-      ),
-      GoRoute(path: '/login', builder: (context, state) => const CustomLoginPage()),
-
-      // Investor Pages - ShellRoute for Investor
-      ShellRoute(
-        builder: (context, state, child) => MainLayout(
-          child: child,
-          toggleTheme: toggleTheme,
-          themeMode: themeMode,
-        ),
-        routes: [
-          GoRoute(path: '/investorHome', builder: (context, state) => const PropertySwipingView()),
-          GoRoute(path: '/investorSetup', builder: (context, state) => const InvestorSetupPage()),
-          GoRoute(path: '/investorSettings', builder: (context, state) => InvestorSettings(toggleTheme: toggleTheme, isDarkMode: themeMode == ThemeMode.dark)),
-          GoRoute(path: '/investorCalculators', builder: (context, state) => const Calculators()),
-          GoRoute(path: '/investorSavedProperties', builder: (context, state) => SavedProperties()),
-
-          //   GoRoute(path: '/investorPortfolio', builder: (context, state) => const InvestorPortfolioPage()),
-        //   GoRoute(path: '/investorSearch', builder: (context, state) => const InvestorHomeSearchPage()),
-        //   GoRoute(path: '/investorSettings', builder: (context, state) => InvestorSettingsPage(toggleTheme: toggleTheme, isDarkMode: themeMode == ThemeMode.dark)),
-        ],
-      ),
-      // Realtor Pages
-      ShellRoute(
-        builder: (context, state, child) => MainLayout(
-          child: child,
-          toggleTheme: toggleTheme,
-          themeMode: themeMode,
-        ), // Sidebar Layout
-        routes: [
-          GoRoute(path: '/realtorDashboard', builder: (context, state) => RealtorDashboard(toggleTheme: toggleTheme, isDarkMode: themeMode == ThemeMode.dark)),
-          GoRoute(path: '/realtorSetup', builder: (context, state) => const RealtorSetupPage()),
-          GoRoute(path: '/realtorCalculators', builder: (context, state) => const Calculators()),
-          GoRoute(path: '/realtorClients', builder: (context, state) => const RealtorClients()),
-          GoRoute(path: '/realtorReports', builder: (context, state) => const RealtorReports()),
-          GoRoute(path: '/realtorHomeSearch', builder: (context, state) => const RealtorHomeSearch()),
-          GoRoute(path: '/realtorSettings', builder: (context, state) => RealtorSettings(toggleTheme: toggleTheme, isDarkMode: themeMode == ThemeMode.dark)),
-        ],
-      ),
-    ],
-  );
-}
-
-class AuthGate extends StatelessWidget {
-  final VoidCallback toggleTheme;
-  final ThemeMode themeMode;
-
-  const AuthGate({Key? key, required this.toggleTheme, required this.themeMode}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>( // Listen to Firebase Auth state
-      stream: FirebaseAuth.instance.idTokenChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-
-        final user = snapshot.data;
-        if (user == null) return const CustomLoginPage();
-
-        return FutureBuilder<DocumentSnapshot>( // Check user role
-          future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
-          builder: (context, userSnapshot) {
-            if (userSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
-            }
-
-            if (userSnapshot.hasData && userSnapshot.data!.exists) {
-              final role = userSnapshot.data!['role'];
-              if (role == "investor") {
-                Future.microtask(() => context.go('/investorHome')); // Navigate to investor home
-                return const PropertySwipingView();
-              } else {
-                Future.microtask(() => context.go('/realtorDashboard')); // Navigate to realtor dashboard
-                return RealtorDashboard(toggleTheme: toggleTheme, isDarkMode: themeMode == ThemeMode.dark);
-              }
-            }
-            return const CustomLoginPage();
-          },
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeModeNotifier,
+      builder: (context, themeMode, child) {
+        return MaterialApp.router(
+          debugShowCheckedModeBanner: false,
+          themeMode: themeMode,
+          theme: _lightTheme(),
+          darkTheme: _darkTheme(),
+          routerConfig: _router,
         );
       },
     );
   }
+  void _showAccessDenied(BuildContext context, String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    });
+  }
+
+  GoRouter _createRouter(VoidCallback toggleTheme, ThemeMode themeMode) {
+    return GoRouter(
+      initialLocation: '/',
+      redirect: (context, state) {
+        if(userProvider.isLoading) return null;
+        final isLoggedIn = userProvider.userRole != null;
+        final currentPath = state.uri.path;
+
+        if (currentPath == '/') return null;
+
+        // Redirect logic for '/login'
+        if (currentPath == '/login' && isLoggedIn){
+          _showAccessDenied(context, "You are already logged in");
+          return '/home';
+        }
+
+        // Protected routes logic
+        final protectedRoutes = [
+          '/home',
+          '/setup',
+          '/settings',
+          '/calculators',
+          '/saved',
+          '/disliked',
+          '/clients',
+          '/reports',
+          '/search'
+        ];
+
+        if (protectedRoutes.contains(currentPath)) {
+          if (!isLoggedIn) {
+            _showAccessDenied(context, "You need to log in to access this page");
+            return '/login'; // Redirect unauthenticated users to login
+          }
+
+          // Role-specific route protection
+          if (currentPath == '/saved' && userProvider.userRole != 'investor') {
+            _showAccessDenied(context, 'Saved properties only available to investors');
+            return '/home';
+          }
+          if (currentPath == '/disliked' && userProvider.userRole != 'investor') {
+            _showAccessDenied(context, 'Disliked properties only available to investors');
+            return '/home';
+          }
+          if (currentPath == '/clients' && userProvider.userRole != 'realtor') {
+            _showAccessDenied(context, 'Client management only available to realtors');
+            return '/home';
+          }
+          if (currentPath == '/reports' && userProvider.userRole != 'realtor') {
+            _showAccessDenied(context, 'Reports only available to realtors');
+            return '/home';
+          }
+        }
+        return null; // No redirection needed
+      },
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const HomePage(),
+        ),
+        GoRoute(
+          path: '/login',
+          builder: (context, state) => const CustomLoginPage(),
+        ),
+        ShellRoute(
+          builder: (context, state, child) => MainLayout(
+            toggleTheme: toggleTheme,
+            themeMode: themeMode,
+            child: child,
+          ),
+          routes: [
+            GoRoute(
+              path: '/home',
+              builder: (context, state) {
+                final userProvider = Provider.of<UserProvider>(context);
+                return userProvider.userRole == 'investor'
+                    ? const PropertySwipingView()
+                    : RealtorDashboard(
+                        toggleTheme: toggleTheme,
+                        isDarkMode: themeMode == ThemeMode.dark,
+                      );
+              },
+            ),
+            GoRoute(
+              path: '/setup',
+              builder: (context, state) {
+                final userProvider = Provider.of<UserProvider>(context);
+                return userProvider.userRole == 'investor'
+                    ? const InvestorSetupPage()
+                    : const RealtorSetupPage();
+              },
+            ),
+            GoRoute(
+              path: '/settings',
+              builder: (context, state) {
+                final userProvider = Provider.of<UserProvider>(context);
+                return userProvider.userRole == 'investor'
+                    ? InvestorSettings(
+                        toggleTheme: toggleTheme,
+                        isDarkMode: themeMode == ThemeMode.dark,
+                      )
+                    : RealtorSettings(
+                        toggleTheme: toggleTheme,
+                        isDarkMode: themeMode == ThemeMode.dark,
+                      );
+              },
+            ),
+            GoRoute(
+              path: '/calculators',
+              builder: (context, state) => const Calculators(),
+            ),
+            GoRoute(
+              path: '/saved',
+              builder: (context, state) {
+                final userProvider = Provider.of<UserProvider>(context);
+                if (userProvider.userRole != 'investor') {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Saved properties only available to investors')),
+                    );
+                    context.go('/home'); // Redirect back to home
+                  });
+                  return const SizedBox.shrink(); // Temporary empty widget
+                }
+                return SavedProperties();
+              },
+            ),
+            GoRoute(
+              path: '/disliked',
+              builder: (context, state) {
+                final userProvider = Provider.of<UserProvider>(context);
+                if (userProvider.userRole != 'investor') {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Disliked properties only available to investors')),
+                    );
+                    context.go('/home'); // Redirect back to home
+                  });
+                  return const SizedBox.shrink(); // Temporary empty widget
+                }
+                return DislikedProperties();
+              },
+            ),
+            GoRoute(
+              path: '/clients',
+              builder: (context, state) {
+                final userProvider = Provider.of<UserProvider>(context);
+                if (userProvider.userRole != 'realtor') {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Client management only available to realtors')),
+                    );
+                    context.go('/home'); // Redirect back to home
+                  });
+                  return const SizedBox.shrink(); // Temporary empty widget
+                }
+                return const RealtorClients();
+              },
+            ),
+            GoRoute(
+              path: '/reports',
+              builder: (context, state) {
+                final userProvider = Provider.of<UserProvider>(context);
+                if (userProvider.userRole != 'realtor') {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Reports only available to realtors')),
+                    );
+                    context.go('/home');
+                  });
+                  return const SizedBox.shrink();
+                }
+                return const RealtorReports();
+              },
+            ),
+            GoRoute(
+              path: '/search',
+              builder: (context, state) => const RealtorHomeSearch(),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
-
-
-/// **🏠 Sidebar Layout Wrapper**
 class MainLayout extends StatelessWidget {
   final Widget child;
   final VoidCallback toggleTheme;
@@ -185,9 +305,9 @@ class MainLayout extends StatelessWidget {
       key: _scaffoldKey,
       appBar: isSmallScreen
           ? AppBar(
-        title: Text("RealEst"),
+        title: const Text("RealEst"),
         leading: IconButton(
-          icon: Icon(Icons.menu),
+          icon: const Icon(Icons.menu),
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
       )
@@ -200,34 +320,32 @@ class MainLayout extends StatelessWidget {
         ),
       )
           : null,
-
       body: Row(
         children: [
-          if (!isSmallScreen) // ✅ Sidebar for large screens
+          if (!isSmallScreen)
             NavBar(
               toggleTheme: toggleTheme,
               isDarkMode: themeMode == ThemeMode.dark,
             ),
-          Expanded(child: child), // Page content
+          Expanded(child: child),
         ],
       ),
     );
   }
 }
 
-
-/// **🎨 Light Theme**
 ThemeData _lightTheme() {
   return ThemeData(
     primaryColor: Colors.black,
-    scaffoldBackgroundColor: Colors.white,
+    scaffoldBackgroundColor: Colors.white24,
     cardColor: Colors.grey[200],
     colorScheme: const ColorScheme.light(
-      primary: Colors.deepPurple, // Buttons and selected navbar item
-      secondary: Colors.black87, // Secondary elements
-      surface: Colors.white, // Default text color
-      surfaceVariant: Colors.black, // Navbar background
+      primary: Colors.deepPurple,
+      secondary: Colors.black87,
+      surface: Colors.white,
+      surfaceVariant: Colors.black,
       onSurface: Colors.black,
+      onTertiary: Colors.white38,
     ),
     textTheme: const TextTheme(
       bodyLarge: TextStyle(color: Colors.black),
@@ -241,24 +359,23 @@ ThemeData _lightTheme() {
         borderSide: BorderSide.none,
       ),
       hintStyle: TextStyle(color: Colors.grey[500]),
-      labelStyle: TextStyle(fontWeight: FontWeight.normal),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      labelStyle: const TextStyle(fontWeight: FontWeight.normal),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
   );
 }
 
-/// **🌙 Dark Theme**
 ThemeData _darkTheme() {
   return ThemeData(
     primaryColor: Colors.white,
-    scaffoldBackgroundColor: Colors.black87,
+    scaffoldBackgroundColor: Colors.black54,
     cardColor: Colors.grey[900],
     colorScheme: const ColorScheme.dark(
-      primary: Colors.deepPurpleAccent, // Buttons and selected navbar item
-      secondary: Colors.white70, // Secondary elements
-      surfaceVariant: Colors.black, // Navbar background
+      primary: Colors.deepPurpleAccent,
+      secondary: Colors.white70,
+      surfaceVariant: Colors.black,
       surface: Colors.black,
-      onSurface: Colors.white, // Default text color
+      onSurface: Colors.white,
     ),
     textTheme: const TextTheme(
       bodyLarge: TextStyle(color: Colors.white),
@@ -272,13 +389,13 @@ ThemeData _darkTheme() {
         borderSide: BorderSide.none,
       ),
       hintStyle: TextStyle(color: Colors.grey[500]),
-      labelStyle: TextStyle(fontWeight: FontWeight.normal),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      labelStyle: const TextStyle(fontWeight: FontWeight.normal),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.deepPurpleAccent, // Primary button color
-        foregroundColor: Colors.white, // Button text color
+        backgroundColor: Colors.deepPurpleAccent,
+        foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 14),
         textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),

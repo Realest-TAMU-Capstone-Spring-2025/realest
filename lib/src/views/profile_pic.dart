@@ -18,36 +18,34 @@ class ProfilePic extends StatelessWidget {
   }) : super(key: key);
 
   void _showProfileDialog(BuildContext context) {
-    // Grab user data from the provider.
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final String fullName = '${userProvider.firstName ?? ''} ${userProvider.lastName ?? ''}'.trim();
     final String contactEmail = userProvider.contactEmail ?? '';
     final String contactPhone = userProvider.contactPhone ?? '';
     final String profilePicUrl = userProvider.profilePicUrl ?? '';
-    final String invitationCode = userProvider.invitationCode ?? ''; // Fetch invitation code
+    final String invitationCode = userProvider.invitationCode ?? '';
     final String userRole = userProvider.userRole ?? '';
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.5), // Grey overlay
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (BuildContext context) {
         final theme = Theme.of(context);
         return Center(
           child: Material(
             color: Colors.transparent,
             child: Container(
-              width: 300, // Fixed width for the dialog
+              width: 300,
               margin: const EdgeInsets.symmetric(horizontal: 20),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: theme.cardColor, // Uses your defined cardColor
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(15),
               ),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Profile Picture at the Top
                     CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.grey[300],
@@ -59,7 +57,6 @@ class ProfilePic extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 15),
-                    // User Details
                     Text(
                       fullName.isNotEmpty ? fullName : 'No Name',
                       style: theme.textTheme.bodyLarge?.copyWith(fontSize: 24),
@@ -78,13 +75,15 @@ class ProfilePic extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 5),
-                    // Invitation Code with Copy Icon
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          //test if realtor
-                          userRole == 'realtor' ? invitationCode.isNotEmpty ? 'Invitation Code: $invitationCode' : 'No Invitation Code' : '',
+                          userRole == 'realtor'
+                              ? invitationCode.isNotEmpty
+                              ? 'Invitation Code: $invitationCode'
+                              : 'No Invitation Code'
+                              : '',
                           style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
                           textAlign: TextAlign.center,
                         ),
@@ -108,7 +107,6 @@ class ProfilePic extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     const Divider(color: Colors.grey),
-                    // Account Settings: Instead of navigating, call the callback.
                     ListTile(
                       leading: Icon(Icons.settings, color: theme.colorScheme.onSurface),
                       title: Text(
@@ -121,20 +119,18 @@ class ProfilePic extends StatelessWidget {
                       },
                     ),
                     const Divider(color: Colors.grey),
-                    // Notifications Toggle with Icon
                     SwitchListTile(
                       secondary: Icon(Icons.notifications, color: theme.colorScheme.onSurface),
                       title: Text(
                         "Notifications",
                         style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
                       ),
-                      value: true, // Replace with your actual notification state
+                      value: true, // Replace with actual notification state
                       onChanged: (bool value) {
                         // Handle notifications toggle
                       },
                     ),
                     const Divider(color: Colors.grey),
-                    // Dark Mode Toggle with Icon – calls global toggleTheme function.
                     SwitchListTile(
                       secondary: Icon(Icons.dark_mode, color: theme.colorScheme.onSurface),
                       title: Text(
@@ -143,12 +139,11 @@ class ProfilePic extends StatelessWidget {
                       ),
                       value: isDarkMode,
                       onChanged: (bool value) {
-                        toggleTheme();
+                        toggleTheme(); // Simply call the toggleTheme callback
                       },
                     ),
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 10),
-                    // Log Out Button with Icon and Themed Confirmation Dialog
                     InkWell(
                       onTap: () async {
                         showDialog(
@@ -180,6 +175,8 @@ class ProfilePic extends StatelessWidget {
                                   onPressed: () async {
                                     Navigator.of(dialogContext).pop();
                                     await FirebaseAuth.instance.signOut();
+                                    //clear user data from provider
+                                    userProvider.clearUserData();
                                     context.go("/login");
                                   },
                                   child: Text(

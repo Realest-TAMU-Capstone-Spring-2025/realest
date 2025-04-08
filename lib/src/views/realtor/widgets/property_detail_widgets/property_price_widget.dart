@@ -5,39 +5,44 @@ class PropertyPriceWidget extends StatelessWidget {
   final num? price;
   final String status;
 
-  const PropertyPriceWidget({Key? key, required this.price, required this.status}) : super(key: key);
+  const PropertyPriceWidget({
+    Key? key,
+    required this.price,
+    required this.status,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currencyFormat = NumberFormat("#,##0", "en_US");
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Property Status
+          // Status Badge
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: _getStatusColor(theme),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              status.toUpperCase().replaceAll("_", " "),
+              _formatStatus(status),
               style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.bold,
                 color: Colors.white,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          const SizedBox(width: 20),
 
-          // Property Price
+          const SizedBox(width: 16),
+
+          // Price
           Text(
             price != null ? "\$${currencyFormat.format(price)}" : "Price Unavailable",
-            style: theme.textTheme.headlineLarge?.copyWith(
+            style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.primary,
             ),
@@ -47,17 +52,25 @@ class PropertyPriceWidget extends StatelessWidget {
     );
   }
 
-  /// **🔵 Dynamic Status Color Based on Listing State**
   Color _getStatusColor(ThemeData theme) {
     switch (status) {
       case "FOR_SALE":
-        return Colors.green;
+        return Colors.green.shade600;
       case "PENDING":
-        return Colors.orange;
+        return Colors.orange.shade700;
       case "SOLD":
-        return Colors.red;
+        return Colors.red.shade600;
       default:
-        return theme.colorScheme.secondary;
+        return Colors.grey.shade600;
     }
+  }
+
+  String _formatStatus(String status) {
+    return status
+        .replaceAll("_", " ")
+        .toLowerCase()
+        .split(' ')
+        .map((s) => s[0].toUpperCase() + s.substring(1))
+        .join(' ');
   }
 }

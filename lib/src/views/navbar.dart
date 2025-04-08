@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../user_provider.dart';
 import 'profile_pic.dart';
@@ -51,7 +50,7 @@ class _NavBarState extends State<NavBar> {
                   child: ProfilePic(
                     toggleTheme: widget.toggleTheme,
                     isDarkMode: widget.isDarkMode,
-                    onAccountSettings: () => context.go(userProvider.userRole == "realtor"? "/realtorSettings" : "/investorSettings"),
+                    onAccountSettings: () => context.go("/settings"),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -72,14 +71,9 @@ class _NavBarState extends State<NavBar> {
 
   /// **📌 Sidebar for Large Screens**
   Widget _buildSidebar(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
-
     final theme = Theme.of(context);
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isExpanded = true),
-      onExit: (_) => setState(() => _isExpanded = false),
-      child: AnimatedContainer(
+    return AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
         width: _isExpanded ? 230 : 80,
@@ -96,26 +90,14 @@ class _NavBarState extends State<NavBar> {
         ),
         child: Column(
           children: [
-            const SizedBox(height: 20),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: _isExpanded ? 100 : 50,
-              height: _isExpanded ? 100 : 50,
-              child: ProfilePic(
-                toggleTheme: widget.toggleTheme,
-                isDarkMode: widget.isDarkMode,
-                onAccountSettings: () => context.go(userProvider.userRole == "realtor"? "/realtorSettings" : "/investorSettings"),
-              ),
-            ),
-            const SizedBox(height: 30),
-            ..._buildNavItems(context, false),
-            const Spacer(),
+            SizedBox(height: 30,),
             InkWell(
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Icon(Icons.real_estate_agent, size: 42, color: Colors.white),
               ),
             ),
+            SizedBox(height: 10,),
             if (_isExpanded)
               Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -127,10 +109,38 @@ class _NavBarState extends State<NavBar> {
                 ),
               ),
             const SizedBox(height: 30),
+            ..._buildNavItems(context, false),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(_isExpanded ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
+                    color: Colors.white,
+                    onPressed: () {
+                      setState(() => _isExpanded = !_isExpanded);
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: _isExpanded ? 100 : 50,
+              height: _isExpanded ? 100 : 50,
+              child: ProfilePic(
+                toggleTheme: widget.toggleTheme,
+                isDarkMode: widget.isDarkMode,
+                onAccountSettings: () => context.go("/settings"),
+              ),
+            ),
+            SizedBox(height: 30,)
           ],
         ),
-      ),
-    );
+      );
   }
 
   /// **📌 Navigation Items**
@@ -139,53 +149,21 @@ class _NavBarState extends State<NavBar> {
     return userProvider.userRole == "realtor"?
     //nav items for realtor
     [
-      _NavItem(icon: Icons.dashboard, label: "Dashboard", route: '/realtorDashboard', isDrawer: isDrawer),
-      _NavItem(icon: Icons.search, label: "Home Search", route: '/realtorHomeSearch', isDrawer: isDrawer),
-      _NavItem(icon: Icons.calculate, label: "Calculators", route: '/realtorCalculators', isDrawer: isDrawer),
-      _NavItem(icon: Icons.people, label: "Clients", route: '/realtorClients', isDrawer: isDrawer),
-      _NavItem(icon: Icons.assessment, label: "Reports", route: '/realtorReports', isDrawer: isDrawer),
+      _NavItem(icon: Icons.dashboard, label: "Dashboard", route: '/home', isDrawer: isDrawer),
+      _NavItem(icon: Icons.search, label: "Home Search", route: '/search', isDrawer: isDrawer),
+      _NavItem(icon: Icons.calculate, label: "Calculators", route: '/calculators', isDrawer: isDrawer),
+      _NavItem(icon: Icons.people, label: "Clients", route: '/clients', isDrawer: isDrawer),
+      _NavItem(icon: Icons.assessment, label: "Reports", route: '/reports', isDrawer: isDrawer),
     ] :
     //nav items for investor
     [
-      _NavItem(icon: Icons.home, label: "Home", route: '/InvestorHome', isDrawer: isDrawer),
-      _NavItem(icon: Icons.calculate, label: "Calculators", route: '/investorCalculators', isDrawer: isDrawer),
-      _NavItem(icon: Icons.favorite, label: "Saved", route: '/investorSavedProperties', isDrawer: isDrawer),
-
+      _NavItem(icon: Icons.home, label: "My Feed", route: '/home', isDrawer: isDrawer),
+      _NavItem(icon: Icons.search, label: "Home Search", route: '/search', isDrawer: isDrawer),
+      _NavItem(icon: Icons.calculate, label: "Calculators", route: '/calculators', isDrawer: isDrawer),
+      _NavItem(icon: Icons.favorite, label: "Saved", route: '/saved', isDrawer: isDrawer),
+      _NavItem(icon: Icons.close, label: "Disliked", route: '/disliked', isDrawer: isDrawer),
     ];
   }
-
-  /// **📌 Logout Dialog**
-  Future<void> _showLogoutDialog(BuildContext context) async {
-    final theme = Theme.of(context);
-
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: theme.cardColor,
-          title: Text("Confirm Logout", style: TextStyle(fontWeight: FontWeight.bold)),
-          content: Text("Are you sure you want to log out?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text("Cancel", style: TextStyle(color: theme.colorScheme.primary)),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await FirebaseAuth.instance.signOut();
-                if (context.mounted) {
-                  context.go('/login');
-                }
-              },
-              child: Text("Logout", style: TextStyle(color: Colors.redAccent)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
 }
 class _NavItem extends StatefulWidget {
   final IconData icon;
@@ -227,24 +205,25 @@ class __NavItemState extends State<_NavItem> {
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          child: ClipRect( // ✅ Prevents overflow
+          child: ClipRect(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 8),
               decoration: BoxDecoration(
                 color: _isHovered
-                    ? Colors.white.withOpacity(0.2)
+                    ? Colors.deepPurpleAccent.withOpacity(0.5)
                     : isSelected
                     ? Colors.deepPurpleAccent.withOpacity(0.2)
-                    : Colors.transparent,
+                    : Colors.white.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Row(
+              child:Row(
                 mainAxisAlignment: isSidebarExpanded || widget.isDrawer
-                    ? MainAxisAlignment.start // ✅ Align left when expanded or in drawer
-                    : MainAxisAlignment.center, // ✅ Center icons when collapsed
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.center,
                 children: [
-                  AnimatedScale(
+                  widget.isDrawer
+                      ? AnimatedScale(
                     scale: _isHovered ? 1.2 : 1.0,
                     duration: const Duration(milliseconds: 200),
                     child: Icon(
@@ -255,14 +234,40 @@ class __NavItemState extends State<_NavItem> {
                           ? theme.primaryColor
                           : Colors.white,
                     ),
+                  )
+                      : TooltipTheme(
+                    data: TooltipThemeData(
+                      textStyle: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Tooltip(
+                      message: widget.label,
+                      child: AnimatedScale(
+                        scale: _isHovered ? 1.2 : 1.0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          widget.icon,
+                          color: isSelected ? Colors.deepPurpleAccent : Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
-                  if (isSidebarExpanded || widget.isDrawer) // ✅ Only add text if sidebar is expanded
-                    Expanded( // ✅ Prevents text from forcing a width overflow
+
+
+                  if (isSidebarExpanded || widget.isDrawer)
+                    Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(left: 12),
                         child: Text(
                           widget.label,
-                          // ✅ Ensures text does not exceed width
                           softWrap: false,
                           style: TextStyle(
                             color: _isHovered
@@ -270,7 +275,7 @@ class __NavItemState extends State<_NavItem> {
                                 : isSelected
                                 ? Colors.deepPurpleAccent
                                 : widget.isDrawer
-                                ?  theme.primaryColor
+                                ? theme.primaryColor
                                 : Colors.white,
                             fontSize: 16,
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -280,10 +285,12 @@ class __NavItemState extends State<_NavItem> {
                     ),
                 ],
               ),
+
             ),
           ),
         ),
       ),
     );
+
   }
 }
