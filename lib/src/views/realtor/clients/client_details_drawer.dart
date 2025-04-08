@@ -40,6 +40,8 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
   final DefaultCacheManager _cacheManager = DefaultCacheManager();
   late AnimationController _animationController;
   List<Map<String, dynamic>> _notes = [];
+  List<Map<String, dynamic>> _availableTags = [];
+  List<String> _assignedTags = [];
 
   @override
   void initState() {
@@ -119,6 +121,22 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
           return data;
         }).toList();
       }
+      final tagsSnapshot = await FirebaseFirestore.instance
+          .collection('realtors')
+          .doc(realtorId)
+          .collection('tags')
+          .get();
+
+      _availableTags = tagsSnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+
+      _assignedTags = _availableTags
+          .where((tag) => (tag['investors'] as List).contains(widget.clientUid))
+          .map((tag) => tag['id'] as String)
+          .toList();
 
       setState(() => _isLoading = false);
     } catch (e) {
@@ -253,6 +271,12 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                           onPressed: widget.onClose,
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton.icon(
+                      onPressed: _showManageTagsDialog,
+                      icon: Icon(Icons.label_outline, color: Theme.of(context).colorScheme.primary),
+                      label: Text('Manage Tags'),
                     ),
                     const SizedBox(height: 16),
                     Card(
@@ -515,4 +539,110 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
       child: _buildInteractionList(title, icon, items),
     );
   }
+
+  void _showManageTagsDialog() async {
+    final realtorId = FirebaseAuth.instance.currentUser?.uid;
+    final clientUid = widget.clientUid;
+
+    if (realtorId == null) return;
+
+    final tagsSnapshot = await FirebaseFirestore.instance
+        .collection('realtors')
+        .doc(realtorId)
+        .collection('tags')
+        .get();
+
+    final allTags = tagsSnapshot.docs;
+    List<String> assignedTags = allTags
+        .where((doc) => (doc['investors'] as List).contains(clientUid))
+        .map((doc) => doc.id)
+        .toList();
+
+    final TextEditingController searchController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setState) {
+          final filteredTags = allTags.where((doc) {
+            final name = doc['name'].toString().toLowerCase();
+            final searchText = searchController.text.toLowerCase();
+            return name.contains(searchText);
+          }).toList();
+
+          return Dialog(
+            insetPadding: const EdgeInsets.all(16),
+            child: Container(
+              width: 500,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("Assign Tags", style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: "Search tags...",
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: filteredTags.length,
+                      itemBuilder: (context, index) {
+                        final tagDoc = filteredTags[index];
+                        final isAssigned = assignedTags.contains(tagDoc.id);
+
+                        return CheckboxListTile(
+                          secondary: CircleAvatar(
+                            backgroundColor: Color(tagDoc['color']),
+                          ),
+                          title: Text(tagDoc['name']),
+                          value: isAssigned,
+                          onChanged: (checked) async {
+                            final docRef = FirebaseFirestore.instance
+                                .collection('realtors')
+                                .doc(realtorId)
+                                .collection('tags')
+                                .doc(tagDoc.id);
+
+                            if (checked == true) {
+                              await docRef.update({
+                                'investors': FieldValue.arrayUnion([clientUid])
+                              });
+                              assignedTags.add(tagDoc.id);
+                            } else {
+                              await docRef.update({
+                                'investors': FieldValue.arrayRemove([clientUid])
+                              });
+                              assignedTags.remove(tagDoc.id);
+                            }
+
+                            setState(() {});
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text("Done"),
+                    ),
+                  )
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    );
+  }
+
 }
