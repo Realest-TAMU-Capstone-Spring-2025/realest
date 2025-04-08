@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'piti_calculator.dart';
 import 'affordability_calculator.dart';
 import 'rental_property_calculator.dart';
+import 'buyer_netsheet_calculator.dart';
 
 class Calculators extends StatefulWidget {
   const Calculators({Key? key}) : super(key: key);
@@ -17,6 +18,7 @@ class _CalculatorsState extends State<Calculators> {
     "PITI Calculator",
     "Affordability Calculator",
     "Rental Property Calculator",
+    "Buyer Net Sheet Calculator",
   ];
 
   @override
@@ -159,6 +161,8 @@ class _CalculatorsState extends State<Calculators> {
         return const AffordabilityCalculator();
       case 2:
         return const RentalPropertyCalculator();
+      case 3:
+        return const BuyerNetSheetCalculator();
       default:
         return const SizedBox.shrink();
     }
