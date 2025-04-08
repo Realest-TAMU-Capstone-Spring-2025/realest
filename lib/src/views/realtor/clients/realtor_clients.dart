@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // For Firestore
-import '../../../../user_provider.dart';
+import 'package:realest/user_provider.dart';
 import 'mouse_region_provider.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:algolia_helper_flutter/algolia_helper_flutter.dart' as algolia;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:realest/src/views/realtor/clients/client_details_drawer.dart';
+
 
 
 class RealtorClients extends StatefulWidget {
@@ -21,6 +25,15 @@ class _RealtorClientsState extends State<RealtorClients> {
   bool _isClientExpanded = true;
   bool _isLoading = false;
   String? _errorMessage;
+  final algolia.HitsSearcher _searcher = algolia.HitsSearcher(
+    applicationID: dotenv.env['ALGOLIA_APP_ID']!,
+    apiKey: dotenv.env['ALGOLIA_API_KEY']!,
+    indexName: 'investors',
+  );
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  double _searchBarWidth = 0;
+
 
   @override
   void initState() {
@@ -92,8 +105,6 @@ class _RealtorClientsState extends State<RealtorClients> {
   }
 
   Widget _buildFilterContent(void Function(void Function()) setModalState, BuildContext dialogContext) {
-    ;
-
     return StatefulBuilder(
       builder: (context, setModalState) {
         return Container(
@@ -160,7 +171,7 @@ class _RealtorClientsState extends State<RealtorClients> {
 
       final List<Map<String, dynamic>> loadedClients = snapshot.docs.map((doc) {
         try {
-          final data = doc.data() as Map<String, dynamic>; // ✅ Cast to correct type
+          final data = doc.data() as Map<String, dynamic>;
           return {
             'uid': doc.id,
             'firstName': data['firstName'] ?? '',
@@ -178,7 +189,7 @@ class _RealtorClientsState extends State<RealtorClients> {
         }
       }).toList();
 
-      print("Successfully fetched clients: ${loadedClients.length}");
+      // print("Successfully fetched clients: ${loadedClients.length}");
       setState(() {
         _clients = loadedClients;
         _isLoading = false;
@@ -850,6 +861,90 @@ class _RealtorClientsState extends State<RealtorClients> {
   }
 
 
+  Future<Iterable<Map<String, dynamic>>> _searchClients(
+    TextEditingValue textEditingValue) async {
+  if (textEditingValue.text.isEmpty) return const [];
+  
+  final userProvider = Provider.of<UserProvider>(context, listen: false);
+  final realtorId = userProvider.uid;
+
+  _searcher.applyState((state) => state.copyWith(
+        filterGroups: {
+          algolia.FilterGroup.facet(
+            filters: {
+              algolia.Filter.facet('realtorId', realtorId),
+            }.toSet(),
+          ),
+        },
+        query: textEditingValue.text,
+      ));
+
+  final snapshot = await _searcher.responses.first;
+  return snapshot.hits
+      .map((e) => Map<String, dynamic>.from(e))
+      .toList();
+}
+
+Widget _buildSearchOptions(BuildContext context,
+  AutocompleteOnSelected<Map<String, dynamic>> onSelected,
+  Iterable<Map<String, dynamic>> options) {
+  final double availableWidth = _searchBarWidth > 0 
+    ? _searchBarWidth 
+    : MediaQuery.of(context).size.width - 32;
+  
+  final double maxHeight = MediaQuery.of(context).size.height * 0.5;
+  
+  return Align(
+    alignment: Alignment.topLeft,
+    child: Material(
+      elevation: 4,
+      child: Container(
+        width: availableWidth,
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: options.isEmpty
+            ? Container(
+                padding: const EdgeInsets.all(16.0),
+                alignment: Alignment.center,
+                child: const Text(
+                  "No results found",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              )
+            : ListView.builder(
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final option = options.elementAt(index);
+                  final isName = 
+                      (option['firstName']?.isNotEmpty == true &&
+                          option['lastName']?.isNotEmpty == true);
+                  return ListTile(
+                    title: Text(
+                    (isName) ? '${option['firstName']} ${option['lastName']}'
+                      : option['contactEmail'] ?? 'Unknown Client',
+                    ),
+                    subtitle: (isName) ? Text(option['contactEmail'] ?? '') : null,
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+      ),
+    ),
+  );
+}
+
+  void _showClientDetails(String clientId) {
+    showDialog(
+      context: context,
+      builder: (context) => ClientDetailsDrawer(
+        clientUid: clientId,
+        onClose: () {
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -889,25 +984,43 @@ class _RealtorClientsState extends State<RealtorClients> {
                       children: [
                         Expanded(
                           flex: 1,
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: 'Search clients...',
-                              prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface),
-                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
+                          child: RawAutocomplete<Map<String, dynamic>>(
+                                  focusNode: _searchFocusNode,
+                                  textEditingController: _searchController,
+                                  optionsBuilder: _searchClients,
+                                  displayStringForOption: (option) =>
+                                      '${option['firstName']} ${option['lastName']}',
+                                  fieldViewBuilder:
+                                      (context, controller, focusNode, onFieldSubmitted) {
+                                    final searchBarKey = GlobalKey();
+                                    return TextField(
+                                      key: searchBarKey,
+                                      controller: controller,
+                                      focusNode: focusNode,
+                                      decoration: InputDecoration(
+                                        hintText: 'Search clients...',
+                                        prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface),
+                                        border: const OutlineInputBorder(),
+                                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                                      ),
+                                      onTap: () {
+                                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                                          if (searchBarKey.currentContext != null) {
+                                            // final RenderBox box = searchBarKey.currentContext!.findRenderObject() as RenderBox;
+                                            // _searchBarWidth = box.size.width;
+                                            setState(() {});
+                                          }
+                                        });
+                                      },
+                                    );
+                                  },
+                                  optionsViewBuilder: (context, onSelected, options) => 
+                                      _buildSearchOptions(context, onSelected, options),
+                                  onSelected: (option) {
+                                    _showClientDetails(option['objectID']);
+                                  },
+                                )
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        _buildFilterButton(
-                          context,
-                          'Filters',
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('More filters coming soon!')),
-                            );
-                          },
-                          icon: Icons.filter_list,
-                        ),
                       ],
                     ),
                   ),
@@ -1068,7 +1181,4 @@ class _RealtorClientsState extends State<RealtorClients> {
       ),
     ));
   }
-
-
-
 }
