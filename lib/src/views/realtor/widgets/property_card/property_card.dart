@@ -47,7 +47,12 @@ class PropertyCard extends StatelessWidget {
                 PropertyInfo(property: property),
               ],
             ),
-            StatusBadge(listingType: property['status']),
+            Positioned(
+              left: 10,
+              top: 10,
+              child: StatusBadge(listingType: property['status']),
+            ),
+
             Positioned(
               right: 10,
               top: 10,
