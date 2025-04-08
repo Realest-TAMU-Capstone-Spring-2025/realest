@@ -9,10 +9,7 @@ class StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (listingType == null) return const SizedBox();
 
-    return Positioned(
-      top: 10,
-      left: 10,
-      child: Container(
+    return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.65),
@@ -26,7 +23,6 @@ class StatusBadge extends StatelessWidget {
             fontSize: 12,
           ),
         ),
-      ),
     );
   }
 

@@ -122,20 +122,25 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
 
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null) {
-        final realtorId = currentUser.uid;
         final realtorDoc = await FirebaseFirestore.instance
             .collection('realtors')
-            .doc(realtorId)
+            .doc(currentUser.uid)
             .get();
 
-        final cashFlowDefaults = realtorDoc.data()?['cashFlowDefaults'] ?? {};
+        if (realtorDoc.exists) {
+          final rawDefaults = realtorDoc.data()?['cashFlowDefaults'];
+          final cashFlowDefaults = rawDefaults != null
+              ? Map<String, dynamic>.from(rawDefaults)
+              : <String, dynamic>{};
 
-        await generateCashFlowIfMissing(
-          realtorId: realtorId,
-          listings: allFilteredPropertiesForMap,
-          cashFlowDefaults: cashFlowDefaults,
-        );
+          await generateCashFlowIfMissing(
+            realtorId: currentUser.uid,
+            listings: allFilteredPropertiesForMap,
+            cashFlowDefaults: cashFlowDefaults,
+          );
+        }
       }
+
 
       _refreshMarkers();
 
@@ -493,7 +498,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
 
     final List<Map<String, dynamic>> fetchedProperties = snapshot.docs.map((
         doc) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = Map<String, dynamic>.from(doc.data());
 
       return {
         "id": doc.id,

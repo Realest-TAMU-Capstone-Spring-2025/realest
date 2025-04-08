@@ -230,7 +230,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
                           color: Colors.red,
                           size: 100) // ❤️ Heart for right swipe
                       : Image.network(
-                          'https://emojicdn.elk.sh/🙅‍♂️', //there were issues with the background of certain emojis
+                          'https://emojicdn.elk.sh/❌️', //there were issues with the background of certain emojis
                           width: 80,
                           height: 80,
                         ),
@@ -288,6 +288,12 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
         'realtorId': realtorId,
         'status': isLiked ? 'liked' : 'disliked',
         'timestamp': FieldValue.serverTimestamp(),
+        'sentByRealtor': (_useRealtorDecisions)? true : false,
+        'propertyData': {
+          'price': property.price,
+          'address': property.address,
+          'status': property.status,
+        }
       };
 
       await Future.wait([
