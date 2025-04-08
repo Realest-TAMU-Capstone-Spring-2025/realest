@@ -173,15 +173,27 @@ class _CustomLoginPageState extends State<CustomLoginPage>
   Future<void> _createAccount() async {
     if (_passwordController.text != _confirmPasswordController.text) {
       throw FirebaseAuthException(
-          code: 'password-mismatch', message: 'Passwords do not match');
+          code: 'password-mismatch',
+          message: 'Passwords do not match'
+      );
     }
+
+    // Create the Firebase auth account
     UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
     );
+
+    // Create a document for the new user in Firestore
     await _createUserDocument(userCredential.user!);
+
+    // Immediately fetch user data to update the provider
+    Provider.of<UserProvider>(context, listen: false).fetchUserData();
+
+    // Navigate after the user data has been (or is being) fetched
     _navigateAfterRegistration();
   }
+
 
   Future<void> _createUserDocument(User user) async {
     await _firestore.collection('users').doc(user.uid).set({

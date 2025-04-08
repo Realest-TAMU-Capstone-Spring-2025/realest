@@ -162,12 +162,12 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           'contactPhone': _contactPhoneController.text.trim(),
           'profilePicUrl': profilePicUrl,
           'createdAt': FieldValue.serverTimestamp(),
-          'status': 'Update',
+          'status': 'client',
           'notes': 'Account Created',
         }, SetOptions(merge: true)); // Merge to preserve existing realtorId
 
         if (mounted) {
-          context.go('/investorHome');
+          context.go('/home');
         }
       } catch (e) {
         if (mounted) {

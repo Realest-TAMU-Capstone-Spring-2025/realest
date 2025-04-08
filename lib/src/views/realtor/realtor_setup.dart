@@ -34,21 +34,9 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
 
   static const Color neonPurple = Color(0xFFa78cde);
 
-  String _generateInvitationCode() {
-    const String chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    Random random = Random();
-    return String.fromCharCodes(
-      Iterable.generate(
-        8,
-            (_) => chars.codeUnitAt(random.nextInt(chars.length)),
-      ),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
-    _invitationCodeController.text = _generateInvitationCode();
     User? currentUser = _auth.currentUser;
     if (currentUser != null && currentUser.email != null) {
       _contactEmailController.text = currentUser.email!;
@@ -130,7 +118,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
         });
 
         if (mounted) {
-          context.go("/realtorDashboard");
+          context.go("/home");
         }
       } catch (e) {
         if (mounted) {
@@ -404,13 +392,6 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
       ),
       SizedBox(height: isMobile ? 12 : 16),
       _buildTextField(_addressController, "Address", isMobile: isMobile),
-      SizedBox(height: isMobile ? 12 : 16),
-      _buildTextField(
-        _invitationCodeController,
-        "Invitation Code (Pre filled)",
-        readOnly: true,
-        isMobile: isMobile,
-      ),
       SizedBox(height: isMobile ? 20 : 30),
       Center(
         child: SizedBox(
