@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // For Firestore
 import '../../../../user_provider.dart';
+import 'client_details_drawer.dart';
 import 'mouse_region_provider.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -352,163 +353,21 @@ class _RealtorClientsState extends State<RealtorClients> {
 
   //client details dialog
   Future<void> _showClientDetailsDialog(String uid) async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final realtorId = userProvider.uid;
-
-    final clientDoc = await FirebaseFirestore.instance.collection('investors').doc(uid).get();
-    final data = clientDoc.data();
-    if (data == null) return;
-
-    final TextEditingController notesController = TextEditingController(text: data['notes'] ?? '');
-
-    final tagsSnapshot = await FirebaseFirestore.instance
-        .collection('realtors')
-        .doc(realtorId)
-        .collection('tags')
-        .get();
-
-    List<QueryDocumentSnapshot> allTags = tagsSnapshot.docs;
-    List<String> assignedTags = allTags
-        .where((doc) => (doc['investors'] as List).contains(uid))
-        .map((doc) => doc.id)
-        .toList();
-
-    final TextEditingController searchController = TextEditingController();
-
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setModalState) {
-          final filteredTags = allTags.where((doc) {
-            final searchLower = searchController.text.toLowerCase();
-            return doc['name'].toLowerCase().contains(searchLower);
-          }).toList();
-
-          return Dialog(
-            insetPadding: const EdgeInsets.all(16),
-            child: Container(
-              width: 600,
-              padding: const EdgeInsets.all(20),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("${data['firstName']} ${data['lastName']}",
-                        style: Theme.of(context).textTheme.headlineSmall),
-                    const SizedBox(height: 8),
-                    Text("Email: ${data['contactEmail']}"),
-                    Text(data['contactPhone']?.isNotEmpty ?? false
-                        ? "Phone: +1 ${data['contactPhone']}"
-                        : "Phone: Not provided"),
-                    const Divider(height: 32),
-                    const SizedBox(height: 8),
-                    Text("Notes", style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: notesController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: "Client notes...",
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Tag assignment section with search
-                    Text("Assign Tags", style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: searchController,
-                      decoration: InputDecoration(
-                        hintText: "Search tags...",
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (_) => setModalState(() {}),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 200,
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: filteredTags.length,
-                        itemBuilder: (context, index) {
-                          final tagDoc = filteredTags[index];
-                          final isAssigned = assignedTags.contains(tagDoc.id);
-
-                          return CheckboxListTile(
-                            secondary: CircleAvatar(
-                              backgroundColor: Color(tagDoc['color']),
-                            ),
-                            title: Text(tagDoc['name']),
-                            value: isAssigned,
-                            onChanged: (checked) async {
-                              final docRef = FirebaseFirestore.instance
-                                  .collection('realtors')
-                                  .doc(realtorId)
-                                  .collection('tags')
-                                  .doc(tagDoc.id);
-
-                              if (checked == true) {
-                                await docRef.update({
-                                  'investors': FieldValue.arrayUnion([uid])
-                                });
-                                assignedTags.add(tagDoc.id);
-                              } else {
-                                await docRef.update({
-                                  'investors': FieldValue.arrayRemove([uid])
-                                });
-                                assignedTags.remove(tagDoc.id);
-                              }
-                              setModalState(() {});
-                            },
-                          );
-                        },
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          //make red
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.red,
-                          ),
-                          onPressed: () {
-                            _deleteClient(uid, "${data['firstName']} ${data['lastName']}");
-                          },
-                          child: const Text("Delete Client"),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Cancel"),
-                        ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            await FirebaseFirestore.instance
-                                .collection('investors')
-                                .doc(uid)
-                                .update({
-                              'notes': notesController.text.trim(),
-                            });
-                            Navigator.pop(context);
-                            _fetchClients();
-                          },
-                          child: const Text("Save"),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        });
-      },
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: SizedBox(
+          width: 500,
+          child: ClientDetailsDrawer(
+            clientUid: uid,
+            onClose: () => Navigator.of(context).pop(),
+          ),
+        ),
+      ),
     );
   }
+
 
   Widget _buildNewLeadCard(Map<String, dynamic> client) {
     final theme = Theme.of(context);
