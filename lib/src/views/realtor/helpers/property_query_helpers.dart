@@ -54,6 +54,9 @@ Query<Map<String, dynamic>> buildFilteredQuery(PropertyFilter filters) {
   if (filters.maxDaysOnMarket != null) {
     query = query.where('days_on_mls', isLessThanOrEqualTo: filters.maxDaysOnMarket);
   }
+  if (filters.maxHOAFee != null) {
+    query = query.where('hoa_fee', isLessThanOrEqualTo: filters.maxHOAFee);
+  }
 
   return query.orderBy('days_on_mls');
 }

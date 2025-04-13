@@ -77,6 +77,7 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
   bool? isNewConstruction;
   int? tempMaxFloors;
   int? tempMaxDaysOnMarket;
+  int? tempMaxHOAFee;
 
   @override
   void initState() {
@@ -96,6 +97,7 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
     isNewConstruction = f.isNewConstruction;
     tempMaxFloors = f.maxFloors;
     tempMaxDaysOnMarket = f.maxDaysOnMarket;
+    tempMaxHOAFee = f.maxHOAFee;
   }
 
   final Set<String> hoveredStatus = {};
@@ -173,7 +175,6 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
                       });
                     },
                   ),
-
                   const SizedBox(height: 16),
                   MinMaxSelector(
                     label: "Lot Size",
@@ -189,7 +190,6 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
                       });
                     },
                   ),
-
                   const SizedBox(height: 16),
                   MinMaxYearInput(
                     minYear: tempMinYearBuilt,
@@ -279,6 +279,29 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
                     )),
                   ),
                   const SizedBox(height: 16),
+                  const Text("Max HOA Fee", style: TextStyle(fontWeight: FontWeight.bold)),
+                  DropdownButtonFormField<int>(
+                    value: tempMaxHOAFee,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    hint: const Text("Any"),
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text("Any")),
+                      DropdownMenuItem(value: 20, child: Text("\$20")),
+                      DropdownMenuItem(value: 50, child: Text("\$50")),
+                      DropdownMenuItem(value: 100, child: Text("\$100")),
+                      DropdownMenuItem(value: 200, child: Text("\$200")),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        tempMaxHOAFee = val;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
                   const Text("Days on MLS", style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<int>(
@@ -307,9 +330,7 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
               ),
             ),
           ),
-
           const SizedBox(height: 16),
-
           // Bottom fixed Apply/Cancel button row
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -338,6 +359,7 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
                       isNewConstruction: isNewConstruction,
                       maxFloors: tempMaxFloors,
                       maxDaysOnMarket: tempMaxDaysOnMarket,
+                      maxHOAFee: tempMaxHOAFee,
                     ),
                   );
                 },
@@ -353,20 +375,6 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
       ),
     );
   }
-
-  Widget _buildDaysChip({required String label, required int value}) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: tempMaxDaysOnMarket == value,
-      selectedColor: Colors.deepPurple.shade100,
-      onSelected: (_) {
-        setState(() {
-          tempMaxDaysOnMarket = value;
-        });
-      },
-    );
-  }
-
 }
 
 
