@@ -71,7 +71,13 @@ class PropertySummaryWidget extends StatelessWidget {
                       onPressed: () => _launchGoogleMaps(address),
                     ),
                   ],
-                )
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "MLS: ${property["mls"] ?? "N/A"} • Days on MLS: ${property["days_on_mls"] ?? "N/A"} • ID: ${property["mls_id"] ?? "N/A"}",
+                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                ),
+
               ],
             ),
           ),
