@@ -102,8 +102,6 @@ class PropertyDetailSheet extends StatelessWidget {
                   TaxAssessmentWidget(taxHistory: property["tax_history"] ?? []),
                   const SizedBox(height: 8),
                   PropertyExtraDetailsPanel(property: property),
-                  const SizedBox(height: 8),
-                  AgentInfoPanel(property: property),
                   const SizedBox(height: 20),
                   PropertyLocationWidget(
                     latitude: property["latitude"] ?? 0.0,
