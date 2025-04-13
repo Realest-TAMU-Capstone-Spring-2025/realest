@@ -31,6 +31,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   bool _noMoreProperties = false;
   bool _noRealtorAssigned = true;
   bool _useRealtorDecisions = false;
+  int _realtorPropertyCount = 0; // Add this to your state
 
   @override
   void initState() {
@@ -86,6 +87,8 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
   Future<void> _loadRealtorProperties() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
+
+// After propertyIds is populated
     if (userId == null) {
       setState(() {
         _noMoreProperties = true;
@@ -125,6 +128,8 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           .map((doc) => doc['propertyId'] as String)
           .toList();
 
+      _realtorPropertyCount = propertyIds.length;
+
       if (propertyIds.isEmpty) {
         setState(() {
           _noMoreProperties = true;
@@ -144,6 +149,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
       setState(() {
         _properties = properties;
+        _realtorPropertyCount = properties.length;
         _noRealtorAssigned = false;
         _noMoreProperties = false;
       });
@@ -356,8 +362,41 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           color: Colors.deepPurple,
           fillColor: Colors.deepPurple,
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
-          children: const [
-            Text("From Realtor"),
+          children: [
+            Stack(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text("From Realtor"),
+                ),
+                if (_realtorPropertyCount > 0)
+                  Positioned(
+                    right: 0,
+                    top: -2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 20,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$_realtorPropertyCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
             Text("Recommended"),
           ],
         ),
