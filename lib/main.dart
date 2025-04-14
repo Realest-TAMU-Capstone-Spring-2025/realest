@@ -33,7 +33,7 @@ import 'package:realest/src/views/mobile_home_page.dart';
 // Provider and user-related imports
 import 'user_provider.dart';
 
-final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.light);
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.dark);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -397,6 +397,9 @@ ThemeData _lightTheme() {
         backgroundColor: Colors.deepPurpleAccent,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -410,7 +413,14 @@ ThemeData _lightTheme() {
           side: const BorderSide(color: Colors.deepPurpleAccent),
         ),
       ),
-    )
+    ),
+    //expansion panel theme border round
+    expansionTileTheme: ExpansionTileThemeData(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+    ),
+    ),
+
   );
 
 }
@@ -421,7 +431,7 @@ ThemeData _darkTheme() {
     scaffoldBackgroundColor: const Color(0xFF1E1E1E),
     cardColor: const Color(0xFF2C2C2C),
     colorScheme: const ColorScheme.dark(
-      primary: Colors.deepPurpleAccent,
+      primary: const Color(0xFFCA93FF),
       secondary: Colors.white70,
       surface: Color(0xFF2C2C2C),
       surfaceVariant: Color(0xFF121212),
@@ -456,6 +466,9 @@ ThemeData _darkTheme() {
         backgroundColor: Colors.deepPurpleAccent,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
