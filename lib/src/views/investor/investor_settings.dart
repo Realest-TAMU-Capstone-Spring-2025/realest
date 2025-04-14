@@ -29,6 +29,19 @@ class _InvestorSettingsState extends State<InvestorSettings> {
   final TextEditingController _contactPhoneController = TextEditingController();
   final TextEditingController _investorNotesController = TextEditingController();
 
+  final Map<String, TextEditingController> _cashFlowControllers = {
+    'downPayment': TextEditingController(),
+    'interestRate': TextEditingController(),
+    'loanTerm': TextEditingController(),
+  };
+
+  final Map<String, String> _cashFlowFieldTypes = {
+    'downPayment': 'percent',
+    'interestRate': 'percent',
+    'loanTerm': 'years',
+  };
+
+
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -60,6 +73,17 @@ class _InvestorSettingsState extends State<InvestorSettings> {
             _contactPhoneController.text = doc['contactPhone'] ?? '';
             _investorNotesController.text = doc['investorNotes'] ?? '';
             _profilePicUrl = doc['profilePicUrl'] ?? '';
+            final cashFlow = doc['cashFlowDefaults'] ?? {};
+            cashFlow.forEach((key, value) {
+              if (_cashFlowControllers.containsKey(key)) {
+                final type = _cashFlowFieldTypes[key];
+                if (type == 'percent' && value is num) {
+                  _cashFlowControllers[key]!.text = (value * 100).toString();
+                } else {
+                  _cashFlowControllers[key]!.text = value.toString();
+                }
+              }
+            });
           });
         }
       } catch (e) {
@@ -197,7 +221,7 @@ class _InvestorSettingsState extends State<InvestorSettings> {
                   _buildTextField("Contact Email:", _contactEmailController, theme),
                   _buildTextField("Contact Phone:", _contactPhoneController, theme),
                   _buildTextField("Investor Notes:", _investorNotesController, theme),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   // Save / Cancel Buttons
                   Center(
                     child: Row(
@@ -207,10 +231,7 @@ class _InvestorSettingsState extends State<InvestorSettings> {
                           width: 200,
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _updateInvestorData,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              textStyle: Theme.of(context).textTheme.bodyLarge,
-                            ),
+
                             child: _isLoading
                                 ? const CircularProgressIndicator()
                                 : const Text("Save Changes"),
@@ -231,6 +252,56 @@ class _InvestorSettingsState extends State<InvestorSettings> {
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: 20),
+                  ExpansionTile(
+                    title: const Text("Investment Defaults"),
+                    initiallyExpanded: false,
+                    children: [
+                      ..._cashFlowControllers.entries.map((entry) {
+                        final key = entry.key;
+                        final controller = entry.value;
+                        final type = _cashFlowFieldTypes[key] ?? 'text';
+
+                        Widget suffix;
+                        switch (type) {
+                          case 'percent':
+                            suffix = const Text('%');
+                            break;
+                          case 'years':
+                            suffix = const Text('yrs');
+                            break;
+                          default:
+                            suffix = const SizedBox();
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: TextField(
+                            controller: controller,
+                            keyboardType: TextInputType.numberWithOptions(decimal: true),
+                            decoration: InputDecoration(
+                              constraints: const BoxConstraints(maxWidth: 200),
+                              labelText: _formatLabel(key),
+                              suffix: suffix,
+                              filled: true,
+                              fillColor: theme.inputDecorationTheme.fillColor,
+                              border: theme.inputDecorationTheme.border,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: ElevatedButton(
+                          onPressed: _saveInvestorDefaults,
+                          child: const Text("Save Defaults"),
+                        ),
+                      ),
+                    ],
+                  ),
+
                 ],
               ),
             ),
@@ -270,4 +341,42 @@ class _InvestorSettingsState extends State<InvestorSettings> {
       ),
     );
   }
+
+  String _formatLabel(String key) {
+    return key.replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (match) {
+      return '${match.group(1)} ${match.group(2)}';
+    }).replaceFirstMapped(RegExp(r'^.'), (m) => m.group(0)!.toUpperCase());
+  }
+
+  Future<void> _saveInvestorDefaults() async {
+    final User? user = _auth.currentUser;
+    if (user == null) return;
+
+    final Map<String, dynamic> updated = {};
+    _cashFlowControllers.forEach((key, controller) {
+      final val = controller.text.trim();
+      final type = _cashFlowFieldTypes[key];
+      if (type == 'percent') {
+        updated[key] = (double.tryParse(val) ?? 0) / 100;
+      } else if (type == 'years') {
+        updated[key] = int.tryParse(val) ?? 0;
+      } else {
+        updated[key] = double.tryParse(val) ?? val;
+      }
+    });
+
+    try {
+      await _firestore.collection('investors').doc(user.uid).update({
+        'cashFlowDefaults': updated,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Defaults saved")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update defaults: $e")),
+      );
+    }
+  }
+
 }
