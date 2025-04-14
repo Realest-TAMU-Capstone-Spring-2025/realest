@@ -4,10 +4,21 @@ const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const sgMail = require("@sendgrid/mail");
+const crypto = require("crypto");
+
 // const functions = require("firebase-functions");
 import * as functions from "firebase-functions";
 
 sgMail.setApiKey(functions.config().sendgrid.api_key);
+
+
+
+function generateRandomPassword(length = 10) {
+  return crypto.randomBytes(length)
+    .toString('base64')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .slice(0, length);
+}
 
 initializeApp();
 
@@ -29,7 +40,7 @@ exports.promoteClient = onCall(async (data: any, context: any) => {
   }
 
   const { uid, email } = data;
-  const password = "TempPass123!";
+  const password = generateRandomPassword(10);
 
   try {
     await getAuth().createUser({
