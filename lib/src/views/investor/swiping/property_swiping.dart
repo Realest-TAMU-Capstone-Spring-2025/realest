@@ -82,8 +82,32 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
       await _loadRealtorProperties();
     } else {
       await _loadNormalProperties();
+      await _loadRealtorPropertiesCount();
     }
   }
+
+  Future<void> _loadRealtorPropertiesCount() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+    try {
+      final investorDoc = await _db.collection('investors').doc(userId).get();
+      final realtorId = investorDoc.data()?['realtorId'] as String?;
+      if (realtorId == null) return;
+      final propertyCountSnapshot = await _db
+          .collection('investors')
+          .doc(userId)
+          .collection('property_interactions')
+          .where('status', isEqualTo: 'sent')
+          .get();
+      setState(() {
+        _realtorPropertyCount = propertyCountSnapshot.docs.length;
+      });
+    } catch (e) {
+      print('Error loading realtor property count: $e');
+    }
+  }
+
+
 
   Future<void> _loadRealtorProperties() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -149,7 +173,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
       setState(() {
         _properties = properties;
-        _realtorPropertyCount = properties.length;
+        _realtorPropertyCount =  propertyIds.length;
         _noRealtorAssigned = false;
         _noMoreProperties = false;
       });
@@ -182,7 +206,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
       final listingsSnapshot = await _db
           .collection('listings')
           .where('status', isEqualTo: 'FOR_SALE')
-          .limit(50) // fetch more since you'll filter some out
+          .limit(100) // fetch more since you'll filter some out
           .get();
 
       final allProperties = listingsSnapshot.docs
@@ -315,6 +339,9 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
         if (_properties.isEmpty) {
           _noMoreProperties = true;
         }
+        if(_useRealtorDecisions) {
+          _realtorPropertyCount--;
+        }
       });
     }
     _showSwipeAnimation(direction);
@@ -363,17 +390,12 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           fillColor: Colors.deepPurple,
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
           children: [
-            Stack(
+            Row(
+              spacing: 0,
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Text("From Realtor"),
-                ),
                 if (_realtorPropertyCount > 0)
-                  Positioned(
-                    right: 0,
-                    top: -2,
-                    child: Container(
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.red,
@@ -393,11 +415,13 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
                         textAlign: TextAlign.center,
                       ),
                     ),
-                  ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text("From Realtor"),
+                ),
               ],
             ),
-
-            Text("Recommended"),
+            const Text("Recommended"),
           ],
         ),
         actions: [
@@ -412,10 +436,11 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
       body: _properties.isEmpty
           ? Center(
               child: _noMoreProperties
-                  ? (_noRealtorAssigned && _useRealtorDecisions
+                  ? _useRealtorDecisions? (_noRealtorAssigned
                       ? Text('No realtor assigned. Please contact support.')
                       : Text(
-                          'No more properties available. Your realtor is busy finding properties that you like.'))
+                          'No more properties available. Your realtor is busy finding properties that you like.')):
+                  Text('No more recommended properties.')
                   : CircularProgressIndicator(),
             )
           : CardSwiper(
