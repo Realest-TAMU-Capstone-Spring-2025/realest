@@ -371,6 +371,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: ToggleButtons(
@@ -386,7 +387,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           borderRadius: BorderRadius.circular(8),
           constraints: const BoxConstraints(minHeight: 36, minWidth: 120),
           selectedColor: Colors.white,
-          color: Colors.deepPurple,
+          color: theme.colorScheme.primary,
           fillColor: Colors.deepPurple,
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
           children: [
@@ -507,7 +508,7 @@ class PropertySwipeCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: isDarkMode ? Colors.black : Colors.white,
+            color: theme.colorScheme.onTertiary,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
@@ -650,7 +651,7 @@ class PropertySwipeCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.black54.withOpacity(0.05),
+                        color: theme.colorScheme.onSurface.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
