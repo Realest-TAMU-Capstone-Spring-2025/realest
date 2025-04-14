@@ -10,6 +10,7 @@ class CashFlowEditDialog extends StatefulWidget {
   final String listingId;
   final String realtorId;
   final void Function(Map<String, dynamic>) onSave;
+  final bool isRealtor;
 
   const CashFlowEditDialog({
     super.key,
@@ -19,6 +20,7 @@ class CashFlowEditDialog extends StatefulWidget {
     required this.listingId,
     required this.realtorId,
     required this.onSave,
+    required this.isRealtor,
   });
 
   @override
@@ -30,14 +32,16 @@ class _CashFlowEditDialogState extends State<CashFlowEditDialog> {
   Map<String, double> estimate = {};
 
   final fieldGroups = {
-    'Loan & Purchase': ['downPayment', 'interestRate', 'loanTerm'],
+    'Loan Details': ['downPayment', 'interestRate', 'loanTerm'],
     'Taxes & Insurance': ['propertyTax', 'insurance'],
     'Operating Expenses': ['maintenance', 'managementFee', 'vacancyRate', 'hoaFee', 'otherCosts'],
     'Income': ['customIncome'],
   };
 
+
+
   final percentFields = [
-    'downPayment', 'interestRate', 'propertyTax', 'insurance', 'maintenance', 'managementFee', 'vacancyRate'
+    'propertyTax', 'insurance', 'maintenance', 'managementFee', 'vacancyRate'
   ];
 
   @override
@@ -112,17 +116,20 @@ class _CashFlowEditDialogState extends State<CashFlowEditDialog> {
                         Wrap(
                           spacing: 16,
                           runSpacing: 12,
-                          children: entry.value.map((field) => SizedBox(
+                          children: entry.value
+                              .where((field) => widget.isRealtor || entry.key != 'Loan Details') // hide loan fields for investors
+                              .map((field) => SizedBox(
                             width: MediaQuery.of(context).size.width * 0.35,
                             child: TextField(
                               controller: controllers[field],
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
                                 labelText: _labelForField(field),
-                                border: const OutlineInputBorder(),
                               ),
                             ),
-                          )).toList(),
+                          ))
+                              .toList(),
+
                         ),
                       ],
                       const SizedBox(height: 20),
