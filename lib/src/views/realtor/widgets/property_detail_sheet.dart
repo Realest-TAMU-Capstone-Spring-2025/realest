@@ -164,12 +164,13 @@ class PropertyDetailSheet extends StatelessWidget {
               'status': 'sent',
               'timestamp': FieldValue.serverTimestamp(),
               'sentByRealtor': true,
-              'propertyDetails':
+              'propertyData':
               {
-                'price': property['price'] ?? 0,
+                'price': property['list_price'] ?? 0,
                 'address': property['address'] ?? '',
                 'status': property['status'] ?? '',
               }
+
             };
 
             //create the interaction data for investor
@@ -189,7 +190,9 @@ class PropertyDetailSheet extends StatelessWidget {
           await batch.commit();
 
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Property sent to ${selectedClientIds.length} investor(s)!')),
+            SnackBar(content: Text('Property sent to ${selectedClientIds.length} investor(s)!'),
+              backgroundColor: Colors.green,
+            ),
           );
         },
         property: property, // assuming this is defined and passed properly
