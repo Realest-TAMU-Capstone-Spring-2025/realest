@@ -2,29 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:realest/main.dart';
 import '../../user_provider.dart';
-import 'package:flutter/services.dart'; // For clipboard functionality
 
 class ProfilePic extends StatelessWidget {
   final VoidCallback toggleTheme;
-  final bool isDarkMode;
   final VoidCallback onAccountSettings;
 
-  const ProfilePic({
+
+   ProfilePic({
     Key? key,
     required this.toggleTheme,
-    required this.isDarkMode,
     required this.onAccountSettings,
-  }) : super(key: key);
+   }) : super(key: key);
+
 
   void _showProfileDialog(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final String fullName = '${userProvider.firstName ?? ''} ${userProvider.lastName ?? ''}'.trim();
     final String contactEmail = userProvider.contactEmail ?? '';
-    final String contactPhone = userProvider.contactPhone ?? '';
     final String profilePicUrl = userProvider.profilePicUrl ?? '';
-    final String invitationCode = userProvider.invitationCode ?? '';
-    final String userRole = userProvider.userRole ?? '';
 
     showDialog(
       context: context,
@@ -68,43 +65,6 @@ class ProfilePic extends StatelessWidget {
                       style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      contactPhone.isNotEmpty ? contactPhone : 'No Phone',
-                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 5),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          userRole == 'realtor'
-                              ? invitationCode.isNotEmpty
-                              ? 'Invitation Code: $invitationCode'
-                              : 'No Invitation Code'
-                              : '',
-                          style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (invitationCode.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: Icon(Icons.copy, size: 20, color: theme.colorScheme.primary),
-                            onPressed: () {
-                              Clipboard.setData(ClipboardData(text: invitationCode));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Invitation code copied to clipboard!'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            tooltip: 'Copy to clipboard',
-                          ),
-                        ],
-                      ],
-                    ),
                     const SizedBox(height: 20),
                     const Divider(color: Colors.grey),
                     ListTile(
@@ -120,16 +80,24 @@ class ProfilePic extends StatelessWidget {
                     ),
                     const Divider(color: Colors.grey),
                     SwitchListTile(
-                      secondary: Icon(Icons.notifications, color: theme.colorScheme.onSurface),
+                      secondary: Icon(Icons.notifications, color: theme.disabledColor),
                       title: Text(
                         "Notifications",
-                        style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 16,
+                          color: theme.disabledColor,
+                        ),
                       ),
-                      value: true, // Replace with actual notification state
-                      onChanged: (bool value) {
-                        // Handle notifications toggle
-                      },
+                      subtitle: Text(
+                        "Coming soon",
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.disabledColor,
+                        ),
+                      ),
+                      value: true, // or false depending on your default
+                      onChanged: null,
                     ),
+
                     const Divider(color: Colors.grey),
                     SwitchListTile(
                       secondary: Icon(Icons.dark_mode, color: theme.colorScheme.onSurface),
@@ -137,11 +105,12 @@ class ProfilePic extends StatelessWidget {
                         "Dark Mode",
                         style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
                       ),
-                      value: isDarkMode,
+                      value: themeModeNotifier.value == ThemeMode.dark, // ✅ use directly
                       onChanged: (bool value) {
-                        toggleTheme(); // Simply call the toggleTheme callback
+                        toggleTheme(); // Flip between dark and light
                       },
                     ),
+
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 10),
                     InkWell(
@@ -194,12 +163,12 @@ class ProfilePic extends StatelessWidget {
                       child: Row(
                         children: [
                           const SizedBox(width: 18),
-                          Icon(Icons.logout, color: Theme.of(context).colorScheme.primary),
+                          Icon(Icons.logout, color: Colors.red),
                           const SizedBox(width: 12),
                           Text(
                             "Log Out",
                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
+                              color: Colors.red,
                               fontSize: 16,
                             ),
                           ),

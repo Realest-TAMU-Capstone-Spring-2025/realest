@@ -33,7 +33,6 @@ class _RealtorClientsState extends State<RealtorClients> {
   );
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  double _searchBarWidth = 0;
 
 
   @override
@@ -498,7 +497,7 @@ class _RealtorClientsState extends State<RealtorClients> {
             Wrap(
               spacing: 8,
               children: [
-                TextButton(
+                OutlinedButton(
                   onPressed: () => showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -530,10 +529,6 @@ class _RealtorClientsState extends State<RealtorClients> {
                 OutlinedButton(
                   onPressed: () => _deleteLead(uid,  client['firstName'] + " " + client['lastName']),
                   child: const Text("Reject"),
-                ),
-                ElevatedButton(
-                  onPressed: () => _sendInviteEmail(client),
-                  child: const Text("Send Invite Email"),
                 ),
               ],
             )
@@ -747,9 +742,7 @@ class _RealtorClientsState extends State<RealtorClients> {
 Widget _buildSearchOptions(BuildContext context,
   AutocompleteOnSelected<Map<String, dynamic>> onSelected,
   Iterable<Map<String, dynamic>> options) {
-  final double availableWidth = _searchBarWidth > 0 
-    ? _searchBarWidth 
-    : MediaQuery.of(context).size.width - 32;
+  final double availableWidth = 300;
   
   final double maxHeight = MediaQuery.of(context).size.height * 0.5;
   
@@ -825,11 +818,10 @@ Widget _buildSearchOptions(BuildContext context,
               Row(
                 children: [
                   Text(
-                    'Client Management',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    "Client Management",
+                    style: Theme.of(context).textTheme.headlineMedium,
+                    textAlign: TextAlign.start,
+
                   ),
                   const SizedBox(width: 16),
                 ],
@@ -853,24 +845,16 @@ Widget _buildSearchOptions(BuildContext context,
                                       (context, controller, focusNode, onFieldSubmitted) {
                                     final searchBarKey = GlobalKey();
                                     return TextField(
+                                      autofillHints: const [AutofillHints.name],
                                       key: searchBarKey,
                                       controller: controller,
                                       focusNode: focusNode,
                                       decoration: InputDecoration(
                                         hintText: 'Search clients...',
-                                        prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface),
-                                        border: const OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.search),
                                         contentPadding: const EdgeInsets.symmetric(vertical: 14),
                                       ),
-                                      onTap: () {
-                                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                                          if (searchBarKey.currentContext != null) {
-                                            // final RenderBox box = searchBarKey.currentContext!.findRenderObject() as RenderBox;
-                                            // _searchBarWidth = box.size.width;
-                                            setState(() {});
-                                          }
-                                        });
-                                      },
+                                      onTap: () {},
                                     );
                                   },
                                   optionsViewBuilder: (context, onSelected, options) => 
@@ -903,18 +887,8 @@ Widget _buildSearchOptions(BuildContext context,
                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
                             const Spacer(),
-                            ElevatedButton.icon(
-                              onPressed: _addNewLeadDialog,
-                              icon: const Icon(Icons.add, size: 18),
-                              label: const Text("Add Lead"),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                textStyle: const TextStyle(fontSize: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
+                            IconButton(onPressed: _addNewLeadDialog, icon: const Icon(Icons.add))
+
                           ],
                         ),
                       );
