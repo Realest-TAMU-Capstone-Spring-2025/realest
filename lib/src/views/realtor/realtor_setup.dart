@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:math';
 import 'package:google_fonts/google_fonts.dart';
 
 class RealtorSetupPage extends StatefulWidget {
@@ -26,11 +25,19 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
   final TextEditingController _contactEmailController = TextEditingController();
   final TextEditingController _contactPhoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _invitationCodeController = TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
   Uint8List? _profileImageBytes;
+
+  // Validation error states
+  String? _firstNameError;
+  String? _lastNameError;
+  String? _agencyNameError;
+  String? _licenseNumberError;
+  String? _contactEmailError;
+  String? _contactPhoneError;
+  String? _addressError;
 
   static const Color neonPurple = Color(0xFFa78cde);
 
@@ -41,6 +48,150 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     if (currentUser != null && currentUser.email != null) {
       _contactEmailController.text = currentUser.email!;
     }
+
+    // Add listeners for real-time validation
+    _firstNameController.addListener(_validateFirstName);
+    _lastNameController.addListener(_validateLastName);
+    _agencyNameController.addListener(_validateAgencyName);
+    _licenseNumberController.addListener(_validateLicenseNumber);
+    _contactEmailController.addListener(_validateContactEmail);
+    _contactPhoneController.addListener(_validateContactPhone);
+    _addressController.addListener(_validateAddress);
+  }
+
+  @override
+  void dispose() {
+    // Remove listeners
+    _firstNameController.removeListener(_validateFirstName);
+    _lastNameController.removeListener(_validateLastName);
+    _agencyNameController.removeListener(_validateAgencyName);
+    _licenseNumberController.removeListener(_validateLicenseNumber);
+    _contactEmailController.removeListener(_validateContactEmail);
+    _contactPhoneController.removeListener(_validateContactPhone);
+    _addressController.removeListener(_validateAddress);
+
+    // Dispose controllers
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _agencyNameController.dispose();
+    _licenseNumberController.dispose();
+    _contactEmailController.dispose();
+    _contactPhoneController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
+
+  void _validateFirstName() {
+    final value = _firstNameController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _firstNameError = 'First name is required';
+      } else {
+        _firstNameError = null;
+      }
+    });
+  }
+
+  void _validateLastName() {
+    final value = _lastNameController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _lastNameError = 'Last name is required';
+      } else {
+        _lastNameError = null;
+      }
+    });
+  }
+
+  void _validateAgencyName() {
+    final value = _agencyNameController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _agencyNameError = 'Agency name is required';
+      } else if (value.length < 3) {
+        _agencyNameError = 'Agency name must be at least 3 characters';
+      } else {
+        _agencyNameError = null;
+      }
+    });
+  }
+
+  void _validateLicenseNumber() {
+    final value = _licenseNumberController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _licenseNumberError = 'License number is required';
+      } else if (value.length < 5) {
+        _licenseNumberError = 'License number must be at least 5 characters';
+      } else if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value)) {
+        _licenseNumberError = 'License number must be alphanumeric';
+      } else {
+        _licenseNumberError = null;
+      }
+    });
+  }
+
+  void _validateContactEmail() {
+    final value = _contactEmailController.text.trim();
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    setState(() {
+      if (value.isEmpty) {
+        _contactEmailError = 'Email is required';
+      } else if (!emailRegex.hasMatch(value)) {
+        _contactEmailError = 'Enter a valid email';
+      } else {
+        _contactEmailError = null;
+      }
+    });
+  }
+
+  void _validateContactPhone() {
+    final value = _contactPhoneController.text.trim();
+    // Normalize phone number by removing non-digits
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    setState(() {
+      if (value.isEmpty) {
+        _contactPhoneError = 'Phone number is required';
+      } else if (digits.length != 10) {
+        _contactPhoneError = 'Phone number must be 10 digits';
+      } else {
+        _contactPhoneError = null;
+      }
+    });
+  }
+
+  void _validateAddress() {
+    final value = _addressController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _addressError = 'Address is required';
+      } else if (value.length < 5) {
+        _addressError = 'Address must be at least 5 characters';
+      } else {
+        _addressError = null;
+      }
+    });
+  }
+
+  List<String> _validateFields() {
+    List<String> errors = [];
+    _validateFirstName();
+    _validateLastName();
+    _validateAgencyName();
+    _validateLicenseNumber();
+    _validateContactEmail();
+    _validateContactPhone();
+    _validateAddress();
+
+    if (_firstNameError != null) errors.add(_firstNameError!);
+    if (_lastNameError != null) errors.add(_lastNameError!);
+    if (_agencyNameError != null) errors.add(_agencyNameError!);
+    if (_licenseNumberError != null) errors.add(_licenseNumberError!);
+    if (_contactEmailError != null) errors.add(_contactEmailError!);
+    if (_contactPhoneError != null) errors.add(_contactPhoneError!);
+    if (_addressError != null) errors.add(_addressError!);
+
+    return errors;
   }
 
   Future<void> _pickImage() async {
@@ -54,6 +205,28 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
   }
 
   void _saveRealtorData() async {
+    List<String> errors = _validateFields();
+    if (errors.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Validation Error'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: errors.map((error) => Text('• $error')).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -85,14 +258,13 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
         await _firestore.collection('realtors').doc(uid).set({
           'uid': uid,
           'firstName': _firstNameController.text.trim(),
-          'lastName': _lastNameController.text.trim(),
+          'lastName': _firstNameController.text.trim(),
           'agencyName': _agencyNameController.text.trim(),
           'licenseNumber': _licenseNumberController.text.trim(),
           'contactEmail': _contactEmailController.text.trim(),
           'contactPhone': _contactPhoneController.text.trim(),
           'address': _addressController.text.trim(),
           'profilePicUrl': profilePicUrl,
-          'invitationCode': _invitationCodeController.text,
           'createdAt': FieldValue.serverTimestamp(),
           'cashFlowDefaults': {
             'useLoan': true,
@@ -150,6 +322,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
         TextInputType keyboardType = TextInputType.text,
         bool readOnly = false,
         required bool isMobile,
+        String? error,
       }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,7 +336,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
         ),
         const SizedBox(height: 8),
         SizedBox(
-          width: isMobile ? 400 : 700,
+          width: isMobile ? 400 : 1000,
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
@@ -174,15 +347,36 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
               fillColor: Colors.grey[900],
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(15.0),
-                borderSide: const BorderSide(color: neonPurple, width: 1),
+                borderSide: BorderSide(
+                  color: error != null ? Colors.red : neonPurple,
+                  width: 1,
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(15.0),
-                borderSide: const BorderSide(color: neonPurple, width: 2),
+                borderSide: BorderSide(
+                  color: error != null ? Colors.red : neonPurple,
+                  width: 2,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15.0),
+                borderSide: const BorderSide(color: Colors.red, width: 1),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15.0),
+                borderSide: const BorderSide(color: Colors.red, width: 2),
               ),
             ),
           ),
         ),
+        if (error != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            error,
+            style: TextStyle(color: Colors.red, fontSize: isMobile ? 12 : 14),
+          ),
+        ],
       ],
     );
   }
@@ -234,7 +428,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
               child: SizedBox(
                 width: 400,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, // Aligns logo and content to the left
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Logo aligned to the left
                     Row(
@@ -255,7 +449,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: isMobile ? 20 : 40), // Space after logo
+                    SizedBox(height: isMobile ? 20 : 40),
                     ..._buildFormChildren(isMobile),
                   ],
                 ),
@@ -282,7 +476,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
               child: SizedBox(
                 width: 500,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, // Aligns logo and content to the left
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Logo aligned to the left
                     Row(
@@ -303,7 +497,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: isMobile ? 20 : 40), // Space after logo
+                    SizedBox(height: isMobile ? 20 : 40),
                     ..._buildFormChildren(isMobile),
                   ],
                 ),
@@ -356,11 +550,21 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
       Row(
         children: [
           Expanded(
-            child: _buildTextField(_firstNameController, "First Name", isMobile: isMobile),
+            child: _buildTextField(
+              _firstNameController,
+              "First Name",
+              isMobile: isMobile,
+              error: _firstNameError,
+            ),
           ),
           SizedBox(width: isMobile ? 12 : 16),
           Expanded(
-            child: _buildTextField(_lastNameController, "Last Name", isMobile: isMobile),
+            child: _buildTextField(
+              _lastNameController,
+              "Last Name",
+              isMobile: isMobile,
+              error: _lastNameError,
+            ),
           ),
         ],
       ),
@@ -368,11 +572,21 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
       Row(
         children: [
           Expanded(
-            child: _buildTextField(_agencyNameController, "Agency Name", isMobile: isMobile),
+            child: _buildTextField(
+              _agencyNameController,
+              "Agency Name",
+              isMobile: isMobile,
+              error: _agencyNameError,
+            ),
           ),
           SizedBox(width: isMobile ? 12 : 16),
           Expanded(
-            child: _buildTextField(_licenseNumberController, "License Number", isMobile: isMobile),
+            child: _buildTextField(
+              _licenseNumberController,
+              "License Number",
+              isMobile: isMobile,
+              error: _licenseNumberError,
+            ),
           ),
         ],
       ),
@@ -382,6 +596,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
         "Contact Email",
         keyboardType: TextInputType.emailAddress,
         isMobile: isMobile,
+        error: _contactEmailError,
       ),
       SizedBox(height: isMobile ? 12 : 16),
       _buildTextField(
@@ -389,13 +604,19 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
         "Contact Phone",
         keyboardType: TextInputType.phone,
         isMobile: isMobile,
+        error: _contactPhoneError,
       ),
       SizedBox(height: isMobile ? 12 : 16),
-      _buildTextField(_addressController, "Address", isMobile: isMobile),
+      _buildTextField(
+        _addressController,
+        "Address",
+        isMobile: isMobile,
+        error: _addressError,
+      ),
       SizedBox(height: isMobile ? 20 : 30),
       Center(
         child: SizedBox(
-          width: isMobile ? 400 : 700,
+          width: isMobile ? 400 : 1000,
           height: isMobile ? 45 : 50,
           child: ElevatedButton(
             onPressed: _isLoading ? null : _saveRealtorData,

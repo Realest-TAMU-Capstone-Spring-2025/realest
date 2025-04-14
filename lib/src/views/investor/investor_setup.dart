@@ -28,7 +28,28 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
   bool _isLoading = false;
   String? _errorMessage;
   Uint8List? _profileImageBytes;
-  String? _tempPassword; // To store the temp password for re-authentication
+  String? _tempPassword;
+
+  // Validation error states
+  String? _firstNameError;
+  String? _lastNameError;
+  String? _contactEmailError;
+  String? _contactPhoneError;
+  String? _newPasswordError;
+  String? _confirmPasswordError;
+
+  // Password visibility states
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
+
+  // Password requirement states
+  bool _hasMinLength = false;
+  bool _hasUppercase = false;
+  bool _hasLowercase = false;
+  bool _hasNumber = false;
+  bool _hasSpecialChar = false;
+  bool _showPasswordStrength = false;
+  double _passwordStrength = 0.0;
 
   static const Color neonPurple = Color(0xFFa78cde);
 
@@ -36,10 +57,27 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
   void initState() {
     super.initState();
     _prefillUserData();
+
+    // Add listeners for real-time validation
+    _firstNameController.addListener(_validateFirstName);
+    _lastNameController.addListener(_validateLastName);
+    _contactEmailController.addListener(_validateContactEmail);
+    _contactPhoneController.addListener(_validateContactPhone);
+    _newPasswordController.addListener(_validateNewPassword);
+    _confirmPasswordController.addListener(_validateConfirmPassword);
   }
 
   @override
   void dispose() {
+    // Remove listeners
+    _firstNameController.removeListener(_validateFirstName);
+    _lastNameController.removeListener(_validateLastName);
+    _contactEmailController.removeListener(_validateContactEmail);
+    _contactPhoneController.removeListener(_validateContactPhone);
+    _newPasswordController.removeListener(_validateNewPassword);
+    _confirmPasswordController.removeListener(_validateConfirmPassword);
+
+    // Dispose controllers
     _firstNameController.dispose();
     _lastNameController.dispose();
     _contactEmailController.dispose();
@@ -65,10 +103,140 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
         setState(() {
           _firstNameController.text = data['firstName'] ?? '';
           _lastNameController.text = data['lastName'] ?? '';
-          _tempPassword = data['tempPassword']; // Fetch temp password for re-authentication
+          _tempPassword = data['tempPassword'];
         });
       }
     }
+  }
+
+  void _validateFirstName() {
+    final value = _firstNameController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _firstNameError = 'First name is required';
+      } else {
+        _firstNameError = null;
+      }
+    });
+  }
+
+  void _validateLastName() {
+    final value = _lastNameController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _lastNameError = 'Last name is required';
+      } else {
+        _lastNameError = null;
+      }
+    });
+  }
+
+  void _validateContactEmail() {
+    final value = _contactEmailController.text.trim();
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    setState(() {
+      if (value.isEmpty) {
+        _contactEmailError = 'Email is required';
+      } else if (!emailRegex.hasMatch(value)) {
+        _contactEmailError = 'Enter a valid email';
+      } else {
+        _contactEmailError = null;
+      }
+    });
+  }
+
+  void _validateContactPhone() {
+    final value = _contactPhoneController.text.trim();
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    setState(() {
+      if (value.isEmpty) {
+        _contactPhoneError = 'Phone number is required';
+      } else if (digits.length != 10) {
+        _contactPhoneError = 'Phone number must be 10 digits';
+      } else {
+        _contactPhoneError = null;
+      }
+    });
+  }
+
+  void _validateNewPassword() {
+    final password = _newPasswordController.text;
+    setState(() {
+      _showPasswordStrength = password.isNotEmpty;
+      if (password.isEmpty) {
+        _newPasswordError = 'Password is required';
+        _hasMinLength = false;
+        _hasUppercase = false;
+        _hasLowercase = false;
+        _hasNumber = false;
+        _hasSpecialChar = false;
+        _passwordStrength = 0.0;
+      } else {
+        _hasMinLength = password.length >= 8;
+        _hasUppercase = RegExp(r'[A-Z]').hasMatch(password);
+        _hasLowercase = RegExp(r'[a-z]').hasMatch(password);
+        _hasNumber = RegExp(r'[0-9]').hasMatch(password);
+        _hasSpecialChar = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+
+        if (!_hasMinLength) {
+          _newPasswordError = 'Password must be at least 8 characters';
+        } else if (!_hasUppercase) {
+          _newPasswordError = 'Password must contain an uppercase letter';
+        } else if (!_hasLowercase) {
+          _newPasswordError = 'Password must contain a lowercase letter';
+        } else if (!_hasNumber) {
+          _newPasswordError = 'Password must contain a number';
+        } else if (!_hasSpecialChar) {
+          _newPasswordError = 'Password must contain a special character';
+        } else {
+          _newPasswordError = null;
+        }
+
+        _passwordStrength = _calculatePasswordStrength(password);
+      }
+    });
+  }
+
+  double _calculatePasswordStrength(String password) {
+    int strength = 0;
+    if (password.length >= 8) strength++;
+    if (RegExp(r'[A-Z]').hasMatch(password)) strength++;
+    if (RegExp(r'[a-z]').hasMatch(password)) strength++;
+    if (RegExp(r'[0-9]').hasMatch(password)) strength++;
+    if (RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) strength++;
+    return strength / 5.0;
+  }
+
+  void _validateConfirmPassword() {
+    final confirmPassword = _confirmPasswordController.text;
+    setState(() {
+      if (confirmPassword.isEmpty) {
+        _confirmPasswordError = 'Confirm password is required';
+      } else if (confirmPassword != _newPasswordController.text) {
+        _confirmPasswordError = 'Passwords do not match';
+      } else {
+        _confirmPasswordError = null;
+      }
+    });
+  }
+
+  List<String> _validateFields() {
+    List<String> errors = [];
+    _validateFirstName();
+    _validateLastName();
+    _validateContactEmail();
+    _validateContactPhone();
+    _validateNewPassword();
+    _validateConfirmPassword();
+
+    if (_firstNameError != null) errors.add(_firstNameError!);
+    if (_lastNameError != null) errors.add(_lastNameError!);
+    if (_contactEmailError != null) errors.add(_contactEmailError!);
+    if (_contactPhoneError != null) errors.add(_contactPhoneError!);
+    if (_newPasswordError != null) errors.add(_newPasswordError!);
+    if (_confirmPasswordError != null) errors.add(_confirmPasswordError!);
+
+    return errors;
   }
 
   Future<void> _pickImage() async {
@@ -94,18 +262,25 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
   }
 
   void _saveInvestorData() async {
-    // Validate passwords
-    if (_newPasswordController.text != _confirmPasswordController.text) {
-      setState(() {
-        _errorMessage = "Passwords do not match.";
-      });
-      return;
-    }
-
-    if (_newPasswordController.text.isEmpty) {
-      setState(() {
-        _errorMessage = "Please enter a new password.";
-      });
+    List<String> errors = _validateFields();
+    if (errors.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Validation Error'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: errors.map((error) => Text('• $error')).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
       return;
     }
 
@@ -119,19 +294,16 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
       String uid = user.uid;
 
       try {
-        // Re-authenticate the user before updating the password
         if (_tempPassword == null || _tempPassword!.isEmpty) {
           throw Exception("Temporary password not found. Please contact support.");
         }
 
         await _reAuthenticateUser(_contactEmailController.text.trim(), _tempPassword!);
 
-        // Update the user's password in Firebase Auth
         await user.updatePassword(_newPasswordController.text.trim());
 
-        // Clear the tempPassword in Firestore after successful password update
         await _firestore.collection('investors').doc(uid).update({
-          'tempPassword': null, // Invalidate temp password
+          'tempPassword': null,
         });
 
         String profilePicUrl = '';
@@ -148,12 +320,10 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           profilePicUrl = await snapshot.ref.getDownloadURL();
         }
 
-        // Update the completedSetup flag in the users collection
         await _firestore.collection('users').doc(uid).update({
           'completedSetup': true,
         });
 
-        // Update or set investor data (realtorId preserved from invite)
         await _firestore.collection('investors').doc(uid).set({
           'uid': uid,
           'firstName': _firstNameController.text.trim(),
@@ -164,7 +334,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           'createdAt': FieldValue.serverTimestamp(),
           'status': 'client',
           'notes': 'Account Created',
-        }, SetOptions(merge: true)); // Merge to preserve existing realtorId
+        }, SetOptions(merge: true));
 
         if (mounted) {
           context.go('/home');
@@ -174,7 +344,6 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           setState(() {
             _errorMessage = "Error saving data: $e";
           });
-          print("Save error: $e");
         }
       } finally {
         if (mounted) {
@@ -200,6 +369,9 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
         bool readOnly = false,
         bool obscureText = false,
         required bool isMobile,
+        String? error,
+        VoidCallback? toggleObscure,
+        bool isPassword = false,
       }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,16 +397,131 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
               fillColor: Colors.grey[900],
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(15.0),
-                borderSide: const BorderSide(color: neonPurple, width: 1),
+                borderSide: BorderSide(
+                  color: error != null ? Colors.red : neonPurple,
+                  width: 1,
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(15.0),
-                borderSide: const BorderSide(color: neonPurple, width: 2),
+                borderSide: BorderSide(
+                  color: error != null ? Colors.red : neonPurple,
+                  width: 2,
+                ),
               ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15.0),
+                borderSide: const BorderSide(color: Colors.red, width: 1),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15.0),
+                borderSide: const BorderSide(color: Colors.red, width: 2),
+              ),
+              suffixIcon: isPassword
+                  ? IconButton(
+                icon: Icon(
+                  obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.white70,
+                ),
+                onPressed: toggleObscure,
+              )
+                  : null,
             ),
           ),
         ),
+        if (error != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            error,
+            style: TextStyle(color: Colors.red, fontSize: isMobile ? 12 : 14),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildPasswordRequirements(bool isMobile) {
+    return Visibility(
+      visible: _showPasswordStrength,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        children: [
+          _buildRequirementText(
+            _hasMinLength ? '✔️ 8 characters' : 'x 8 characters',
+            _hasMinLength,
+            isMobile,
+          ),
+          _buildRequirementText(
+            _hasUppercase ? '✔️ Uppercase' : 'x Uppercase',
+            _hasUppercase,
+            isMobile,
+          ),
+          _buildRequirementText(
+            _hasLowercase ? '✔️ Lowercase' : 'x Lowercase',
+            _hasLowercase,
+            isMobile,
+          ),
+          _buildRequirementText(
+            _hasNumber ? '✔️ Number' : 'x Number',
+            _hasNumber,
+            isMobile,
+          ),
+          _buildRequirementText(
+            _hasSpecialChar ? '✔️ Special Character' : 'x Special Character',
+            _hasSpecialChar,
+            isMobile,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequirementText(String text, bool isMet, bool isMobile) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: isMet ? Colors.green : Colors.red,
+        fontSize: isMobile ? 12 : 14,
+      ),
+    );
+  }
+
+  Widget _buildPasswordStrengthBar(bool isMobile) {
+    Color strengthColor;
+    String strengthText;
+    if (_passwordStrength < 0.4) {
+      strengthColor = Colors.red;
+      strengthText = 'Weak';
+    } else if (_passwordStrength < 0.8) {
+      strengthColor = Colors.yellow;
+      strengthText = 'Medium';
+    } else {
+      strengthColor = Colors.green;
+      strengthText = 'Strong';
+    }
+
+    return Visibility(
+      visible: _showPasswordStrength,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LinearProgressIndicator(
+            value: _passwordStrength,
+            backgroundColor: Colors.grey[700],
+            valueColor: AlwaysStoppedAnimation<Color>(strengthColor),
+            minHeight: 5,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Password Strength: $strengthText',
+            style: TextStyle(
+              color: strengthColor,
+              fontSize: isMobile ? 12 : 14,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -398,11 +685,21 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
       Row(
         children: [
           Expanded(
-            child: _buildTextField(_firstNameController, "First Name", isMobile: isMobile),
+            child: _buildTextField(
+              _firstNameController,
+              "First Name",
+              isMobile: isMobile,
+              error: _firstNameError,
+            ),
           ),
           SizedBox(width: isMobile ? 12 : 16),
           Expanded(
-            child: _buildTextField(_lastNameController, "Last Name", isMobile: isMobile),
+            child: _buildTextField(
+              _lastNameController,
+              "Last Name",
+              isMobile: isMobile,
+              error: _lastNameError,
+            ),
           ),
         ],
       ),
@@ -413,6 +710,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
         keyboardType: TextInputType.emailAddress,
         readOnly: true,
         isMobile: isMobile,
+        error: _contactEmailError,
       ),
       SizedBox(height: isMobile ? 12 : 16),
       _buildTextField(
@@ -420,25 +718,40 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
         "Contact Phone",
         keyboardType: TextInputType.phone,
         isMobile: isMobile,
+        error: _contactPhoneError,
       ),
       SizedBox(height: isMobile ? 12 : 16),
-      _buildTextField(
-        _newPasswordController,
-        "New Password",
-        obscureText: true,
-        isMobile: isMobile,
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTextField(
+            _newPasswordController,
+            "New Password",
+            obscureText: _obscureNewPassword,
+            isMobile: isMobile,
+            error: _newPasswordError,
+            toggleObscure: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
+            isPassword: true,
+          ),
+          _buildPasswordRequirements(isMobile),
+          const SizedBox(height: 8),
+          _buildPasswordStrengthBar(isMobile),
+        ],
       ),
       SizedBox(height: isMobile ? 12 : 16),
       _buildTextField(
         _confirmPasswordController,
         "Confirm Password",
-        obscureText: true,
+        obscureText: _obscureConfirmPassword,
         isMobile: isMobile,
+        error: _confirmPasswordError,
+        toggleObscure: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+        isPassword: true,
       ),
       SizedBox(height: isMobile ? 20 : 30),
       Center(
         child: SizedBox(
-          width: isMobile ? 400 : 500,
+          width: isMobile ? 400 : 800,
           height: isMobile ? 45 : 50,
           child: ElevatedButton(
             onPressed: _isLoading ? null : _saveInvestorData,
