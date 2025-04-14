@@ -201,6 +201,7 @@ class NoteCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
+      color:  Theme.of(context).colorScheme.onTertiary,
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(16),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../../main.dart';
 import '../../../../../models/property_filter.dart';
 import 'min_max_selector.dart';
 import 'min_max_text_input_selector.dart';
@@ -23,7 +24,6 @@ void showFilterDrawer({
             topLeft: Radius.circular(16),
             bottomLeft: Radius.circular(16),
           ),
-          color: Colors.white,
           child: FilterDrawerContent(
             filters: filters,
             onApply: onApply,
@@ -102,8 +102,11 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
 
   final Set<String> hoveredStatus = {};
 
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       width: 400,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
@@ -240,14 +243,14 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
                               color: isSelected
                                   ? Colors.deepPurple.shade100
                                   : isHovered
-                                  ? Colors.grey.shade300
-                                  : Colors.grey.shade200,
+                                  ? theme.colorScheme.onTertiary
+                                  : theme.colorScheme.onTertiaryFixedVariant,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               entry.value,
                               style: TextStyle(
-                                color: isSelected ? Colors.deepPurple : Colors.black87,
+                                color: isSelected ? Colors.deepPurple : themeModeNotifier.value == ThemeMode.dark ? Colors.white : Colors.black,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),

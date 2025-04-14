@@ -121,7 +121,7 @@ class _RentalPropertyCalculatorState extends State<RentalPropertyCalculator> {
               Center(
                 child: ElevatedButton.icon(
                   onPressed: _calculateRental,
-                  icon: const Icon(Icons.calculate),
+                  icon: const Icon(Icons.calculate, color: Colors.white),
                   label: const Text("Calculate"),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
