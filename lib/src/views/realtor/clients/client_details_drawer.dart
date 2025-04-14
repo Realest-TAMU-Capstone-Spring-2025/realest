@@ -13,12 +13,17 @@ import '../widgets/property_detail_sheet.dart';
 class ClientDetailsDrawer extends StatefulWidget {
   final String clientUid;
   final VoidCallback onClose;
+  final void Function(String clientId, String newStatus)? onStatusChange;
+  final void Function(String uid, String name)? onDelete;
 
   const ClientDetailsDrawer({
     super.key,
     required this.clientUid,
     required this.onClose,
+    this.onStatusChange,
+    this.onDelete, // 👈 add this
   });
+
 
   @override
   _ClientDetailsDrawerState createState() => _ClientDetailsDrawerState();
@@ -36,6 +41,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
   bool _isLoading = true;
   String? _error;
   bool _notesExpanded = false;
+
 
   final DefaultCacheManager _cacheManager = DefaultCacheManager();
   late AnimationController _animationController;
@@ -70,9 +76,6 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
       }
 
       final data = investorDoc.data()!;
-      data['createdAt'] =
-          (data['createdAt'] as Timestamp?)?.toDate().toIso8601String() ??
-              DateTime.now().toIso8601String();
       _clientData = data;
 
       final realtorId = FirebaseAuth.instance.currentUser?.uid;
@@ -198,7 +201,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                     enableDrag: false,
                   );
                 },
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onTertiary,
               ),
             );
           },
@@ -206,13 +209,81 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
       ],
     );
   }
+  Future<void> _deleteClient() async {
+    final name = '${_clientData?['firstName'] ?? ''} ${_clientData?['lastName'] ?? ''}';
+    widget.onDelete?.call(widget.clientUid, name);
+    //TODO make more through and delete all user data
+    widget.onClose();
+  }
+
+  Widget _buildTagList() {
+    final theme = Theme.of(context);
+    final assignedTags = _assignedTags
+        .map((id) => _availableTags.firstWhere((tag) => tag['id'] == id))
+        .toList();
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: assignedTags.map((tag) {
+        final color = Color(tag['color'] ?? 0xFFCCCCCC);
+        final name = tag['name'] ?? '';
+
+        return Chip(
+          label: Text(
+            name,
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white),
+          ),
+          backgroundColor: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: color, width: 0),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  void _showEditNotesDialog(TextEditingController notesController) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Edit Notes"),
+        content: TextField(
+          controller: notesController,
+          maxLines: 10,
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection('investors')
+                  .doc(widget.clientUid)
+                  .update({'notes': notesController.text});
+              Navigator.pop(context);
+            },
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_error != null) return Center(child: Text('Error: $_error'));
-    if (_clientData == null)
+    if (_clientData == null) {
       return const Center(child: Text('Client not found'));
+    }
+
+    final status = _clientData?['status'] ?? 'inactive';
+    final canViewInteractions = status == 'client' || status == 'qualified-lead';
 
     final name =
         '${_clientData?['firstName'] ?? ''} ${_clientData?['lastName'] ?? ''}';
@@ -220,27 +291,32 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     final phone = _clientData?['contactPhone'] ?? 'N/A';
     final profilePicUrl = _clientData?['profilePicUrl'] ?? '';
     final notes = _clientData?['notes'] ?? '';
-    final createdAt = DateTime.parse(_clientData!['createdAt']);
-    final status = _clientData?['status'] ?? 'inactive';
+    final createdAt = (_clientData!['createdAt'] as Timestamp).toDate();
+    final isQualifiedLead = status == 'qualified-lead';
+    final TextEditingController notesController = TextEditingController(text: _clientData?['notes'] ?? '');
+    final isNewLead = status == 'lead';
+    final isClient = status == 'client';
 
     return SlideTransition(
-        position:
-            Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
-          CurvedAnimation(parent: _animationController, curve: Curves.ease),
-        ),
-        child: Center(
-          child: Material(
-            borderRadius: BorderRadius.circular(16),
-            elevation: 10,
-            color: Colors.white,
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: 1000,
-              ),
-              padding: const EdgeInsets.all(16),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
+        CurvedAnimation(parent: _animationController, curve: Curves.ease),
+      ),
+      child: Center(
+        child: Material(
+          borderRadius: BorderRadius.circular(16),
+          elevation: 10,
+          child: Container(
+            width: 500,
+            height: MediaQuery.of(context).size.height, // 👈 Full height
+            constraints: const BoxConstraints(maxWidth: 1000),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+            Expanded(
+            child: SingleChildScrollView(
+            child: Column(
+
+              crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
@@ -272,19 +348,89 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                         ),
                       ],
                     ),
+                    if (!isNewLead) ...[
+                      SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: _buildTagList()),
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert),
+                            onSelected: (value) async {
+                              switch (value) {
+                                case 'manageTags':
+                                  _showManageTagsDialog();
+                                  break;
+                                case 'editNotes':
+                                  _showEditNotesDialog(notesController);
+                                  break;
+                                case 'promote':
+                                  await FirebaseFirestore.instance
+                                      .collection('investors')
+                                      .doc(widget.clientUid)
+                                      .update({'status': 'client'});
+                                  widget.onStatusChange?.call(widget.clientUid, 'client');
+                                  final updatedDoc = await FirebaseFirestore.instance
+                                      .collection('investors')
+                                      .doc(widget.clientUid)
+                                      .get();
+                                  setState(() => _clientData = updatedDoc.data());
+                                  break;
+                                case 'promoteQualified':
+                                  await FirebaseFirestore.instance
+                                      .collection('investors')
+                                      .doc(widget.clientUid)
+                                      .update({'status': 'qualified-lead'});
+                                  widget.onStatusChange?.call(widget.clientUid, 'qualified-lead');
+                                  final updated = await FirebaseFirestore.instance
+                                      .collection('investors')
+                                      .doc(widget.clientUid)
+                                      .get();
+                                  setState(() => _clientData = updated.data());
+                                  break;
+                                case 'delete':
+                                  _deleteClient();
+                                  break;
+                              }
+                            },
+                            itemBuilder: (context) {
+                              final isLead = _clientData?['status'] == 'lead';
+                              final isQualified = _clientData?['status'] == 'qualified-lead';
+                              final isClient = _clientData?['status'] == 'client';
+
+                              return [
+                                const PopupMenuItem(value: 'manageTags', child: Text('Manage Tags')),
+                                const PopupMenuItem(value: 'editNotes', child: Text('Edit Notes')),
+                                if (isLead)
+                                  const PopupMenuItem(
+                                    value: 'promoteQualified',
+                                    child: Text('Accept as Qualified Lead'),
+                                  ),
+                                if (isQualified)
+                                  const PopupMenuItem(
+                                    value: 'promote',
+                                    child: Text('Promote to Client'),
+                                  ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Delete user', style: TextStyle(color: Colors.red)),
+                                ),
+                              ];
+                            },
+                          ),
+                        ],
+                      ),
+
+                    ],
                     const SizedBox(height: 16),
-                    TextButton.icon(
-                      onPressed: _showManageTagsDialog,
-                      icon: Icon(Icons.label_outline, color: Theme.of(context).colorScheme.primary),
-                      label: Text('Manage Tags'),
-                    ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     Card(
                       elevation: 2,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       margin: const EdgeInsets.symmetric(vertical: 8),
-                      color: Colors.grey[200],
+                      color: Theme.of(context).colorScheme.onTertiary,
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -307,15 +453,11 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                                   },
                                   child: Text(
                                     email,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                          decoration: TextDecoration.underline,
-                                        ),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -334,15 +476,11 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                                   },
                                   child: Text(
                                     phone,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                          decoration: TextDecoration.underline,
-                                        ),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -357,7 +495,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       margin: const EdgeInsets.symmetric(vertical: 8),
-                      color: Colors.grey[200],
+                      color: Theme.of(context).colorScheme.onTertiary,
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -381,7 +519,13 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                       ),
                     ),
                     SizedBox(height: 16),
-                    ExpansionPanelList(
+                    Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12), // 👈 Rounded corners
+                        ),
+                        child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: ExpansionPanelList(
                       expansionCallback: (panelIndex, isExpanded) {
                         setState(() {
                           _notesExpanded = !_notesExpanded;
@@ -393,10 +537,8 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                           canTapOnHeader: true,
                           headerBuilder: (context, isExpanded) {
                             return ListTile(
-                              title: Text(
-                                'Client Notes',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
+                              title: const Text("Notes",
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                             );
                           },
                           body: _notes.isEmpty
@@ -449,64 +591,44 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                                 ),
                         ),
                       ],
-                    ),
-                    const Divider(height: 32),
-                     DefaultTabController(
+                    ))),
+                    if (canViewInteractions) ...[
+                      const Divider(height: 32),
+                      DefaultTabController(
                         length: 4,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const TabBar(
-                              labelColor: Colors.deepPurple,
-                              unselectedLabelColor: Colors.black54,
                               tabs: [
-                                Tab(
-                                    icon: Icon(Icons.favorite_border),
-                                    text: 'Liked'),
-                                Tab(
-                                    icon: Icon(Icons.thumb_down_alt_outlined),
-                                    text: 'Disliked'),
-                                Tab(
-                                    icon: Icon(Icons.send_outlined),
-                                    text: 'Sent'),
-                                Tab(icon: Icon(Icons.check), text: 'Matched')
+                                Tab(icon: Icon(Icons.favorite_border), text: 'Liked'),
+                                Tab(icon: Icon(Icons.thumb_down_alt_outlined), text: 'Disliked'),
+                                Tab(icon: Icon(Icons.send_outlined), text: 'Sent'),
+                                Tab(icon: Icon(Icons.check), text: 'Matched'),
                               ],
                             ),
                             const SizedBox(height: 8),
-
-                           SizedBox(
-                             height: 400, // Or any reasonable height
-                             child: TabBarView(
-                                    children: [
-                                      _buildScrollableTabContent(
-                                          'Liked',
-                                          Icons.favorite_border,
-                                          _groupedDecisions['liked']!),
-                                      _buildScrollableTabContent(
-                                          'Disliked',
-                                          Icons.thumb_down_alt_outlined,
-                                          _groupedDecisions['disliked']!),
-                                      _buildScrollableTabContent(
-                                          'Sent',
-                                          Icons.send_outlined,
-                                          _groupedDecisions['sent']!),
-                                      _buildScrollableTabContent(
-                                          'properties that you sent and client liked',
-                                          Icons.check,
-                                          _groupedDecisions['sentAndLiked']!),
-                                    ],
-
-                                ),
-                               )],
+                            SizedBox(
+                              height: 400,
+                              child: TabBarView(
+                                children: [
+                                  _buildScrollableTabContent('Liked', Icons.favorite_border, _groupedDecisions['liked']!),
+                                  _buildScrollableTabContent('Disliked', Icons.thumb_down_alt_outlined, _groupedDecisions['disliked']!),
+                                  _buildScrollableTabContent('Sent', Icons.send_outlined, _groupedDecisions['sent']!),
+                                  _buildScrollableTabContent('Matched', Icons.check, _groupedDecisions['sentAndLiked']!),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-
+                    ]
                   ],
                 ),
               ),
             ),
-          ),
-        ));
+
+        ])))));
   }
 
   Future<void> _openPropertyDetails(String propertyId) async {
