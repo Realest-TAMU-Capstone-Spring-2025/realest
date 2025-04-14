@@ -44,7 +44,6 @@ Query<Map<String, dynamic>> buildFilteredQuery(PropertyFilter filters) {
   if (filters.selectedStatuses != null && filters.selectedStatuses!.isNotEmpty) {
     query = query.where('status', whereIn: filters.selectedStatuses);
   }
-  print('Selected statuses: ${filters.selectedStatuses}');
   if (filters.isNewConstruction != null) {
     query = query.where('new_construction', isEqualTo: filters.isNewConstruction);
   }
