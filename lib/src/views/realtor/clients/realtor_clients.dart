@@ -9,9 +9,6 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:algolia_helper_flutter/algolia_helper_flutter.dart' as algolia;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:realest/src/views/realtor/clients/client_details_drawer.dart';
-
-
 
 class RealtorClients extends StatefulWidget {
   const RealtorClients({Key? key}) : super(key: key);
@@ -21,11 +18,13 @@ class RealtorClients extends StatefulWidget {
 }
 
 class _RealtorClientsState extends State<RealtorClients> {
-  bool _isLeadExpanded = true;
-  bool _isQualifiedLeadExpanded = true;
-  bool _isClientExpanded = true;
+  bool _isLeadExpanded = false;
+  bool _isQualifiedLeadExpanded = false;
+  bool _isClientExpanded = false;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _selectedClientUid;
+
   final algolia.HitsSearcher _searcher = algolia.HitsSearcher(
     applicationID: dotenv.env['ALGOLIA_APP_ID']!,
     apiKey: dotenv.env['ALGOLIA_API_KEY']!,
@@ -34,115 +33,18 @@ class _RealtorClientsState extends State<RealtorClients> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        await userProvider.fetchUserData(); // ensure data is loaded
-        _fetchClients(); // only fetch clients after uid is available
-      });
-
-
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.fetchUserData(); // ensure data is loaded
+      if (!mounted) return; // ✅ Prevent setState on disposed widget
+      _fetchClients();
+    });
   }
 
   List<Map<String, dynamic>> _clients = [];
-
-  Widget _buildFilterButton(BuildContext context, String label, {VoidCallback? onPressed, IconData? icon}) {
-    return ElevatedButton.icon(
-      icon: Icon(Icons.tune, size: 20),
-      label: Text("More", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        elevation: 2,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
-        minimumSize: Size(160, 50),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      onPressed: showFilterDrawer,
-    );
-  }
-
-  void showFilterDrawer() {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: "Filters",
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (BuildContext dialogContext, _, __) {
-        return Align(
-          alignment: Alignment.centerRight,
-          child: Material(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              bottomLeft: Radius.circular(16),
-            ),
-            color: Colors.white,
-            child: Container(
-              width: 400,
-              height: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-              child: StatefulBuilder(
-                builder: (context, setModalState) =>
-                    _buildFilterContent(setModalState, dialogContext), // pass outer context
-              ),
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (context, anim1, anim2, child) {
-        return SlideTransition(
-          position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(anim1),
-          child: child,
-        );
-      },
-    );
-  }
-
-  Widget _buildFilterContent(void Function(void Function()) setModalState, BuildContext dialogContext) {
-    return StatefulBuilder(
-      builder: (context, setModalState) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          width: 300,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("Filters", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const Divider(),
-
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(dialogContext).pop(),
-                    child: const Text("Cancel"),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(dialogContext).pop();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text("Apply"),
-                  ),
-                ],
-              )
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   Future<void> _fetchClients() async {
     // print("Fetching clients...");
@@ -168,7 +70,6 @@ class _RealtorClientsState extends State<RealtorClients> {
           .where('realtorId', isEqualTo: realtorId)
           .get();
 
-
       final List<Map<String, dynamic>> loadedClients = snapshot.docs.map((doc) {
         try {
           final data = doc.data() as Map<String, dynamic>;
@@ -190,11 +91,13 @@ class _RealtorClientsState extends State<RealtorClients> {
       }).toList();
 
       // print("Successfully fetched clients: ${loadedClients.length}");
+      if (!mounted) return;
       setState(() {
         _clients = loadedClients;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = 'Failed to fetch clients: $e';
@@ -202,15 +105,11 @@ class _RealtorClientsState extends State<RealtorClients> {
     }
   }
 
-  Future<void> _updateClientStatus(String uid, String newStatus) async {
-    await FirebaseFirestore.instance.collection('investors').doc(uid).update({'status': newStatus});
-    _fetchClients();
-  }
-
   Future<void> _addNewLeadDialog() async {
     final TextEditingController firstNameController = TextEditingController();
     final TextEditingController lastNameController = TextEditingController();
     final TextEditingController emailController = TextEditingController();
+    final TextEditingController phoneController = TextEditingController();
 
     showDialog(
       context: context,
@@ -233,6 +132,11 @@ class _RealtorClientsState extends State<RealtorClients> {
               controller: emailController,
               decoration: const InputDecoration(labelText: 'Email'),
             ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: phoneController,
+              decoration: const InputDecoration(labelText: 'Phone (optional)'),
+            ),
           ],
         ),
         actions: [
@@ -243,16 +147,21 @@ class _RealtorClientsState extends State<RealtorClients> {
           ElevatedButton(
             child: const Text("Add"),
             onPressed: () async {
-              final userProvider = Provider.of<UserProvider>(context, listen: false);
-              final firstName = firstNameController .text.trim();
+              final userProvider =
+                  Provider.of<UserProvider>(context, listen: false);
+              final firstName = firstNameController.text.trim();
               final lastName = lastNameController.text.trim();
               final contact = emailController.text.trim();
+              final phone = phoneController.text.trim();
+
               if (firstName.isNotEmpty && contact.isNotEmpty) {
-                final doc = await FirebaseFirestore.instance.collection('investors').add({
+                final doc = await FirebaseFirestore.instance
+                    .collection('investors')
+                    .add({
                   'firstName': firstName,
                   'lastName': lastName,
                   'contactEmail': contact,
-                  'contactPhone':  '',
+                  'contactPhone': phone,
                   'status': 'lead',
                   'createdAt': Timestamp.now(),
                   'notes': '',
@@ -268,12 +177,13 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
-  Future<void> _deleteLead(String uid, name) async {
+  //delete client
+  Future<void> _deleteClient(String uid, String name) async {
     // Show confirmation dialog
-    final confirm = await showDialog<bool>(
+    showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Delete Lead"),
+        title: const Text("Delete User"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -281,7 +191,11 @@ class _RealtorClientsState extends State<RealtorClients> {
             Text("Are you sure you want to delete this lead?"),
             const SizedBox(height: 12),
             // name of the lead
-            Text("${name}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red)),
+            Text("${name}",
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.red)),
           ],
         ),
         actions: [
@@ -291,67 +205,14 @@ class _RealtorClientsState extends State<RealtorClients> {
           ),
           ElevatedButton(
             onPressed: () async {
-              await FirebaseFirestore.instance.collection('investors').doc(uid).delete();
-              _fetchClients();
-              Navigator.pop(context, true);
-            },
-            child: const Text("Delete"),
-          ),
-
-        ],
-      ),
-    );
-
-
-  }
-
-  Future<void> _sendInviteEmail(Map<String, dynamic> client) async {
-    //TODO: Implement email sending logic
-  }
-
-  Future<void> _acceptAsClient(String uid, String email) async {
-    try {
-      // Call the Cloud Function
-      final result = await FirebaseFunctions.instance
-          .httpsCallable('promoteClient')
-          .call({'uid': uid, 'email': email});
-
-      _fetchClients();
-    } catch (e) {
-      print("Error promoting client: $e");
-    }
-  }
-
-  //delete client
-  Future<void> _deleteClient(String uid, String name) async {
-    // Show confirmation dialog
-    showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Delete Client"),
-        content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text("This action cannot be undone."),
-          Text("Are you sure you want to delete this lead?"),
-          const SizedBox(height: 12),
-          // name of the lead
-          Text("${name}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red)),
-        ],
-      ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await FirebaseFirestore.instance.collection('investors').doc(uid).delete();
+              await FirebaseFirestore.instance
+                  .collection('investors')
+                  .doc(uid)
+                  .delete();
               //updaate the client list without calling the fetch clients
               setState(() {
                 _clients.removeWhere((client) => client['uid'] == uid);
               });
-              Navigator.pop(context, true);
               Navigator.pop(context, true);
             },
             child: const Text("Delete"),
@@ -362,195 +223,45 @@ class _RealtorClientsState extends State<RealtorClients> {
   }
 
   //client details dialog
-  Future<void> _showClientDetailsDialog(String uid) async {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        insetPadding: const EdgeInsets.all(16),
-        child: SizedBox(
-          width: 500,
-          child: ClientDetailsDrawer(
-            clientUid: uid,
-            onClose: () => Navigator.of(context).pop(),
+  void _showClientDetails(String uid) {
+    final isWide = MediaQuery.of(context).size.width >= 1000;
+    if (isWide) {
+      setState(() => _selectedClientUid = uid);
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: 500,
+            child: ClientDetailsDrawer(
+              clientUid: uid,
+              onClose: () => Navigator.of(context).pop(),
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }
   }
-
 
   Widget _buildNewLeadCard(Map<String, dynamic> client) {
     final theme = Theme.of(context);
     final uid = client['uid'];
-    final TextEditingController notesController = TextEditingController(text: client['notes']);
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: client['profilePicUrl'].isNotEmpty
-                      ? NetworkImage(client['profilePicUrl'])
-                      : const AssetImage('assets/images/profile.png') as ImageProvider,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${client['firstName']} ${client['lastName']}', style: theme.textTheme.titleSmall),
-                      Text(client['contactEmail'], style: theme.textTheme.bodySmall),
-                      Text('+1 ${client['contactPhone']}', style: theme.textTheme.bodySmall),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              children: [
-                TextButton(
-                  onPressed: () => showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text("Edit Notes"),
-                      content: TextField(
-                        controller: notesController,
-                        maxLines: 10,
-                        decoration: const InputDecoration(border: OutlineInputBorder()),
-                      ),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-                        ElevatedButton(
-                          child: const Text("Save"),
-                          onPressed: () async {
-                            await FirebaseFirestore.instance.collection('investors').doc(uid).update({'notes': notesController.text});
-                            _fetchClients();
-                            Navigator.pop(context);
-                          },
-                        )
-                      ],
-                    ),
-                  ),
-                  child: const Text("Notes"),
-                ),
+    final String fullName = '${client['firstName']} ${client['lastName']}';
+    final String email = client['contactEmail'] ?? 'No email';
+    final String phone = client['contactPhone']?.isNotEmpty == true
+        ? '+1 ${client['contactPhone']}'
+        : 'No phone';
+    final TextEditingController notesController =
+    TextEditingController(text: client['notes']);
 
-                ElevatedButton(
-                  onPressed: () => _updateClientStatus(uid, 'qualified-lead'),
-                  child: const Text("Qualify"),
-                ),
-                OutlinedButton(
-                  onPressed: () => _deleteLead(uid, client['firstName'] + " " + client['lastName']),
-                  child: const Text("Disqualify"),
-                ),
-              ],
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQualifiedLeadCard(Map<String, dynamic> client) {
-    final theme = Theme.of(context);
-    final uid = client['uid'];
-    final TextEditingController notesController = TextEditingController(text: client['notes']);
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: client['profilePicUrl'].isNotEmpty
-                      ? NetworkImage(client['profilePicUrl'])
-                      : const AssetImage('assets/images/profile.png') as ImageProvider,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${client['firstName']} ${client['lastName']}', style: theme.textTheme.titleSmall),
-                      Text(client['contactEmail'], style: theme.textTheme.bodySmall),
-                      Text('+1 ${client['contactPhone']}', style: theme.textTheme.bodySmall),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              children: [
-                OutlinedButton(
-                  onPressed: () => showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text("Edit Notes"),
-                      content: TextField(
-                        controller: notesController,
-                        maxLines: 10,
-                        decoration: const InputDecoration(border: OutlineInputBorder()),
-                      ),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-                        ElevatedButton(
-                          child: const Text("Save"),
-                          onPressed: () async {
-                            await FirebaseFirestore.instance.collection('investors').doc(uid).update({'notes': notesController.text});
-                            _fetchClients();
-                            Navigator.pop(context);
-                          },
-                        )
-                      ],
-                    ),
-                  ),
-                  child: const Text("Notes"),
-                ),
-                ElevatedButton(
-                  onPressed: () => _acceptAsClient(uid, client['contactEmail']),
-                  child: const Text("Accept as Client"),
-                ),
-                OutlinedButton(
-                  onPressed: () => _deleteLead(uid,  client['firstName'] + " " + client['lastName']),
-                  child: const Text("Reject"),
-                ),
-              ],
-            )
-
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildClientCard( Map<String, dynamic> client) {
-    final theme = Theme.of(context);
-    final uid = client['uid'];
-    final TextEditingController notesController = TextEditingController(text: client['notes']);
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-      elevation: 2,
-      child: InkWell(
-        onTap: () {
-          _showClientDetailsDialog(uid);
-        },
+    return InkWell(
+      onTap: () => _showClientDetails(uid),
+      child: Card(
+        color: Theme.of(context).colorScheme.onTertiary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+        elevation: 2,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
           child: Column(
@@ -559,19 +270,44 @@ class _RealtorClientsState extends State<RealtorClients> {
               Row(
                 children: [
                   CircleAvatar(
-                    radius: 20,
+                    radius: 22,
                     backgroundImage: client['profilePicUrl'].isNotEmpty
                         ? NetworkImage(client['profilePicUrl'])
                         : const AssetImage('assets/images/profile.png') as ImageProvider,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Wrap(
+                      spacing: 24,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text('${client['firstName']} ${client['lastName']}', style: theme.textTheme.titleSmall),
-                        Text(client['contactEmail'], style: theme.textTheme.bodySmall),
-                        Text('+1 ${client['contactPhone']}', style: theme.textTheme.bodySmall),
+                        Text(
+                          fullName,
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.email, size: 16, color: theme.hintColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              email,
+                              style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.phone, size: 16, color: theme.hintColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              phone,
+                              style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -584,6 +320,137 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
+  Widget _buildQualifiedLeadCard(Map<String, dynamic> client) {
+    final theme = Theme.of(context);
+    final uid = client['uid'];
+    final String fullName = '${client['firstName']} ${client['lastName']}';
+    final String email = client['contactEmail'] ?? 'No email';
+    final String phone = client['contactPhone']?.isNotEmpty == true
+        ? '+1 ${client['contactPhone']}'
+        : 'No phone';
+
+    return InkWell(
+      onTap: () => _showClientDetails(uid),
+      child: Card(
+        color: theme.colorScheme.onTertiary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundImage: client['profilePicUrl'].isNotEmpty
+                    ? NetworkImage(client['profilePicUrl'])
+                    : const AssetImage('assets/images/profile.png') as ImageProvider,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Wrap(
+                  spacing: 24,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(fullName, style: theme.textTheme.titleMedium),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.email, size: 16, color: theme.hintColor),
+                        const SizedBox(width: 4),
+                        Text(email, style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.phone, size: 16, color: theme.hintColor),
+                        const SizedBox(width: 4),
+                        Text(phone, style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: theme.colorScheme.onSurface),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClientCard(Map<String, dynamic> client) {
+    final theme = Theme.of(context);
+    final uid = client['uid'];
+    final String fullName = '${client['firstName']} ${client['lastName']}';
+    final String email = client['contactEmail'] ?? 'No email';
+    final String phone = client['contactPhone']?.isNotEmpty == true
+        ? '+1 ${client['contactPhone']}'
+        : 'No phone';
+
+    return Card(
+      color:  Theme.of(context).colorScheme.onTertiary,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+      elevation: 2,
+      child: InkWell(
+        onTap: () => _showClientDetails(uid),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundImage: client['profilePicUrl'].isNotEmpty
+                    ? NetworkImage(client['profilePicUrl'])
+                    : const AssetImage('assets/images/profile.png') as ImageProvider,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Wrap(
+                  spacing: 24,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      fullName,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.email, size: 16, color: theme.hintColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          email,
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.phone, size: 16, color: theme.hintColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          phone,
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: theme.colorScheme.onSurface),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
 // Updated tags management dialog with color picker
   Future<void> _showTagsManagementDialog() async {
@@ -714,304 +581,326 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
-
   Future<Iterable<Map<String, dynamic>>> _searchClients(
-    TextEditingValue textEditingValue) async {
-  if (textEditingValue.text.isEmpty) return const [];
-  
-  final userProvider = Provider.of<UserProvider>(context, listen: false);
-  final realtorId = userProvider.uid;
+      TextEditingValue textEditingValue) async {
+    if (textEditingValue.text.isEmpty) return const [];
 
-  _searcher.applyState((state) => state.copyWith(
-        filterGroups: {
-          algolia.FilterGroup.facet(
-            filters: {
-              algolia.Filter.facet('realtorId', realtorId),
-            }.toSet(),
-          ),
-        },
-        query: textEditingValue.text,
-      ));
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final realtorId = userProvider.uid;
 
-  final snapshot = await _searcher.responses.first;
-  return snapshot.hits
-      .map((e) => Map<String, dynamic>.from(e))
-      .toList();
-}
+    _searcher.applyState((state) => state.copyWith(
+          filterGroups: {
+            algolia.FilterGroup.facet(
+              filters: {
+                algolia.Filter.facet('realtorId', realtorId),
+              }.toSet(),
+            ),
+          },
+          query: textEditingValue.text,
+        ));
 
-Widget _buildSearchOptions(BuildContext context,
-  AutocompleteOnSelected<Map<String, dynamic>> onSelected,
-  Iterable<Map<String, dynamic>> options) {
-  final double availableWidth = 300;
-  
-  final double maxHeight = MediaQuery.of(context).size.height * 0.5;
-  
-  return Align(
-    alignment: Alignment.topLeft,
-    child: Material(
-      elevation: 4,
-      child: Container(
-        width: availableWidth,
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        child: options.isEmpty
-            ? Container(
-                padding: const EdgeInsets.all(16.0),
-                alignment: Alignment.center,
-                child: const Text(
-                  "No results found",
-                  style: TextStyle(color: Colors.grey),
+    final snapshot = await _searcher.responses.first;
+    return snapshot.hits.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  Widget _buildSearchOptions(
+      BuildContext context,
+      AutocompleteOnSelected<Map<String, dynamic>> onSelected,
+      Iterable<Map<String, dynamic>> options) {
+    final double availableWidth = 300;
+
+    final double maxHeight = MediaQuery.of(context).size.height * 0.5;
+
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Material(
+        elevation: 4,
+        child: Container(
+          width: availableWidth,
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: options.isEmpty
+              ? Container(
+                  padding: const EdgeInsets.all(16.0),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    "No results found",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final option = options.elementAt(index);
+                    final isName = (option['firstName']?.isNotEmpty == true &&
+                        option['lastName']?.isNotEmpty == true);
+                    return ListTile(
+                      title: Text(
+                        (isName)
+                            ? '${option['firstName']} ${option['lastName']}'
+                            : option['contactEmail'] ?? 'Unknown Client',
+                      ),
+                      subtitle:
+                          (isName) ? Text(option['contactEmail'] ?? '') : null,
+                      onTap: () => onSelected(option),
+                    );
+                  },
                 ),
-              )
-            : ListView.builder(
-                shrinkWrap: true,
-                itemCount: options.length,
-                itemBuilder: (context, index) {
-                  final option = options.elementAt(index);
-                  final isName = 
-                      (option['firstName']?.isNotEmpty == true &&
-                          option['lastName']?.isNotEmpty == true);
-                  return ListTile(
-                    title: Text(
-                    (isName) ? '${option['firstName']} ${option['lastName']}'
-                      : option['contactEmail'] ?? 'Unknown Client',
-                    ),
-                    subtitle: (isName) ? Text(option['contactEmail'] ?? '') : null,
-                    onTap: () => onSelected(option),
-                  );
-                },
-              ),
-      ),
-    ),
-  );
-}
-
-  void _showClientDetails(String clientId) {
-    showDialog(
-      context: context,
-      builder: (context) => ClientDetailsDrawer(
-        clientUid: clientId,
-        onClose: () {
-          Navigator.of(context).pop();
-        },
+        ),
       ),
     );
   }
 
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  // 🟩 Search Bar
+  Widget _buildSearchBar() {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: RawAutocomplete<Map<String, dynamic>>(
+                  focusNode: _searchFocusNode,
+                  textEditingController: _searchController,
+                  optionsBuilder: _searchClients,
+                  displayStringForOption: (option) =>
+                  '${option['firstName']} ${option['lastName']}',
+                  fieldViewBuilder: (context, controller, focusNode, _) {
+                    return TextField(
+                      autofillHints: const [AutofillHints.name],
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(
+                        hintText: 'Search clients...',
+                        prefixIcon: Icon(Icons.search),
+                        contentPadding: EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    );
+                  },
+                  optionsViewBuilder: (context, onSelected, options) =>
+                      _buildSearchOptions(context, onSelected, options),
+                  onSelected: (option) {
+                    _showClientDetails(option['objectID']);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UserProvider>(context, listen: false).fetchUserData();
-    });
+// 🟦 Leads Panel
+  Widget _buildLeadsPanel() {
+    return ExpansionPanelList(
+      expansionCallback: (int index, bool isExpanded) {
+        setState(() {
+          _isLeadExpanded = !_isLeadExpanded;
+        });
+      },
+      children: [
+        ExpansionPanel(
+          headerBuilder: (context, isExpanded) {
+            return ListTile(
+              title: Row(
+                children: [
+                  const Text("New Leads",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  IconButton(
+                      onPressed: _addNewLeadDialog, icon: const Icon(Icons.add))
+                ],
+              ),
+            );
+          },
+          body: Builder(
+            builder: (context) {
+              final leadClients = _clients
+                  .where((client) => client['status'] == 'lead')
+                  .toList();
+
+              return leadClients.isEmpty
+                  ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Text('No leads available.',
+                    style: TextStyle(
+                        color: Colors.grey, fontStyle: FontStyle.italic)),
+              )
+                  : Column(
+                children:
+                leadClients.map<Widget>(_buildNewLeadCard).toList(),
+              );
+            },
+          ),
+          isExpanded: _isLeadExpanded,
+          canTapOnHeader: true,
+        ),
+      ],
+    );
+  }
+
+// 🟧 Qualified Leads Panel
+  Widget _buildQualifiedLeadsPanel() {
+    return ExpansionPanelList(
+      expansionCallback: (int index, bool isExpanded) {
+        setState(() {
+          _isQualifiedLeadExpanded = !_isQualifiedLeadExpanded;
+        });
+      },
+      children: [
+        ExpansionPanel(
+          headerBuilder: (context, isExpanded) {
+            return const ListTile(
+              title: Text("Qualified Leads",
+                  style:
+                  TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            );
+          },
+          body: Builder(
+            builder: (context) {
+              final qualifiedClients = _clients
+                  .where((client) => client['status'] == 'qualified-lead')
+                  .toList();
+
+              return qualifiedClients.isEmpty
+                  ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Text('No qualified leads available.',
+                    style: TextStyle(
+                        color: Colors.grey, fontStyle: FontStyle.italic)),
+              )
+                  : Column(
+                children: qualifiedClients
+                    .map<Widget>(_buildQualifiedLeadCard)
+                    .toList(),
+              );
+            },
+          ),
+          isExpanded: _isQualifiedLeadExpanded,
+          canTapOnHeader: true,
+        ),
+      ],
+    );
+  }
+
+// 🟨 Clients Panel
+  Widget _buildClientsPanel() {
+    return ExpansionPanelList(
+      expansionCallback: (int index, bool isExpanded) {
+        setState(() {
+          _isClientExpanded = !_isClientExpanded;
+        });
+      },
+      children: [
+        ExpansionPanel(
+          headerBuilder: (context, isExpanded) {
+            return ListTile(
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("Clients",
+                      style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  IconButton(
+                    icon: const Icon(Icons.settings),
+                    onPressed: _showTagsManagementDialog,
+                  ),
+                ],
+              ),
+            );
+          },
+          body: Builder(
+            builder: (context) {
+              final clientList = _clients
+                  .where((client) => client['status'] == 'client')
+                  .toList();
+
+              return clientList.isEmpty
+                  ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Text('No clients yet.',
+                    style: TextStyle(
+                        color: Colors.grey, fontStyle: FontStyle.italic)),
+              )
+                  : Column(
+                children:
+                clientList.map<Widget>(_buildClientCard).toList(),
+              );
+            },
+          ),
+          isExpanded: _isClientExpanded,
+          canTapOnHeader: true,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width >= 1000;
 
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => MouseRegionProvider()),
       ],
       child: Scaffold(
-        body: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            child: SingleChildScrollView(
-            child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    "Client Management",
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    textAlign: TextAlign.start,
-
-                  ),
-                  const SizedBox(width: 16),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Row(
+        body: Row(
+          children: [
+            // LEFT PANEL: Main content (Client management, panels, etc.)
+            Expanded(
+              flex: 3,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                child: SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          flex: 1,
-                          child: RawAutocomplete<Map<String, dynamic>>(
-                                  focusNode: _searchFocusNode,
-                                  textEditingController: _searchController,
-                                  optionsBuilder: _searchClients,
-                                  displayStringForOption: (option) =>
-                                      '${option['firstName']} ${option['lastName']}',
-                                  fieldViewBuilder:
-                                      (context, controller, focusNode, onFieldSubmitted) {
-                                    final searchBarKey = GlobalKey();
-                                    return TextField(
-                                      autofillHints: const [AutofillHints.name],
-                                      key: searchBarKey,
-                                      controller: controller,
-                                      focusNode: focusNode,
-                                      decoration: InputDecoration(
-                                        hintText: 'Search clients...',
-                                        prefixIcon: Icon(Icons.search),
-                                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                                      ),
-                                      onTap: () {},
-                                    );
-                                  },
-                                  optionsViewBuilder: (context, onSelected, options) => 
-                                      _buildSearchOptions(context, onSelected, options),
-                                  onSelected: (option) {
-                                    _showClientDetails(option['objectID']);
-                                  },
-                                )
-                          ),
-                      ],
-                    ),
+                      Text("Client Management",
+                          style: Theme.of(context).textTheme.headlineMedium),
+                      const SizedBox(height: 16),
+                      _buildSearchBar(),
+                      const SizedBox(height: 24),
+                      _buildLeadsPanel(),
+                      const SizedBox(height: 15),
+                      _buildQualifiedLeadsPanel(),
+                      const SizedBox(height: 15),
+                      _buildClientsPanel(),
+                    ],
                   ),
-                ],
+                ),)
               ),
-              const SizedBox(height: 24),
-              ExpansionPanelList(
-                expansionCallback: (int index, bool isExpanded) {
-                  setState(() {
-                    _isLeadExpanded = !_isLeadExpanded;
-                  });
-                },
-                children: [
-                  ExpansionPanel(
-                    headerBuilder: (BuildContext context, bool isExpanded) {
-                      return ListTile(
-                        title: Row(
-                          children: [
-                            const Text(
-                              "New Leads",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            const Spacer(),
-                            IconButton(onPressed: _addNewLeadDialog, icon: const Icon(Icons.add))
+            ),
 
-                          ],
-                        ),
-                      );
+            // RIGHT PANEL: Client Details (only on wide screen)
+            if (isWide && _selectedClientUid != null)
+              Container(
+                width: 500,
+                child: KeyedSubtree(
+                  key: ValueKey(_selectedClientUid),
+                  child: ClientDetailsDrawer(
+                    clientUid: _selectedClientUid!,
+                    onClose: () => setState(() => _selectedClientUid = null),
+                    onStatusChange: (clientId, newStatus) {
+                      final index = _clients.indexWhere((c) => c['uid'] == clientId);
+                      if (index != -1) {
+                        setState(() {
+                          _clients[index]['status'] = newStatus;
+                        });
+                      }
                     },
-
-                    body: Builder(
-                      builder: (context) {
-                        final leadClients = _clients.where((client) => client['status'] == 'lead').toList();
-
-                        return leadClients.isEmpty
-                            ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16.0),
-                          child: Text(
-                            'No leads available.',
-                            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-                          ),
-                        )
-                            : Column(
-                          children: leadClients.map<Widget>(_buildNewLeadCard).toList(),
-                        );
-                      },
-                    ),
-                    isExpanded: _isLeadExpanded,
-                    canTapOnHeader: true,
+                    onDelete: _deleteClient, // 👈 pass the parent’s method
                   ),
-                ]),
-              const SizedBox(height: 15),
-              ExpansionPanelList(
-                expansionCallback: (int index, bool isExpanded) {
-                  setState(() {
-                    _isQualifiedLeadExpanded = !_isQualifiedLeadExpanded;
-                  });
-                },
-                children: [
-                  ExpansionPanel(
-                    headerBuilder: (BuildContext context, bool isExpanded) {
-                      return const ListTile(
-                        title: Text(
-                          "Qualified Leads",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      );
-                    },
-                    body: Builder(
-                      builder: (context) {
-                        final qualifiedClients = _clients
-                            .where((client) => client['status'] == 'qualified-lead')
-                            .toList();
 
-                        return qualifiedClients.isEmpty
-                            ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16.0),
-                          child: Text(
-                            'No qualified leads available.',
-                            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-                          ),
-                        )
-                            : Column(
-                          children: qualifiedClients
-                              .map<Widget>(_buildQualifiedLeadCard)
-                              .toList(),
-                        );
-                      },
-                    ),
-                    isExpanded: _isQualifiedLeadExpanded,
-                    canTapOnHeader: true,
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 15),
-              ExpansionPanelList(
-                expansionCallback: (int index, bool isExpanded) {
-                  setState(() {
-                    _isClientExpanded = !_isClientExpanded;
-                  });
-                },
-                children: [
-                  ExpansionPanel(
-                    headerBuilder: (BuildContext context, bool isExpanded) {
-                      return ListTile(
-                        title: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              "Clients",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.settings),
-                              onPressed: _showTagsManagementDialog,
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    body: Builder(
-                      builder: (context) {
-                        final clientList = _clients
-                            .where((client) => client['status'] == 'client')
-                            .toList();
-
-                        return clientList.isEmpty
-                            ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16.0),
-                          child: Text(
-                            'No clients yet.',
-                            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-                          ),
-                        )
-                            : Column(
-                          children: clientList.map<Widget>(_buildClientCard).toList(),
-                        );
-                      },
-                    ),
-                    isExpanded: _isClientExpanded,
-                    canTapOnHeader: true,
-                  ),
-                ],
-              ),
-            ],
-          ),
+          ],
         ),
       ),
-    ));
+    );
   }
 }
