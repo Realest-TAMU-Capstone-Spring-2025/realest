@@ -1,0 +1,29 @@
+/* Add to your content.css file */
+#cashflow-widget-popup {
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    animation: fadeIn 0.2s ease-in-out;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  
+  /* Add a subtle arrow pointing to the button */
+  #cashflow-widget-popup::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: -6px;
+    width: 12px;
+    height: 12px;
+    background-color: white;
+    transform: rotate(45deg);
+    border-left: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
