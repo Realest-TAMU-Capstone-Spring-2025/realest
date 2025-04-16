@@ -348,7 +348,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                         ),
                       ],
                     ),
-                    if (!isNewLead) ...[
+
                       SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -422,7 +422,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                         ],
                       ),
 
-                    ],
+
                     const SizedBox(height: 16),
                     SizedBox(height: 16),
                     Card(

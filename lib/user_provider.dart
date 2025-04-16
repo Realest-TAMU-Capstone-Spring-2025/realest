@@ -36,8 +36,6 @@ class UserProvider extends ChangeNotifier {
   String? get status => _status;
   String? _createdAt;
   String? get createdAt => _createdAt;
-  String? _tempPassword;
-  String? get tempPassword => _tempPassword;
 
   set uid(String? value) {
     _uid = value;
@@ -89,7 +87,6 @@ class UserProvider extends ChangeNotifier {
     await prefs.setString('realtorId', _realtorId ?? '');
     await prefs.setString('status', _status ?? '');
     await prefs.setString('createdAt', _createdAt ?? '');
-    await prefs.setString('tempPassword', _tempPassword ?? '');
     if(_userRole == 'realtor') {
       await prefs.setStringList('clients', _clients.map((client) => client['id'] as String).toList());
       await prefs.setStringList('tags', _tags.map((tag) => tag['id'] as String).toList());
@@ -175,7 +172,6 @@ class UserProvider extends ChangeNotifier {
       _agencyName = data['agencyName'];
       _licenseNumber = data['licenseNumber'];
       _address = data['address'];
-      _invitationCode = data['invitationCode'];
     }
   }
 
@@ -195,7 +191,6 @@ class UserProvider extends ChangeNotifier {
       _investorNotes = data['notes'];
       _realtorId = data['realtorId'];
       _status = data['status'];
-      _tempPassword = data['tempPassword'];
     }
   }
 
@@ -218,7 +213,6 @@ class UserProvider extends ChangeNotifier {
         'notes': doc['notes'] ?? '',
         'realtorId': doc['realtorId'] ?? '',
         'status': doc['status'] ?? '',
-        'tempPassword': doc['tempPassword'] ?? '',
       };
     }).toList();
 
@@ -266,7 +260,6 @@ class UserProvider extends ChangeNotifier {
     _realtorId = null;
     _status = null;
     _createdAt = null;
-    _tempPassword = null;
 
     _clients.clear();
     _tags.clear();

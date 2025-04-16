@@ -657,36 +657,29 @@ class _RealtorClientsState extends State<RealtorClients> {
       children: [
         Expanded(
           flex: 3,
-          child: Row(
-            children: [
-              Expanded(
-                flex: 1,
-                child: RawAutocomplete<Map<String, dynamic>>(
-                  focusNode: _searchFocusNode,
-                  textEditingController: _searchController,
-                  optionsBuilder: _searchClients,
-                  displayStringForOption: (option) =>
-                  '${option['firstName']} ${option['lastName']}',
-                  fieldViewBuilder: (context, controller, focusNode, _) {
-                    return TextField(
-                      autofillHints: const [AutofillHints.name],
-                      controller: controller,
-                      focusNode: focusNode,
-                      decoration: const InputDecoration(
-                        hintText: 'Search clients...',
-                        prefixIcon: Icon(Icons.search),
-                        contentPadding: EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    );
-                  },
-                  optionsViewBuilder: (context, onSelected, options) =>
-                      _buildSearchOptions(context, onSelected, options),
-                  onSelected: (option) {
-                    _showClientDetails(option['objectID']);
-                  },
+          child: RawAutocomplete<Map<String, dynamic>>(
+            focusNode: _searchFocusNode,
+            textEditingController: _searchController,
+            optionsBuilder: _searchClients,
+            displayStringForOption: (option) =>
+            '${option['firstName'] ?? ''} ${option['lastName'] ?? ''}',
+            fieldViewBuilder: (context, controller, focusNode, _) {
+              return TextField(
+                autofillHints: const [AutofillHints.name],
+                controller: controller,
+                focusNode: focusNode,
+                decoration: const InputDecoration(
+                  hintText: 'Search clients...',
+                  prefixIcon: Icon(Icons.search),
+                  contentPadding: EdgeInsets.symmetric(vertical: 14),
                 ),
-              ),
-            ],
+              );
+            },
+            optionsViewBuilder: (context, onSelected, options) =>
+                _buildSearchOptions(context, onSelected, options),
+            onSelected: (option) {
+              _showClientDetails(option['objectID']);
+            },
           ),
         ),
       ],

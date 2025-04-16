@@ -19,8 +19,8 @@ class PinnedClientsSection extends StatefulWidget {
 
 class PinnedClientsSectionState extends State<PinnedClientsSection> {
   final algolia.HitsSearcher _searcher = algolia.HitsSearcher(
-    applicationID: dotenv.env['ALGOLIA_APP_ID']!,
-    apiKey: dotenv.env['ALGOLIA_API_KEY']!,
+    applicationID: 'BFVXJ9G642',
+    apiKey: '5341f6a026fbb648426f933b6e3cead7',
     indexName: 'investors',
   );
   final DefaultCacheManager _cacheManager = DefaultCacheManager();
