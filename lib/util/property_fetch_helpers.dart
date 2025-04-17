@@ -80,7 +80,7 @@ Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
     'last_sold_date': data['last_sold_date'] ?? 'N/A',
     'parking': data['parking'] ?? 'N/A',
     'agent_id': data['agent_id'] ?? 'N/A',
-    'mls_id': data['mls'] ?? 'N/A',
+    'mls_id': data['mls_id'] ?? 'N/A',
     'description': data['text_description'] ?? 'No description available',
     'property_type': data['property_type'] ?? 'Unknown',
     'fips_code': data['fips_code'] ?? 'N/A',
@@ -88,5 +88,7 @@ Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
     'text': data['text'] ?? 'No description available',
     'year_built': data['year_built'] ?? 0,
     'lot_sqft': data['lot_sqft'] ?? 0,
+    'mls' : data['mls'] ?? 'N/A',
+    'days_on_mls' : data['days_on_mls'] ?? 'N/A',
   };
 }

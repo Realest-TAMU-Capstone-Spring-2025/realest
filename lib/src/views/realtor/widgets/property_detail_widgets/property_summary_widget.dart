@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:realest/src/views/realtor/widgets/property_detail_widgets/property_price_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PropertySummaryWidget extends StatelessWidget {
@@ -21,6 +22,7 @@ class PropertySummaryWidget extends StatelessWidget {
     final baths = property["baths"] ?? "-";
     final sqft = property["sqft"];
     final sqftText = sqft != null ? "${currency.format(sqft)}" : "N/A";
+    final status = property["status"] ?? "Status Unavailable";
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -32,13 +34,7 @@ class PropertySummaryWidget extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  priceText,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
+                PropertyPriceWidget(price: rawPrice, status: status),
                 const SizedBox(height: 6),
                 Wrap(
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -71,7 +67,13 @@ class PropertySummaryWidget extends StatelessWidget {
                       onPressed: () => _launchGoogleMaps(address),
                     ),
                   ],
-                )
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "MLS: ${property["mls"] ?? "N/A"} • Days on MLS: ${property["days_on_mls"] ?? "N/A"} • ID: ${property["mls_id"] ?? "N/A"}",
+                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                ),
+
               ],
             ),
           ),
@@ -81,9 +83,8 @@ class PropertySummaryWidget extends StatelessWidget {
             margin: const EdgeInsets.only(left: 12),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: theme.colorScheme.onTertiary,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
             ),
             child: Row(
               children: [

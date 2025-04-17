@@ -17,7 +17,7 @@ class PropertyPriceWidget extends StatelessWidget {
     final currencyFormat = NumberFormat("#,##0", "en_US");
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -42,7 +42,7 @@ class PropertyPriceWidget extends StatelessWidget {
           // Price
           Text(
             price != null ? "\$${currencyFormat.format(price)}" : "Price Unavailable",
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style: theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.primary,
             ),

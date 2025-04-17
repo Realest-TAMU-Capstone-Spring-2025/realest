@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:realest/main.dart';
 import '../../../../../models/property_filter.dart';
 
 class HomeTypeSelector extends StatelessWidget {
@@ -38,16 +39,15 @@ class HomeTypeSelector extends StatelessWidget {
           icon: const Icon(Icons.home_work_outlined, size: 18),
           label: Text(
             label,
-            style: const TextStyle(fontSize: 14),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             overflow: TextOverflow.ellipsis,
           ),
           style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.deepPurple,
-            side: const BorderSide(color: Colors.deepPurple),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
             minimumSize: const Size(160, 50),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            side: BorderSide.none, // Remove the border
           ),
         ),
       ),
@@ -77,6 +77,8 @@ class HomeTypeSelector extends StatelessWidget {
 
     late final OverlayEntry entry;
 
+    final theme = Theme.of(context);
+
     entry = OverlayEntry(
       builder: (context) => Stack(
         children: [
@@ -104,7 +106,6 @@ class HomeTypeSelector extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         vertical: 16, horizontal: 20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border:
                           Border.all(color: Colors.deepPurple.withAlpha(75)),
@@ -138,12 +139,12 @@ class HomeTypeSelector extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? Colors.deepPurple
-                                      : Colors.grey.shade200,
+                                      : theme.colorScheme.onTertiaryFixedVariant,
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
                                     color: isSelected
                                         ? Colors.deepPurple
-                                        : Colors.grey.shade400,
+                                        : theme.colorScheme.onTertiaryFixedVariant,
                                   ),
                                 ),
                                 child: Text(
@@ -151,7 +152,7 @@ class HomeTypeSelector extends StatelessWidget {
                                   style: TextStyle(
                                     color: isSelected
                                         ? Colors.white
-                                        : Colors.black87,
+                                        : themeModeNotifier.value == ThemeMode.dark? Colors.white : Colors.black,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),

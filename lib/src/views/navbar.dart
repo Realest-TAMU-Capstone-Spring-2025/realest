@@ -49,7 +49,6 @@ class _NavBarState extends State<NavBar> {
                   radius: 40,
                   child: ProfilePic(
                     toggleTheme: widget.toggleTheme,
-                    isDarkMode: widget.isDarkMode,
                     onAccountSettings: () => context.go("/settings"),
                   ),
                 ),
@@ -133,7 +132,6 @@ class _NavBarState extends State<NavBar> {
               height: _isExpanded ? 100 : 50,
               child: ProfilePic(
                 toggleTheme: widget.toggleTheme,
-                isDarkMode: widget.isDarkMode,
                 onAccountSettings: () => context.go("/settings"),
               ),
             ),

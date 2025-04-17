@@ -13,6 +13,7 @@ import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platf
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' show FieldPath;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../main.dart';
 import '../../../../util/property_fetch_helpers.dart';
 import '../../../models/property_filter.dart';
 import '../helpers/property_query_helpers.dart';
@@ -153,12 +154,10 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
   }
 
 
-  void _onMapCreated(GoogleMapController controller) {
+  void _onMapCreated(GoogleMapController controller) async {
     _mapController = controller;
-    // if (_darkMapStyle != null) {
-    //   _mapController.setMapStyle(_darkMapStyle);
-    // }
   }
+
 
   Future<void> _selectProperty(String propertyId, LatLng location) async {
 
@@ -290,7 +289,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
                             // Buttons
                             if (isSmallScreen)
                               IconButton(
-                                icon: Icon(Icons.tune, size: 28),
+                                icon: Icon(Icons.tune, size: 28, color: Colors.deepPurple),
                                 tooltip: "More Filters",
                                   onPressed: () {
                                     showFilterDrawer(
@@ -357,7 +356,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
                                     },
                                   ),
                                   ElevatedButton.icon(
-                                    icon: const Icon(Icons.tune, size: 20),
+                                    icon: const Icon(Icons.tune, size: 20, color: Colors.white),
                                     label: const Text(
                                       "More",
                                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -458,7 +457,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
             bottom: 20,
             left: 20,
             right: 20,
-            child: ElevatedButton.icon(
+            child: OutlinedButton.icon(
               onPressed: () {
                 setState(() => _showingMap = !_showingMap);
               },
@@ -510,6 +509,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
         "address": data["full_street_line"] ?? "Unknown Address",
         "status": data["status"] ?? "N/A",
         "rent_estimate": data["rent_estimate"] ?? 0,
+        "hoa_fee": data["hoa_fee"] ?? 0,
       };
     }).toList();
 
@@ -583,7 +583,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
           continue;
         }
 
-        // print("✅ Creating cashflow for $listingId...");
+        //print("✅ Creating cashflow for $listingId...");
 
         tasks.add(() async {
           final double purchasePrice = (property['price'] ?? 0).toDouble();
@@ -600,7 +600,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
           final double monthlyPayment = loanAmount * monthlyInterest / (1 - (1 / pow(1 + monthlyInterest, months)));
           final double interest = monthlyPayment - principal;
 
-          final double hoaFee = (property['hoa_fee'] ?? (cashFlowDefaults['hoaFee'] ?? 0)) / 12;
+          final double hoaFee = (property['hoa_fee'] ?? (cashFlowDefaults['hoaFee'] ?? 0));
           final double propertyTax = (cashFlowDefaults['propertyTax'] ?? 0.015) * purchasePrice / 12;
           final double vacancy = (cashFlowDefaults['vacancyRate'] ?? 0.05) * rentValue;
           final double insurance = (cashFlowDefaults['insurance'] ?? 0.005) * purchasePrice / 12;
@@ -622,7 +622,6 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
             'loanAmount': loanAmount,
             'monthlyPayment': monthlyPayment,
             'hoaFee': hoaFee,
-            'propertyHoa': property['hoa_fee'] ?? 0,
             'vacancy': vacancy,
             'downPayment': downPayment,
             'monthlyInterest': monthlyInterest,
