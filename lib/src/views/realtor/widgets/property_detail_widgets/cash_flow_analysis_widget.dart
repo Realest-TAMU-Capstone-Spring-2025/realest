@@ -240,23 +240,34 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
           Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 600),
-              // Adjust as needed
               child: Wrap(
                 spacing: 12,
                 runSpacing: 12,
                 alignment: WrapAlignment.center,
                 children: [
                   _valueCard(
-                      "Income", cashflowData['rent']!, Colors.green, currency),
-                  _valueCard("Expenses",
-                      cashflowData['rent'] - cashflowData['netOperatingIncome'],
-                      Colors.red, currency),
-                  _valueCard("Cash Flow", cashflowData['netOperatingIncome']!,
-                      isPositive ? Colors.green : Colors.red, currency),
+                    "Income",
+                    (cashflowData['rent'] as num).toDouble(),
+                    Colors.green,
+                    currency,
+                  ),
+                  _valueCard(
+                    "Expenses",
+                    ((cashflowData['rent'] as num) - (cashflowData['netOperatingIncome'] as num)).toDouble(),
+                    Colors.red,
+                    currency,
+                  ),
+                  _valueCard(
+                    "Cash Flow",
+                    (cashflowData['netOperatingIncome'] as num).toDouble(),
+                    isPositive ? Colors.green : Colors.red,
+                    currency,
+                  ),
                 ],
               ),
             ),
           ),
+
 
           const SizedBox(height: 10),
           // Breakdown section
@@ -625,13 +636,14 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
             });
 
 
-            final double purchasePrice = cashflowData['purchasePrice'];
+            final double purchasePrice = (cashflowData['purchasePrice'] ?? 0).toDouble();
             final used = cashflowData['valuesUsed'] ?? {};
-            final rent = (newDefaults['customIncome'] ?? 0).toDouble();
-            final double downPayment = used['downPayment'] * purchasePrice;
+
+            final double rent = (newDefaults['customIncome'] ?? 0).toDouble();
+            final double downPayment = ((used['downPayment'] ?? 0) as num).toDouble() * purchasePrice;
             final double loanAmount = purchasePrice - downPayment;
-            final double interestRate = used['interestRate'];
-            final int loanTerm = used['loanTerm'];
+            final double interestRate = ((used['interestRate'] ?? 0) as num).toDouble();
+            final int loanTerm = ((used['loanTerm'] ?? 0) as num).toInt();
             final double monthlyInterest = interestRate / 12;
             final int months = loanTerm * 12;
 
@@ -639,13 +651,14 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
             final double monthlyPayment = loanAmount * monthlyInterest / (1 - (1 / pow(1 + monthlyInterest, months)));
             final double interest = monthlyPayment - principal;
 
-            final double hoaFee = newDefaults['hoaFee'];
-            final double propertyTax = newDefaults['propertyTax'] * purchasePrice / 12;
-            final double vacancy = newDefaults['vacancyRate'] * rent;
-            final double insurance = newDefaults['insurance'] * purchasePrice / 12;
-            final double maintenance = newDefaults['maintenance'] * purchasePrice / 12;
-            final double otherCosts = newDefaults['otherCosts'] / 12;
-            final double managementFee = newDefaults['managementFee'] * rent;
+            final double hoaFee = ((newDefaults['hoaFee'] ?? 0) as num).toDouble();
+            final double propertyTax = ((newDefaults['propertyTax'] ?? 0) as num).toDouble() * purchasePrice / 12;
+            final double vacancy = ((newDefaults['vacancyRate'] ?? 0) as num).toDouble() * rent;
+            final double insurance = ((newDefaults['insurance'] ?? 0) as num).toDouble() * purchasePrice / 12;
+            final double maintenance = ((newDefaults['maintenance'] ?? 0) as num).toDouble() * purchasePrice / 12;
+            final double otherCosts = ((newDefaults['otherCosts'] ?? 0) as num).toDouble() / 12;
+            final double managementFee = ((newDefaults['managementFee'] ?? 0) as num).toDouble() * rent;
+
 
             final expenses = monthlyPayment + vacancy + propertyTax + insurance + maintenance + otherCosts + hoaFee + managementFee;
             final double netOperatingIncome = rent - expenses;
