@@ -141,32 +141,6 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
                                   ),
                                 ],
                               ),
-                              if (!isMobile)
-                                Expanded(
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: neonPurple),
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            _tabButton(context, 'Overview'),
-                                            const SizedBox(width: 16),
-                                            _tabButton(context, 'Realtors'),
-                                            const SizedBox(width: 16),
-                                            _tabButton(context, 'Investors'),
-                                            const SizedBox(width: 16),
-                                            _tabButton(context, 'Solutions'),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                               Row(
                                 children: [
                                   OutlinedButton(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MobileHomePage extends StatefulWidget {
   const MobileHomePage({Key? key}) : super(key: key);
@@ -22,6 +24,11 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
   @override
   void initState() {
     super.initState();
+
+    // Check if user is already logged in
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthStatus();
+    });
 
     // Initialize animation controllers
     _logoController = AnimationController(
@@ -80,6 +87,46 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
     Future.delayed(const Duration(milliseconds: 1200), () {
       _buttonsController.forward();
     });
+  }
+
+  Future<void> _checkAuthStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && mounted) {
+      // User is logged in, fetch user data from Firestore
+      try {
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists) {
+          String role = userDoc['role'];
+          bool completedSetup = userDoc['completedSetup'] ?? false;
+
+          // Navigate based on role and setup status
+          if (role == 'realtor' || role == 'investor') {
+            context.go(completedSetup ? '/home' : '/setup');
+          } else {
+            // Handle invalid role (optional: show error or sign out)
+            await FirebaseAuth.instance.signOut();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Invalid user role. Please contact support.')),
+            );
+          }
+        } else {
+          // User document doesn't exist, sign out and show error
+          await FirebaseAuth.instance.signOut();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User data not found. Please sign in again.')),
+          );
+        }
+      } catch (e) {
+        // Handle Firestore errors
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error checking user status: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -146,7 +193,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
                   children: [
                     SizedBox(
                       width: double.infinity,
-                      height: 50,
+                      height: 60,
                       child: ElevatedButton(
                         onPressed: () {
                           context.go('/login');
@@ -170,7 +217,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
-                      height: 50,
+                      height: 60,
                       child: ElevatedButton(
                         onPressed: () {
                           context.go('/login?register=true');

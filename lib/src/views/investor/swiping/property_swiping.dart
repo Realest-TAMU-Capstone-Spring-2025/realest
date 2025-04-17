@@ -392,30 +392,29 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
           children: [
             Row(
-              spacing: 0,
               children: [
                 if (_realtorPropertyCount > 0)
                   Container(
                     margin: const EdgeInsets.only(left: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 20,
-                        minHeight: 16,
-                      ),
-                      child: Text(
-                        '$_realtorPropertyCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    constraints: const BoxConstraints(
+                      minWidth: 20,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$_realtorPropertyCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8),
                   child: Text("From Realtor"),
@@ -436,51 +435,98 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
       ),
       body: _properties.isEmpty
           ? Center(
-              child: _noMoreProperties
-                  ? _useRealtorDecisions? (_noRealtorAssigned
-                      ? Text('No realtor assigned. Please contact support.')
-                      : Text(
-                          'No more properties available. Your realtor is busy finding properties that you like.')):
-                  Text('No more recommended properties.')
-                  : CircularProgressIndicator(),
-            )
-          : CardSwiper(
-              controller: _controller,
-              cardsCount: _properties.length,
-              numberOfCardsDisplayed: 1, // Ensure valid card count
-              backCardOffset: const Offset(0, 40),
-              scale: 0.9,
-              padding: const EdgeInsets.all(24),
-              allowedSwipeDirection: AllowedSwipeDirection.symmetric(
-                horizontal: true,
-                vertical: false,
-              ),
-              onSwipe: _handleSwipe,
-              onEnd: () {
-                setState(() {
-                  _noMoreProperties = true;
-                });
-              },
-              cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
-                if (index >= _properties.length) {
-                  return const SizedBox.shrink(); // Safeguard
-                }
-
-                final property = _properties[index];
-                if (index == 0) {
-                  _startCardViewTracking(property.id);
-                }
-
-                // Determine if this was a "sent" property
-                final wasSent =
-                    _useRealtorDecisions; // You could refine this further
-
-                return PropertySwipeCard(
-                  property: property,
-                  controller: _controller,
-                );
-              },
+        child: _noMoreProperties
+            ? _useRealtorDecisions
+            ? (_noRealtorAssigned
+            ? Text(
+          'No realtor assigned. Please contact support.',
+          style: TextStyle(
+            fontSize: 18,
+            color: Colors.white70,
+            fontWeight: FontWeight.w500,
+          ),
+          textAlign: TextAlign.center,
+        )
+            : Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: 24, vertical: 32),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFFa78cde).withOpacity(0.3),
+              width: 1,
             ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.search_rounded,
+                size: 48,
+                color: Color(0xFFa78cde),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No more properties available.\nYour realtor is busy finding properties that you like.',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ))
+            : Text(
+          'No more recommended properties.',
+          style: TextStyle(
+            fontSize: 18,
+            color: Colors.white70,
+            fontWeight: FontWeight.w500,
+          ),
+          textAlign: TextAlign.center,
+        )
+            : const CircularProgressIndicator(),
+      )
+          : CardSwiper(
+        controller: _controller,
+        cardsCount: _properties.length,
+        numberOfCardsDisplayed: 1,
+        backCardOffset: const Offset(0, 40),
+        scale: 0.9,
+        padding: const EdgeInsets.all(24),
+        allowedSwipeDirection: AllowedSwipeDirection.symmetric(
+          horizontal: true,
+          vertical: false,
+        ),
+        onSwipe: _handleSwipe,
+        onEnd: () {
+          setState(() {
+            _noMoreProperties = true;
+          });
+        },
+        cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
+          if (index >= _properties.length) {
+            return const SizedBox.shrink();
+          }
+
+          final property = _properties[index];
+          if (index == 0) {
+            _startCardViewTracking(property.id);
+          }
+
+          final wasSent = _useRealtorDecisions;
+
+          return PropertySwipeCard(
+            property: property,
+            controller: _controller,
+          );
+        },
+      ),
     );
   }
 }

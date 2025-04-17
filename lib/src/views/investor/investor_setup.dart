@@ -332,7 +332,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
           'contactPhone': _contactPhoneController.text.trim(),
           'profilePicUrl': profilePicUrl,
           'createdAt': FieldValue.serverTimestamp(),
-          'status': 'client',
+          'status': 'qualified-lead',
           'notes': 'Account Created',
         }, SetOptions(merge: true));
 
