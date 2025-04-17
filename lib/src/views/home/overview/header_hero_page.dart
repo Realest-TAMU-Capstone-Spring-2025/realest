@@ -188,7 +188,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
                                   ),
                                   const SizedBox(width: 8),
                                   ElevatedButton(
-                                    onPressed: () => context.go('/login'),
+                                    onPressed: () => context.go('/login?register=true'),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.white,
                                       padding: EdgeInsets.symmetric(
@@ -273,7 +273,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
                       FadeTransition(
                         opacity: _buttonAnimation,
                         child: ElevatedButton(
-                          onPressed: () => context.go('/login'),
+                          onPressed: () => context.go('/login?register=true'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
                             foregroundColor: neonPurple,

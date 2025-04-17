@@ -111,18 +111,18 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+
   GoRouter _createRouter(VoidCallback toggleTheme) {
-    // Determine the initial route based on the platform
+
     String initialRoute = '/';
     if (!kIsWeb) {
-      // If not on web, check if the platform is Android or iOS (mobile)
       if (Platform.isAndroid || Platform.isIOS) {
-        initialRoute = '/mobileHome'; // Redirect mobile users to the login page
+        initialRoute = '/mobileHome';
       }
     }
 
     return GoRouter(
-      initialLocation: initialRoute, // Set the platform-specific initial route
+      initialLocation: initialRoute,
       redirect: (context, state) {
         if (userProvider.isLoading) return null;
         final isLoggedIn = userProvider.userRole != null;
@@ -130,16 +130,13 @@ class _MyAppState extends State<MyApp> {
 
         if (currentPath == '/') return null;
 
-        // Redirect logic for '/login'
         if (currentPath == '/login' && isLoggedIn) {
           _showAccessDenied(context, "You are already logged in");
           return '/home';
         }
 
-        // Protected routes logic
         final protectedRoutes = [
           '/home',
-          '/setup',
           '/settings',
           '/calculators',
           '/saved',
@@ -152,10 +149,9 @@ class _MyAppState extends State<MyApp> {
         if (protectedRoutes.contains(currentPath)) {
           if (!isLoggedIn) {
             _showAccessDenied(context, "You need to log in to access this page");
-            return '/login'; // Redirect unauthenticated users to login
+            return '/login';
           }
 
-          // Role-specific route protection
           if (currentPath == '/saved' && userProvider.userRole != 'investor') {
             _showAccessDenied(context, 'Saved properties only available to investors');
             return '/home';
@@ -173,7 +169,7 @@ class _MyAppState extends State<MyApp> {
             return '/home';
           }
         }
-        return null; // No redirection needed
+        return null;
       },
       routes: [
         GoRoute(
@@ -187,6 +183,15 @@ class _MyAppState extends State<MyApp> {
         GoRoute(
           path: '/login',
           builder: (context, state) => const CustomLoginPage(),
+        ),
+        GoRoute(
+          path: '/setup',
+          builder: (context, state) {
+            final userProvider = Provider.of<UserProvider>(context);
+            return userProvider.userRole == 'investor'
+                ? const InvestorSetupPage()
+                : const RealtorSetupPage();
+          },
         ),
         ShellRoute(
           builder: (context, state, child) => MainLayout(
@@ -205,15 +210,6 @@ class _MyAppState extends State<MyApp> {
                   toggleTheme: toggleTheme,
                   isDarkMode: themeModeNotifier.value == ThemeMode.dark,
                 );
-              },
-            ),
-            GoRoute(
-              path: '/setup',
-              builder: (context, state) {
-                final userProvider = Provider.of<UserProvider>(context);
-                return userProvider.userRole == 'investor'
-                    ? const InvestorSetupPage()
-                    : const RealtorSetupPage();
               },
             ),
             GoRoute(
@@ -244,9 +240,9 @@ class _MyAppState extends State<MyApp> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Saved properties only available to investors')),
                     );
-                    context.go('/home'); // Redirect back to home
+                    context.go('/home');
                   });
-                  return const SizedBox.shrink(); // Temporary empty widget
+                  return const SizedBox.shrink();
                 }
                 return SavedProperties();
               },
@@ -260,9 +256,9 @@ class _MyAppState extends State<MyApp> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Disliked properties only available to investors')),
                     );
-                    context.go('/home'); // Redirect back to home
+                    context.go('/home');
                   });
-                  return const SizedBox.shrink(); // Temporary empty widget
+                  return const SizedBox.shrink();
                 }
                 return DislikedProperties();
               },
@@ -276,9 +272,9 @@ class _MyAppState extends State<MyApp> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Client management only available to realtors')),
                     );
-                    context.go('/home'); // Redirect back to home
+                    context.go('/home');
                   });
-                  return const SizedBox.shrink(); // Temporary empty widget
+                  return const SizedBox.shrink();
                 }
                 return const RealtorClients();
               },

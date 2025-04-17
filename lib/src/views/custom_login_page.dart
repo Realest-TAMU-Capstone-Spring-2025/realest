@@ -30,7 +30,6 @@ class _DelayedFadeInState extends State<DelayedFadeIn> {
   @override
   void initState() {
     super.initState();
-    // Trigger fade in after the specified delay.
     Future.delayed(widget.delay, () {
       if (mounted) {
         setState(() {
@@ -67,25 +66,189 @@ class _CustomLoginPageState extends State<CustomLoginPage>
   String? _errorMessage;
   Timer? _errorTimer;
 
+  // Validation states
+  String? _emailError;
+  String? _passwordError;
+  String? _confirmPasswordError;
+  double _passwordStrength = 0.0;
+  bool _showPasswordStrength = false;
+
+  // Password requirement states
+  bool _hasMinLength = false;
+  bool _hasUppercase = false;
+  bool _hasLowercase = false;
+  bool _hasNumber = false;
+  bool _hasSpecialChar = false;
+
+  // Password visibility states
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
     super.initState();
-    // No outer fade controller; instead each widget fades in individually.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final queryParams = GoRouterState.of(context).uri.queryParameters;
+      setState(() {
+        _isRegister = queryParams['register'] == 'true';
+      });
+    });
+
+    _emailController.addListener(_validateEmail);
+    _passwordController.addListener(_validatePassword);
+    _confirmPasswordController.addListener(_validateConfirmPassword);
   }
 
   @override
   void dispose() {
     _errorTimer?.cancel();
+    _emailController.removeListener(_validateEmail);
+    _passwordController.removeListener(_validatePassword);
+    _confirmPasswordController.removeListener(_validateConfirmPassword);
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
+  void _validateEmail() {
+    final email = _emailController.text.trim();
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    setState(() {
+      _emailError = email.isEmpty
+          ? 'Email is required'
+          : !emailRegex.hasMatch(email)
+          ? 'Enter a valid email'
+          : null;
+    });
+  }
+
+  void _validatePassword() {
+    final password = _passwordController.text;
+    setState(() {
+      _showPasswordStrength = _isRegister && password.isNotEmpty;
+      if (password.isEmpty) {
+        _passwordError = 'Password is required';
+        _hasMinLength = false;
+        _hasUppercase = false;
+        _hasLowercase = false;
+        _hasNumber = false;
+        _hasSpecialChar = false;
+        _passwordStrength = 0.0;
+      } else if (_isRegister) {
+        _hasMinLength = password.length >= 8;
+        _hasUppercase = RegExp(r'[A-Z]').hasMatch(password);
+        _hasLowercase = RegExp(r'[a-z]').hasMatch(password);
+        _hasNumber = RegExp(r'[0-9]').hasMatch(password);
+        _hasSpecialChar = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+
+        if (!_hasMinLength) {
+          _passwordError = 'Password must be at least 8 characters';
+        } else if (!_hasUppercase) {
+          _passwordError = 'Password must contain an uppercase letter';
+        } else if (!_hasLowercase) {
+          _passwordError = 'Password must contain a lowercase letter';
+        } else if (!_hasNumber) {
+          _passwordError = 'Password must contain a number';
+        } else if (!_hasSpecialChar) {
+          _passwordError = 'Password must contain a special character';
+        } else {
+          _passwordError = null;
+        }
+
+        _passwordStrength = _calculatePasswordStrength(password);
+      } else {
+        _passwordError = null;
+        _hasMinLength = false;
+        _hasUppercase = false;
+        _hasLowercase = false;
+        _hasNumber = false;
+        _hasSpecialChar = false;
+        _passwordStrength = 0.0;
+      }
+    });
+  }
+
+  double _calculatePasswordStrength(String password) {
+    int strength = 0;
+    if (password.length >= 8) strength++;
+    if (RegExp(r'[A-Z]').hasMatch(password)) strength++;
+    if (RegExp(r'[a-z]').hasMatch(password)) strength++;
+    if (RegExp(r'[0-9]').hasMatch(password)) strength++;
+    if (RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) strength++;
+    return strength / 5.0;
+  }
+
+  void _validateConfirmPassword() {
+    final confirmPassword = _confirmPasswordController.text;
+    setState(() {
+      _confirmPasswordError = _isRegister && confirmPassword.isEmpty
+          ? 'Confirm password is required'
+          : _isRegister && confirmPassword != _passwordController.text
+          ? 'Passwords do not match'
+          : null;
+    });
+  }
+
+  void _resetFields() {
+    _emailController.clear();
+    _passwordController.clear();
+    _confirmPasswordController.clear();
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+      _confirmPasswordError = null;
+      _showPasswordStrength = false;
+      _hasMinLength = false;
+      _hasUppercase = false;
+      _hasLowercase = false;
+      _hasNumber = false;
+      _hasSpecialChar = false;
+      _passwordStrength = 0.0;
+      _obscurePassword = true;
+      _obscureConfirmPassword = true;
+    });
+  }
+
+  List<String> _validateFields() {
+    List<String> errors = [];
+    _validateEmail();
+    _validatePassword();
+    if (_isRegister) _validateConfirmPassword();
+
+    if (_emailError != null) errors.add(_emailError!);
+    if (_passwordError != null) errors.add(_passwordError!);
+    if (_isRegister && _confirmPasswordError != null) errors.add(_confirmPasswordError!);
+
+    return errors;
+  }
+
   Future<void> _authenticate() async {
+    List<String> errors = _validateFields();
+    if (errors.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Validation Error'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: errors.map((error) => Text('• $error')).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -106,7 +269,6 @@ class _CustomLoginPageState extends State<CustomLoginPage>
 
   Future<void> _signInWithEmail() async {
     try {
-      // Check for temp password login in the investors collection
       QuerySnapshot investorQuery = await _firestore
           .collection('investors')
           .where('contactEmail', isEqualTo: _emailController.text.trim())
@@ -115,17 +277,14 @@ class _CustomLoginPageState extends State<CustomLoginPage>
           .get();
 
       if (investorQuery.docs.isNotEmpty) {
-        // Temp password login detected
         DocumentSnapshot investorDoc = investorQuery.docs.first;
         String uid = investorDoc.id;
 
-        // Sign in with Firebase Auth
         UserCredential userCredential = await _auth.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
 
-        // Update Firestore: Set user role (do NOT invalidate tempPassword here)
         await _firestore.collection('users').doc(uid).set({
           'email': _emailController.text.trim(),
           'role': 'investor',
@@ -133,11 +292,9 @@ class _CustomLoginPageState extends State<CustomLoginPage>
           'completedSetup': false,
         }, SetOptions(merge: true));
 
-        // Fetch user data and redirect to investor setup
         Provider.of<UserProvider>(context, listen: false).fetchUserData();
         if (mounted) context.go('/setup');
       } else {
-        // Regular login flow
         UserCredential userCredential = await _auth.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
@@ -171,34 +328,20 @@ class _CustomLoginPageState extends State<CustomLoginPage>
   }
 
   Future<void> _createAccount() async {
-    if (_passwordController.text != _confirmPasswordController.text) {
-      throw FirebaseAuthException(
-          code: 'password-mismatch',
-          message: 'Passwords do not match'
-      );
-    }
-
-    // Create the Firebase auth account
     UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
     );
 
-    // Create a document for the new user in Firestore
     await _createUserDocument(userCredential.user!);
-
-    // Immediately fetch user data to update the provider
     Provider.of<UserProvider>(context, listen: false).fetchUserData();
-
-    // Navigate after the user data has been (or is being) fetched
     _navigateAfterRegistration();
   }
-
 
   Future<void> _createUserDocument(User user) async {
     await _firestore.collection('users').doc(user.uid).set({
       'email': user.email,
-      'role': 'realtor', // All new accounts default to Realtor
+      'role': 'realtor',
       'createdAt': FieldValue.serverTimestamp(),
       'completedSetup': false,
     });
@@ -356,11 +499,9 @@ class _CustomLoginPageState extends State<CustomLoginPage>
     );
   }
 
-  /// Build the list of form children with staggered fade-in animations.
   List<Widget> _buildFormChildren(Color neonPurple, bool isMobile) {
-    // We'll assign a base delay and an increment for each successive widget.
-    const baseDelay = 300; // in milliseconds
-    const delayIncrement = 200; // in milliseconds
+    const baseDelay = 300;
+    const delayIncrement = 200;
     int index = 0;
 
     List<Widget> children = [];
@@ -407,7 +548,14 @@ class _CustomLoginPageState extends State<CustomLoginPage>
       DelayedFadeIn(
         delay: Duration(milliseconds: baseDelay + index * delayIncrement),
         duration: const Duration(milliseconds: 1000),
-        child: _buildAlignedField('Email', _emailController, false, false, isMobile),
+        child: _buildAlignedField(
+          'Email',
+          _emailController,
+          false,
+          false,
+          isMobile,
+          error: _emailError,
+        ),
       ),
     );
     index++;
@@ -418,7 +566,27 @@ class _CustomLoginPageState extends State<CustomLoginPage>
       DelayedFadeIn(
         delay: Duration(milliseconds: baseDelay + index * delayIncrement),
         duration: const Duration(milliseconds: 1000),
-        child: _buildAlignedField('Password', _passwordController, true, !_isRegister, isMobile),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildAlignedField(
+              'Password',
+              _passwordController,
+              _obscurePassword,
+              !_isRegister,
+              isMobile,
+              error: _passwordError,
+              toggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
+              isPassword: true,
+            ),
+            if (_showPasswordStrength) ...[
+              const SizedBox(height: 8),
+              _buildPasswordRequirements(isMobile),
+              const SizedBox(height: 8),
+              _buildPasswordStrengthBar(isMobile),
+            ],
+          ],
+        ),
       ),
     );
     index++;
@@ -429,7 +597,16 @@ class _CustomLoginPageState extends State<CustomLoginPage>
         DelayedFadeIn(
           delay: Duration(milliseconds: baseDelay + index * delayIncrement),
           duration: const Duration(milliseconds: 1000),
-          child: _buildAlignedField('Confirm Password', _confirmPasswordController, true, true, isMobile),
+          child: _buildAlignedField(
+            'Confirm Password',
+            _confirmPasswordController,
+            _obscureConfirmPassword,
+            true,
+            isMobile,
+            error: _confirmPasswordError,
+            toggleObscure: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+            isPassword: true,
+          ),
         ),
       );
       index++;
@@ -476,7 +653,16 @@ class _CustomLoginPageState extends State<CustomLoginPage>
     return children;
   }
 
-  Widget _buildAlignedField(String label, TextEditingController controller, bool obscure, bool isLastField, bool isMobile) {
+  Widget _buildAlignedField(
+      String label,
+      TextEditingController controller,
+      bool obscure,
+      bool isLastField,
+      bool isMobile, {
+        String? error,
+        VoidCallback? toggleObscure,
+        bool isPassword = false,
+      }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -487,13 +673,36 @@ class _CustomLoginPageState extends State<CustomLoginPage>
         const SizedBox(height: 8),
         SizedBox(
           width: isMobile ? 400 : 500,
-          child: _buildTextField(controller, obscure, isLastField, isMobile),
+          child: _buildTextField(
+            controller,
+            obscure,
+            isLastField,
+            isMobile,
+            error,
+            toggleObscure,
+            isPassword,
+          ),
         ),
+        if (error != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            error,
+            style: TextStyle(color: Colors.red, fontSize: isMobile ? 12 : 14),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, bool obscure, bool isLastField, bool isMobile) {
+  Widget _buildTextField(
+      TextEditingController controller,
+      bool obscure,
+      bool isLastField,
+      bool isMobile,
+      String? error,
+      VoidCallback? toggleObscure,
+      bool isPassword,
+      ) {
     const Color neonPurple = Color(0xFFa78cde);
     return TextField(
       controller: controller,
@@ -502,22 +711,124 @@ class _CustomLoginPageState extends State<CustomLoginPage>
         fillColor: Colors.grey[900],
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.0),
-          borderSide: const BorderSide(color: neonPurple, width: 1),
+          borderSide: BorderSide(
+            color: error != null ? Colors.red : neonPurple,
+            width: 1,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.0),
-          borderSide: const BorderSide(color: neonPurple, width: 2),
+          borderSide: BorderSide(
+            color: error != null ? Colors.red : neonPurple,
+            width: 2,
+          ),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15.0),
+          borderSide: const BorderSide(color: Colors.red, width: 1),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15.0),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
+        ),
+        suffixIcon: isPassword
+            ? IconButton(
+          icon: Icon(
+            obscure ? Icons.visibility_off : Icons.visibility,
+            color: Colors.white70,
+          ),
+          onPressed: toggleObscure,
+        )
+            : null,
       ),
       style: TextStyle(color: Colors.white, fontSize: isMobile ? 14 : 16),
       obscureText: obscure,
-      keyboardType: obscure ? TextInputType.text : TextInputType.emailAddress,
+      keyboardType: isPassword ? TextInputType.text : TextInputType.emailAddress,
       textInputAction: isLastField ? TextInputAction.done : TextInputAction.next,
       onSubmitted: (value) {
         if (isLastField) {
           _authenticate();
         }
       },
+    );
+  }
+
+  Widget _buildPasswordRequirements(bool isMobile) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        _buildRequirementText(
+          _hasMinLength ? '✔️ 8 characters' : 'x 8 characters',
+          _hasMinLength,
+          isMobile,
+        ),
+        _buildRequirementText(
+          _hasUppercase ? '✔️ Uppercase' : 'x Uppercase',
+          _hasUppercase,
+          isMobile,
+        ),
+        _buildRequirementText(
+          _hasLowercase ? '✔️ Lowercase' : 'x Lowercase',
+          _hasLowercase,
+          isMobile,
+        ),
+        _buildRequirementText(
+          _hasNumber ? '✔️ Number' : 'x Number',
+          _hasNumber,
+          isMobile,
+        ),
+        _buildRequirementText(
+          _hasSpecialChar ? '✔️ Special Character' : 'x Special character',
+          _hasSpecialChar,
+          isMobile,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRequirementText(String text, bool isMet, bool isMobile) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: isMet ? Colors.green : Colors.red,
+        fontSize: isMobile ? 12 : 14,
+      ),
+    );
+  }
+
+  Widget _buildPasswordStrengthBar(bool isMobile) {
+    Color strengthColor;
+    String strengthText;
+    if (_passwordStrength < 0.4) {
+      strengthColor = Colors.red;
+      strengthText = 'Weak';
+    } else if (_passwordStrength < 0.8) {
+      strengthColor = Colors.yellow;
+      strengthText = 'Medium';
+    } else {
+      strengthColor = Colors.green;
+      strengthText = 'Strong';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LinearProgressIndicator(
+          value: _passwordStrength,
+          backgroundColor: Colors.grey[700],
+          valueColor: AlwaysStoppedAnimation<Color>(strengthColor),
+          minHeight: 5,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Password Strength: $strengthText',
+          style: TextStyle(
+            color: strengthColor,
+            fontSize: isMobile ? 12 : 14,
+          ),
+        ),
+      ],
     );
   }
 
@@ -553,7 +864,12 @@ class _CustomLoginPageState extends State<CustomLoginPage>
           style: GoogleFonts.openSans(fontSize: isMobile ? 16 : 20, color: Colors.white),
         ),
         TextButton(
-          onPressed: () => setState(() => _isRegister = !_isRegister),
+          onPressed: () {
+            setState(() {
+              _isRegister = !_isRegister;
+              _resetFields();
+            });
+          },
           child: Text(
             _isRegister ? 'Sign In' : 'Register',
             style: GoogleFonts.openSans(
