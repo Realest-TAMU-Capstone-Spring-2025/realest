@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'feature_container.dart';
 
 class HeaderHeroPage extends StatefulWidget {
@@ -26,6 +27,9 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
   late Animation<double> _featuresAnimation;
 
   bool _hasTyped = false;
+
+  // Firebase Storage URL for the APK
+  final String _apkDownloadUrl = 'https://firebasestorage.googleapis.com/v0/b/realest-3a0d2.firebasestorage.app/o/app-release.apk?alt=media&token=c765016a-1d08-4a4b-878b-07049821a861';
 
   @override
   void initState() {
@@ -95,6 +99,28 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
         style: const TextStyle(color: Colors.white, fontSize: 20),
       ),
     );
+  }
+
+  // Function to launch the APK download URL
+  Future<void> _launchApkDownload() async {
+    final Uri url = Uri.parse(_apkDownloadUrl);
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch download URL')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error launching URL: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -247,7 +273,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
                       FadeTransition(
                         opacity: _buttonAnimation,
                         child: ElevatedButton(
-                          onPressed: () => context.go('/login?register=true'),
+                          onPressed: _launchApkDownload,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
                             foregroundColor: neonPurple,
@@ -264,7 +290,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Get Started',
+                                'Download Mobile APK',
                                 style: TextStyle(
                                   color: neonPurple,
                                   fontSize: isMobile ? 16 : 20,
@@ -273,9 +299,9 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
                               ),
                               const SizedBox(width: 8),
                               Icon(
-                                Icons.arrow_forward,
+                                Icons.download,
                                 color: neonPurple,
-                                size: isMobile ? 20 : 40,
+                                size: isMobile ? 20 : 24,
                               ),
                             ],
                           ),

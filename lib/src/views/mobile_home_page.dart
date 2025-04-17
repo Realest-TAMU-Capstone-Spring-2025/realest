@@ -163,7 +163,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
               child: Text(
                 'Welcome to RealEst',
                 style: GoogleFonts.poppins(
-                  fontSize: 36,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -176,7 +176,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
               child: Text(
                 'Automate Analysis, Multiply Deals',
                 style: GoogleFonts.poppins(
-                  fontSize: 18,
+                  fontSize: 17,
                   color: Color(0xFFa78cde),
                   fontWeight: FontWeight.bold,
                 ),
