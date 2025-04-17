@@ -470,7 +470,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
               const SizedBox(height: 16),
               Text(
                 'No more properties available.\nYour realtor is busy finding properties that you like.',
-                style: GoogleFonts.poppins(
+                style: TextStyle(
                   fontSize: 20,
                   color: Colors.white,
                   fontWeight: FontWeight.w500,
