@@ -72,10 +72,6 @@ class PropertySearchBar extends StatelessWidget {
           decoration: InputDecoration(
             hintText: 'Search by address, MLS ID, or Neighborhood...',
             prefixIcon: Icon(Icons.search),
-            contentPadding: const EdgeInsets.symmetric(vertical: 14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
           ),
         );
       },

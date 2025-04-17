@@ -82,11 +82,7 @@ class _CalculatorsState extends State<Calculators> {
           width: 250,
           height: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: const BorderRadius.only(
-              topRight: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
+            color:  Theme.of(context).cardColor,
             boxShadow: const [
               BoxShadow(
                 color: Colors.black12,

@@ -33,7 +33,7 @@ import 'package:realest/src/views/mobile_home_page.dart';
 // Provider and user-related imports
 import 'user_provider.dart';
 
-final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.light);
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.dark);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,17 +78,14 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     userProvider = Provider.of<UserProvider>(context, listen: false);
-    _router = _createRouter(
-          () {
-        setState(() {
-          themeModeNotifier.value = themeModeNotifier.value == ThemeMode.light
-              ? ThemeMode.dark
-              : ThemeMode.light;
-        });
-      },
-      themeModeNotifier.value,
-    );
+    _router = _createRouter(_toggleTheme);
   }
+
+  void _toggleTheme() {
+    themeModeNotifier.value =
+    themeModeNotifier.value == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +111,9 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  GoRouter _createRouter(VoidCallback toggleTheme, ThemeMode themeMode) {
+
+  GoRouter _createRouter(VoidCallback toggleTheme) {
+
     String initialRoute = '/';
     if (!kIsWeb) {
       if (Platform.isAndroid || Platform.isIOS) {
@@ -197,7 +196,7 @@ class _MyAppState extends State<MyApp> {
         ShellRoute(
           builder: (context, state, child) => MainLayout(
             toggleTheme: toggleTheme,
-            themeMode: themeMode,
+            themeMode: themeModeNotifier.value,
             child: child,
           ),
           routes: [
@@ -209,7 +208,7 @@ class _MyAppState extends State<MyApp> {
                     ? const PropertySwipingView()
                     : RealtorDashboard(
                   toggleTheme: toggleTheme,
-                  isDarkMode: themeMode == ThemeMode.dark,
+                  isDarkMode: themeModeNotifier.value == ThemeMode.dark,
                 );
               },
             ),
@@ -220,11 +219,11 @@ class _MyAppState extends State<MyApp> {
                 return userProvider.userRole == 'investor'
                     ? InvestorSettings(
                   toggleTheme: toggleTheme,
-                  isDarkMode: themeMode == ThemeMode.dark,
+                  isDarkMode: themeModeNotifier.value == ThemeMode.dark,
                 )
                     : RealtorSettings(
                   toggleTheme: toggleTheme,
-                  isDarkMode: themeMode == ThemeMode.dark,
+                  isDarkMode: themeModeNotifier.value == ThemeMode.dark,
                 );
               },
             ),
@@ -359,47 +358,24 @@ ThemeData _lightTheme() {
     primaryColor: Colors.black,
     scaffoldBackgroundColor: Colors.white24,
     cardColor: Colors.grey[200],
-    colorScheme: const ColorScheme.light(
+    colorScheme: ColorScheme.light(
       primary: Colors.deepPurple,
       secondary: Colors.black87,
       surface: Colors.white,
       surfaceVariant: Colors.black,
       onSurface: Colors.black,
-      onTertiary: Colors.white38,
+      onTertiary: Colors.grey[100],
+      onTertiaryFixedVariant: Colors.grey[200],
     ),
+    cardTheme: CardTheme( color: Colors.grey[200]),
     textTheme: const TextTheme(
+      headlineSmall: TextStyle(color: Colors.black),
+      headlineLarge: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+      headlineMedium: TextStyle(color: Colors.black87),
+      titleLarge: TextStyle(color: Colors.black),
+      titleMedium: TextStyle(color: Colors.black87),
       bodyLarge: TextStyle(color: Colors.black),
       bodyMedium: TextStyle(color: Colors.black87),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: Colors.grey.shade100,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      hintStyle: TextStyle(color: Colors.grey[500]),
-      labelStyle: const TextStyle(fontWeight: FontWeight.normal),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    ),
-  );
-}
-
-ThemeData _darkTheme() {
-  return ThemeData(
-    primaryColor: Colors.white,
-    scaffoldBackgroundColor: Colors.black54,
-    cardColor: Colors.grey[900],
-    colorScheme: const ColorScheme.dark(
-      primary: Colors.deepPurpleAccent,
-      secondary: Colors.white70,
-      surfaceVariant: Colors.black,
-      surface: Colors.black,
-      onSurface: Colors.white,
-    ),
-    textTheme: const TextTheme(
-      bodyLarge: TextStyle(color: Colors.white),
-      bodyMedium: TextStyle(color: Colors.white70),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -416,8 +392,91 @@ ThemeData _darkTheme() {
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.deepPurpleAccent,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.deepPurpleAccent,
+        backgroundColor: Colors.grey[100],
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        side: const BorderSide(color: Colors.deepPurpleAccent),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Colors.deepPurpleAccent),
+        ),
+      ),
+    ),
+    //expansion panel theme border round
+    expansionTileTheme: ExpansionTileThemeData(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+    ),
+    ),
+
+  );
+
+}
+
+ThemeData _darkTheme() {
+  return ThemeData(
+    primaryColor: Colors.white,
+    scaffoldBackgroundColor: const Color(0xFF1E1E1E),
+    cardColor: const Color(0xFF2C2C2C),
+    colorScheme: const ColorScheme.dark(
+      primary: const Color(0xFFCA93FF),
+      secondary: Colors.white70,
+      surface: Color(0xFF2C2C2C),
+      surfaceVariant: Color(0xFF121212),
+      onSurface: Colors.white,
+      onTertiary:  Color(0xFF3C3C3C),
+      onTertiaryFixedVariant: Color(0xFF494949),
+
+    ),
+    cardTheme: const CardTheme(color: Color(0xFF2C2C2C)),
+    textTheme: const TextTheme(
+      headlineSmall: TextStyle(color: Colors.white),
+      headlineLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      headlineMedium: TextStyle(color: Colors.white70),
+      titleLarge: TextStyle(color: Colors.white),
+      titleMedium: TextStyle(color: Colors.white70),
+      bodyLarge: TextStyle(color: Colors.white),
+      bodyMedium: TextStyle(color: Colors.white70),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: const Color(0xFF333333),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      hintStyle: TextStyle(color: Colors.grey[400]),
+      labelStyle: const TextStyle(fontWeight: FontWeight.normal, color: Colors.white),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.deepPurpleAccent,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.deepPurpleAccent,
+        backgroundColor: const Color(0xFF2C2C2C),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        side: const BorderSide(color: Colors.deepPurpleAccent),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Colors.deepPurpleAccent),
+        ),
       ),
     ),
   );

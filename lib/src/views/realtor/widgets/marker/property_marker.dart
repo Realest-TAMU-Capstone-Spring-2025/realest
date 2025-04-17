@@ -10,7 +10,7 @@ Future<BitmapDescriptor> createPriceMarkerBitmap(
     text: TextSpan(
       text: priceText,
       style: const TextStyle(
-        fontSize: 12,
+        fontSize: 26,
         fontWeight: FontWeight.bold,
         color: Colors.white,
       ),
@@ -21,7 +21,7 @@ Future<BitmapDescriptor> createPriceMarkerBitmap(
 
   const double padding = 15;
   final double width = textPainter.width + padding;
-  const double height = 20;
+  const double height = 40;
 
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);

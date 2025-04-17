@@ -41,7 +41,6 @@ class _PropertyDescriptionWidgetState extends State<PropertyDescriptionWidget> {
                   widget.description.isNotEmpty
                       ? widget.description
                       : "No description available for this property.",
-                  style: TextStyle(color: Colors.grey[800], fontSize: 14),
                 ),
               ),
               isExpanded: _isExpanded,

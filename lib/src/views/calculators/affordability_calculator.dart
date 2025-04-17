@@ -100,7 +100,7 @@ class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
               const SizedBox(height: 24),
               Center(
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.calculate),
+                  icon: const Icon(Icons.calculate, color: Colors.white),
                   label: const Text("Calculate"),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),

@@ -19,8 +19,8 @@ class PinnedClientsSection extends StatefulWidget {
 
 class PinnedClientsSectionState extends State<PinnedClientsSection> {
   final algolia.HitsSearcher _searcher = algolia.HitsSearcher(
-    applicationID: dotenv.env['ALGOLIA_APP_ID']!,
-    apiKey: dotenv.env['ALGOLIA_API_KEY']!,
+    applicationID: 'BFVXJ9G642',
+    apiKey: '5341f6a026fbb648426f933b6e3cead7',
     indexName: 'investors',
   );
   final DefaultCacheManager _cacheManager = DefaultCacheManager();
@@ -31,7 +31,6 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
   bool _isLoading = true;
   bool _showSearchBar = false;
   Timer? _batchUpdateTimer;
-  double _searchBarWidth = 0; //lags the search bar a little but
 
 
   @override
@@ -64,7 +63,7 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
     setState(() {
       _pinnedClients.remove(clientRef);
     });
-    
+
     // Update both cache and Firestore
     await _cacheClients(_pinnedClients);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -161,17 +160,15 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
+    return Column(
           children: [
             _buildHeader(),
             StreamBuilder<algolia.SearchResponse>(
               stream: _searcher.responses,
               builder: (context, snapshot) {
-                if (_showSearchBar && 
-                    snapshot.hasData && 
-                    snapshot.data!.hits.isEmpty && 
+                if (_showSearchBar &&
+                    snapshot.hasData &&
+                    snapshot.data!.hits.isEmpty &&
                     _searchController.text.isNotEmpty) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -198,8 +195,8 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
                   : _buildPinnedClientsList(),
             ),
           ],
-        ),
-      ),
+
+
     );
   }
 
@@ -207,7 +204,9 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
     return _pinnedClients.isEmpty
         ? const Center(child: Text('No pinned clients'))
         : Card(
-              margin: const EdgeInsets.all(16.0),
+      color:  Theme.of(context).colorScheme.onTertiary,
+
+      margin: const EdgeInsets.all(16.0),
                 child: ReorderableListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 buildDefaultDragHandles: _showSearchBar,
@@ -217,7 +216,7 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
                   final client = _pinnedClients.removeAt(oldIndex);
                   _pinnedClients.insert(newIndex, client);
                   });
-                  
+
                   // Update both cache and Firestore with the new order
                   _cacheClients(_pinnedClients);
                   _scheduleBatchUpdate();
@@ -232,13 +231,13 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
                     if (!snapshot.hasData) {
                       return SizedBox.shrink();
                     }
-                    
+
                     if (!snapshot.hasData || snapshot.data!.data() == null) {
                       return SizedBox.shrink();
                     }
                     final data = snapshot.data!.data() as Map<String, dynamic>;
 
-                    final isName = 
+                    final isName =
                       (data['firstName']?.isNotEmpty == true &&
                         data['lastName']?.isNotEmpty == true);
                     return ListTile(
@@ -265,7 +264,7 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: _showSearchBar 
+      child: _showSearchBar
           ? _buildSearchBarInHeader()
           : Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -285,7 +284,7 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
 
   Widget _buildSearchBarInHeader() {
   final searchBarKey = GlobalKey();
-  
+
   return RawAutocomplete<Map<String, dynamic>>(
     focusNode: _searchFocusNode,
     textEditingController: _searchController,
@@ -305,7 +304,6 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
             icon: const Icon(Icons.close),
             onPressed: _toggleSearchBar,
           ),
-          border: const OutlineInputBorder(),
         ),
         onTap: () {
           // After the widget is built, get its size
@@ -313,14 +311,13 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
             if (searchBarKey.currentContext != null) {
               final RenderBox box = searchBarKey.currentContext!.findRenderObject() as RenderBox;
               // Store the width for use in the options builder
-              _searchBarWidth = box.size.width;
               setState(() {});
             }
           });
         },
       );
     },
-    optionsViewBuilder: (context, onSelected, options) => 
+    optionsViewBuilder: (context, onSelected, options) =>
         _buildSearchOptions(context, onSelected, options),
     onSelected: (option) {
       _addClientToPin(option);
@@ -333,7 +330,7 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
   Future<Iterable<Map<String, dynamic>>> _searchClients(
       TextEditingValue textEditingValue) async {
       if (textEditingValue.text.isEmpty) return const [];
-      
+
       final userProvider =
           Provider.of<UserProvider>(context, listen: false);
       final pinnedIds = _pinnedClients.map((ref) => ref.id).toList();
@@ -365,7 +362,7 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
       setState(() {
         _pinnedClients.add(clientRef);
       });
-      
+
       await _cacheClients(_pinnedClients);
       await FirebaseFirestore.instance
           .collection('realtors')
@@ -375,57 +372,56 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
       });
     }
 
-    Widget _buildSearchOptions(BuildContext context,
+  Widget _buildSearchOptions(
+      BuildContext context,
       AutocompleteOnSelected<Map<String, dynamic>> onSelected,
-      Iterable<Map<String, dynamic>> options) {
-    // Get the available width from the parent container
-    final double availableWidth
-      = _searchBarWidth > 0 
-        ? _searchBarWidth 
-        : MediaQuery.of(context).size.width - 32;
-    
-    // Calculate the height based on the pinned clients section
-    // This will be constrained by the parent's height
-    final double maxHeight = MediaQuery.of(context).size.height * 0.5; // Limit to half the screen height
-    
+      Iterable<Map<String, dynamic>> options,
+      ) {
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    final double availableWidth =  300;
+    final double maxHeight = MediaQuery.of(context).size.height * 0.5;
+
     return Align(
       alignment: Alignment.topLeft,
       child: Material(
         elevation: 4,
-        child: Container(
-          width: availableWidth,
-          constraints: BoxConstraints(maxHeight: maxHeight),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: availableWidth, // ✅ Constrain width here
+            maxHeight: maxHeight,
+          ),
           child: options.isEmpty
               ? Container(
-                  padding: const EdgeInsets.all(16.0),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    "No results found",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                )
+            padding: const EdgeInsets.all(16.0),
+            alignment: Alignment.center,
+            child: const Text(
+              "No results found",
+              style: TextStyle(color: Colors.grey),
+            ),
+          )
               : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: options.length,
-                  itemBuilder: (context, index) {
-                    final option = options.elementAt(index);
-                    final isName = 
-                        (option['firstName']?.isNotEmpty == true &&
-                            option['lastName']?.isNotEmpty == true);
-                    return ListTile(
-                      title: Text(
-                      (isName) ? '${option['firstName']} ${option['lastName']}'
-                        : option['contactEmail'] ?? 'Unknown Client: ${option['objectID']}',
-                      ),
-                      subtitle: (isName) ? Text(option['contactEmail'] ?? '') : null,
-                      onTap: () => onSelected(option),
-                    );
-                  },
+            shrinkWrap: true,
+            itemCount: options.length,
+            itemBuilder: (context, index) {
+              final option = options.elementAt(index);
+              final isName = option['firstName']?.isNotEmpty == true &&
+                  option['lastName']?.isNotEmpty == true;
+              return ListTile(
+                title: Text(
+                  isName
+                      ? '${option['firstName']} ${option['lastName']}'
+                      : option['contactEmail'] ?? 'Unknown Client: ${option['objectID']}',
                 ),
+                subtitle: isName ? Text(option['contactEmail'] ?? '') : null,
+                onTap: () => onSelected(option),
+              );
+            },
+          ),
         ),
       ),
     );
   }
+
 
   @override
   void dispose() {

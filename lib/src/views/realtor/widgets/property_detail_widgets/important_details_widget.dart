@@ -60,7 +60,7 @@ class ImportantDetailsWidget extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.05),
+            color: theme.colorScheme.onSurface.withOpacity(0.05),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(

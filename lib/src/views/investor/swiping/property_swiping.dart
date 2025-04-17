@@ -31,6 +31,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   bool _noMoreProperties = false;
   bool _noRealtorAssigned = true;
   bool _useRealtorDecisions = false;
+  int _realtorPropertyCount = 0; // Add this to your state
 
   @override
   void initState() {
@@ -81,11 +82,37 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
       await _loadRealtorProperties();
     } else {
       await _loadNormalProperties();
+      await _loadRealtorPropertiesCount();
     }
   }
 
+  Future<void> _loadRealtorPropertiesCount() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+    try {
+      final investorDoc = await _db.collection('investors').doc(userId).get();
+      final realtorId = investorDoc.data()?['realtorId'] as String?;
+      if (realtorId == null) return;
+      final propertyCountSnapshot = await _db
+          .collection('investors')
+          .doc(userId)
+          .collection('property_interactions')
+          .where('status', isEqualTo: 'sent')
+          .get();
+      setState(() {
+        _realtorPropertyCount = propertyCountSnapshot.docs.length;
+      });
+    } catch (e) {
+      print('Error loading realtor property count: $e');
+    }
+  }
+
+
+
   Future<void> _loadRealtorProperties() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
+
+// After propertyIds is populated
     if (userId == null) {
       setState(() {
         _noMoreProperties = true;
@@ -125,6 +152,8 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           .map((doc) => doc['propertyId'] as String)
           .toList();
 
+      _realtorPropertyCount = propertyIds.length;
+
       if (propertyIds.isEmpty) {
         setState(() {
           _noMoreProperties = true;
@@ -144,6 +173,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
       setState(() {
         _properties = properties;
+        _realtorPropertyCount =  propertyIds.length;
         _noRealtorAssigned = false;
         _noMoreProperties = false;
       });
@@ -176,7 +206,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
       final listingsSnapshot = await _db
           .collection('listings')
           .where('status', isEqualTo: 'FOR_SALE')
-          .limit(50) // fetch more since you'll filter some out
+          .limit(100) // fetch more since you'll filter some out
           .get();
 
       final allProperties = listingsSnapshot.docs
@@ -309,6 +339,9 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
         if (_properties.isEmpty) {
           _noMoreProperties = true;
         }
+        if(_useRealtorDecisions) {
+          _realtorPropertyCount--;
+        }
       });
     }
     _showSwipeAnimation(direction);
@@ -338,6 +371,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: ToggleButtons(
@@ -353,12 +387,42 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           borderRadius: BorderRadius.circular(8),
           constraints: const BoxConstraints(minHeight: 36, minWidth: 120),
           selectedColor: Colors.white,
-          color: Colors.deepPurple,
+          color: theme.colorScheme.primary,
           fillColor: Colors.deepPurple,
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
-          children: const [
-            Text("From Realtor"),
-            Text("Recommended"),
+          children: [
+            Row(
+              spacing: 0,
+              children: [
+                if (_realtorPropertyCount > 0)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 20,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$_realtorPropertyCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text("From Realtor"),
+                ),
+              ],
+            ),
+            const Text("Recommended"),
           ],
         ),
         actions: [
@@ -373,10 +437,11 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
       body: _properties.isEmpty
           ? Center(
               child: _noMoreProperties
-                  ? (_noRealtorAssigned && _useRealtorDecisions
+                  ? _useRealtorDecisions? (_noRealtorAssigned
                       ? Text('No realtor assigned. Please contact support.')
                       : Text(
-                          'No more properties available. Your realtor is busy finding properties that you like.'))
+                          'No more properties available. Your realtor is busy finding properties that you like.')):
+                  Text('No more recommended properties.')
                   : CircularProgressIndicator(),
             )
           : CardSwiper(
@@ -443,7 +508,7 @@ class PropertySwipeCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: isDarkMode ? Colors.black : Colors.white,
+            color: theme.colorScheme.onTertiary,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
@@ -586,7 +651,7 @@ class PropertySwipeCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.black54.withOpacity(0.05),
+                        color: theme.colorScheme.onSurface.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(

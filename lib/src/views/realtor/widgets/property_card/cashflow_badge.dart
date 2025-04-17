@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +19,9 @@ class CashFlowBadge extends StatefulWidget {
 }
 
 class _CashFlowBadgeState extends State<CashFlowBadge> {
-  double? _netOperatingIncome;
+  double? _realtorNOI;
+  double? _investorNOI;
+  late String userRole;
 
   @override
   void initState() {
@@ -29,7 +33,7 @@ class _CashFlowBadgeState extends State<CashFlowBadge> {
   void didUpdateWidget(covariant CashFlowBadge oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.propertyId != oldWidget.propertyId) {
-      _loadNOI(); // reload if the propertyId changes
+      _loadNOI();
     }
   }
 
@@ -37,7 +41,7 @@ class _CashFlowBadgeState extends State<CashFlowBadge> {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
 
-    final userRole = Provider.of<UserProvider>(context, listen: false).userRole;
+    userRole = Provider.of<UserProvider>(context, listen: false).userRole!;
     String? targetRealtorId;
 
     if (userRole == "realtor") {
@@ -47,9 +51,8 @@ class _CashFlowBadgeState extends State<CashFlowBadge> {
           .collection('investors')
           .doc(currentUser.uid)
           .get();
-      if (investorDoc.exists) {
-        targetRealtorId = investorDoc.data()?['realtorId'];
-      }
+      if (!investorDoc.exists) return;
+      targetRealtorId = investorDoc.data()?['realtorId'];
     }
 
     if (targetRealtorId == null) return;
@@ -64,35 +67,91 @@ class _CashFlowBadgeState extends State<CashFlowBadge> {
     if (!doc.exists || !mounted) return;
 
     final data = doc.data()!;
-    final noi = (data['netOperatingIncome'] ?? 0).toDouble();
+    final storedNOI = (data['netOperatingIncome'] ?? 0).toDouble();
+
+    double? personalizedNOI;
+
+    if (userRole == "investor") {
+      final investorDoc = await FirebaseFirestore.instance
+          .collection('investors')
+          .doc(currentUser.uid)
+          .get();
+      final investorDefaults = investorDoc.data()?['cashFlowDefaults'] ?? {};
+
+      final purchasePrice = (data['purchasePrice'] ?? 0).toDouble();
+      final rent = (data['rent'] ?? 0).toDouble();
+      final downPayment = (investorDefaults['downPayment'] ?? 0.2) * purchasePrice;
+      final loanAmount = purchasePrice - downPayment;
+      final interestRate = investorDefaults['interestRate'] ?? 0.06;
+      final loanTerm = investorDefaults['loanTerm'] ?? 30;
+      final monthlyInterest = interestRate / 12;
+      final months = loanTerm * 12;
+      final principal = loanAmount / months;
+      final monthlyPayment = loanAmount * monthlyInterest / (1 - (1 / pow(1 + monthlyInterest, months)));
+
+      final hoaFee = (data['hoaFee'] ?? 0).toDouble();
+      final tax = (data['tax'] ?? 0).toDouble();
+      final insurance = (data['insurance'] ?? 0).toDouble();
+      final maintenance = (data['maintenance'] ?? 0).toDouble();
+      final otherCosts = (data['otherCosts'] ?? 0).toDouble();
+      final vacancy = (data['vacancy'] ?? 0).toDouble();
+      final managementFee = (data['managementFee'] ?? 0).toDouble();
+
+      final expenses = monthlyPayment + tax + insurance + maintenance + otherCosts + hoaFee + vacancy + managementFee;
+      personalizedNOI = rent - expenses;
+    }
+
+    if (!mounted) return;
 
     setState(() {
-      _netOperatingIncome = noi;
+      _realtorNOI = storedNOI;
+      _investorNOI = personalizedNOI;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_netOperatingIncome == null) return const SizedBox();
+    if (_realtorNOI == null) return const SizedBox();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.shade900.withOpacity(0.85),
+        color: Colors.grey.shade900.withOpacity(0.9),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: _netOperatingIncome! >= 0 ? Colors.green : Colors.red,
+          color: _realtorNOI! >= 0 ? Colors.green : Colors.red,
           width: 4,
         ),
       ),
-      child: Text(
-        "${_netOperatingIncome! >= 0 ? '+ ' : '- '}\$${_netOperatingIncome!.abs().toStringAsFixed(0)}",
-        style: TextStyle(
-          color: _netOperatingIncome! >= 0 ? Colors.green : Colors.red,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Tooltip(
+            message: 'Baseline Estimate — based on default assumptions set by your realtor.',
+            child: Text(
+              "BE: ${_realtorNOI! >= 0 ? '+ ' : '- '}\$${_realtorNOI!.abs().toStringAsFixed(0)}",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: _realtorNOI! >= 0 ? Colors.green : Colors.red,
+              ),
+            ),
+          ),
+          if (_investorNOI != null)
+            Tooltip(
+              message: 'Personalized Estimate — adjusted based on your loan assumptions.',
+              child: Text(
+                "PE: ${_investorNOI! >= 0 ? '+ ' : '- '}\$${_investorNOI!.abs().toStringAsFixed(0)}",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _investorNOI! >= 0 ? Colors.green.shade300 : Colors.red.shade300,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
+
 }
