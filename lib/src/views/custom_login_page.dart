@@ -10,7 +10,48 @@ import 'package:go_router/go_router.dart';
 import 'dart:async';
 import '../../user_provider.dart';
 
-//Custom Login Page
+/// A helper widget that fades in its child after a given delay.
+class DelayedFadeIn extends StatefulWidget {
+  final Widget child;
+  final Duration delay;
+  final Duration duration;
+
+  const DelayedFadeIn({
+    Key? key,
+    required this.child,
+    required this.delay,
+    required this.duration,
+  }) : super(key: key);
+
+  @override
+  _DelayedFadeInState createState() => _DelayedFadeInState();
+}
+
+class _DelayedFadeInState extends State<DelayedFadeIn> {
+  double _opacity = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(widget.delay, () {
+      if (mounted) {
+        setState(() {
+          _opacity = 1.0;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: _opacity,
+      duration: widget.duration,
+      child: widget.child,
+    );
+  }
+}
+
 class CustomLoginPage extends StatefulWidget {
   const CustomLoginPage({Key? key}) : super(key: key);
 
@@ -18,19 +59,34 @@ class CustomLoginPage extends StatefulWidget {
   _CustomLoginPageState createState() => _CustomLoginPageState();
 }
 
-// State class that holds login and registration logic
-class _CustomLoginPageState extends State<CustomLoginPage> {
-  bool _isRegister = false; // Determines if the user is in sign-up mode
-  final _emailController = TextEditingController(); // Controller for email input
-  final _passwordController = TextEditingController(); // Controller for password input
-  final _confirmPasswordController = TextEditingController(); // Controller for confirming password in registration
-  bool _isLoading = false; // State to show loading indicator
-  String? _errorMessage; // Holds error messages from authentication
-  String _selectedRole = 'investor'; // Default role
+class _CustomLoginPageState extends State<CustomLoginPage>
+    with SingleTickerProviderStateMixin {
+  bool _isRegister = false;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _isLoading = false;
+  String? _errorMessage;
   Timer? _errorTimer;
 
+  // Validation states
+  String? _emailError;
+  String? _passwordError;
+  String? _confirmPasswordError;
+  double _passwordStrength = 0.0;
+  bool _showPasswordStrength = false;
 
-  // Firebase authentication and Firestore database instances
+  // Password requirement states
+  bool _hasMinLength = false;
+  bool _hasUppercase = false;
+  bool _hasLowercase = false;
+  bool _hasNumber = false;
+  bool _hasSpecialChar = false;
+
+  // Password visibility states
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -42,17 +98,167 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
 
   // Dispose controllers when the widget is removed from the tree to prevent memory leaks
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final queryParams = GoRouterState.of(context).uri.queryParameters;
+      setState(() {
+        _isRegister = queryParams['register'] == 'true';
+      });
+    });
+
+    _emailController.addListener(_validateEmail);
+    _passwordController.addListener(_validatePassword);
+    _confirmPasswordController.addListener(_validateConfirmPassword);
+  }
+
+  @override
   void dispose() {
-     _errorTimer?.cancel();
+    _errorTimer?.cancel();
+    _emailController.removeListener(_validateEmail);
+    _passwordController.removeListener(_validatePassword);
+    _confirmPasswordController.removeListener(_validateConfirmPassword);
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
+  void _validateEmail() {
+    final email = _emailController.text.trim();
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    setState(() {
+      _emailError = email.isEmpty
+          ? 'Email is required'
+          : !emailRegex.hasMatch(email)
+          ? 'Enter a valid email'
+          : null;
+    });
+  }
 
-  // Main authentication method to handle login and registration
+  void _validatePassword() {
+    final password = _passwordController.text;
+    setState(() {
+      _showPasswordStrength = _isRegister && password.isNotEmpty;
+      if (password.isEmpty) {
+        _passwordError = 'Password is required';
+        _hasMinLength = false;
+        _hasUppercase = false;
+        _hasLowercase = false;
+        _hasNumber = false;
+        _hasSpecialChar = false;
+        _passwordStrength = 0.0;
+      } else if (_isRegister) {
+        _hasMinLength = password.length >= 8;
+        _hasUppercase = RegExp(r'[A-Z]').hasMatch(password);
+        _hasLowercase = RegExp(r'[a-z]').hasMatch(password);
+        _hasNumber = RegExp(r'[0-9]').hasMatch(password);
+        _hasSpecialChar = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+
+        if (!_hasMinLength) {
+          _passwordError = 'Password must be at least 8 characters';
+        } else if (!_hasUppercase) {
+          _passwordError = 'Password must contain an uppercase letter';
+        } else if (!_hasLowercase) {
+          _passwordError = 'Password must contain a lowercase letter';
+        } else if (!_hasNumber) {
+          _passwordError = 'Password must contain a number';
+        } else if (!_hasSpecialChar) {
+          _passwordError = 'Password must contain a special character';
+        } else {
+          _passwordError = null;
+        }
+
+        _passwordStrength = _calculatePasswordStrength(password);
+      } else {
+        _passwordError = null;
+        _hasMinLength = false;
+        _hasUppercase = false;
+        _hasLowercase = false;
+        _hasNumber = false;
+        _hasSpecialChar = false;
+        _passwordStrength = 0.0;
+      }
+    });
+  }
+
+  double _calculatePasswordStrength(String password) {
+    int strength = 0;
+    if (password.length >= 8) strength++;
+    if (RegExp(r'[A-Z]').hasMatch(password)) strength++;
+    if (RegExp(r'[a-z]').hasMatch(password)) strength++;
+    if (RegExp(r'[0-9]').hasMatch(password)) strength++;
+    if (RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) strength++;
+    return strength / 5.0;
+  }
+
+  void _validateConfirmPassword() {
+    final confirmPassword = _confirmPasswordController.text;
+    setState(() {
+      _confirmPasswordError = _isRegister && confirmPassword.isEmpty
+          ? 'Confirm password is required'
+          : _isRegister && confirmPassword != _passwordController.text
+          ? 'Passwords do not match'
+          : null;
+    });
+  }
+
+  void _resetFields() {
+    _emailController.clear();
+    _passwordController.clear();
+    _confirmPasswordController.clear();
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+      _confirmPasswordError = null;
+      _showPasswordStrength = false;
+      _hasMinLength = false;
+      _hasUppercase = false;
+      _hasLowercase = false;
+      _hasNumber = false;
+      _hasSpecialChar = false;
+      _passwordStrength = 0.0;
+      _obscurePassword = true;
+      _obscureConfirmPassword = true;
+    });
+  }
+
+  List<String> _validateFields() {
+    List<String> errors = [];
+    _validateEmail();
+    _validatePassword();
+    if (_isRegister) _validateConfirmPassword();
+
+    if (_emailError != null) errors.add(_emailError!);
+    if (_passwordError != null) errors.add(_passwordError!);
+    if (_isRegister && _confirmPasswordError != null) errors.add(_confirmPasswordError!);
+
+    return errors;
+  }
+
   Future<void> _authenticate() async {
+    List<String> errors = _validateFields();
+    if (errors.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Validation Error'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: errors.map((error) => Text('• $error')).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null; // Reset error message
@@ -79,34 +285,58 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   // Handles sign-in using email and password
   Future<void> _signInWithEmail() async {
     try {
-      // Authenticate the user with Firebase
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
 
-      // Retrieve the user's role from Firestore
-      String uid = userCredential.user!.uid;
+      QuerySnapshot investorQuery = await _firestore
+          .collection('investors')
+          .where('contactEmail', isEqualTo: _emailController.text.trim())
+          .where('tempPassword', isEqualTo: _passwordController.text.trim())
+          .limit(1)
+          .get();
 
-      DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
+      if (investorQuery.docs.isNotEmpty) {
+        DocumentSnapshot investorDoc = investorQuery.docs.first;
+        String uid = investorDoc.id;
 
-      if (userDoc.exists && mounted) {
-        setState(() {
-          _selectedRole = userDoc['role'];
-        });
+        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        await _firestore.collection('users').doc(uid).set({
+          'email': _emailController.text.trim(),
+          'role': 'investor',
+          'createdAt': FieldValue.serverTimestamp(),
+          'completedSetup': false,
+        }, SetOptions(merge: true));
 
         // Navigate based on user role
         Provider.of<UserProvider>(context, listen: false).fetchUserData();
-        if (_selectedRole == "realtor") {
+        if (mounted) context.go('/setup');
+      } else {
+        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
 
-          context.go( "/realtorDashboard");
-        } else {
-          context.go( "/investorHome");
+        String uid = userCredential.user!.uid;
+        DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
+
+        if (userDoc.exists && mounted) {
+          String role = userDoc['role'];
+          bool completedSetup = userDoc['completedSetup'] ?? false;
+
+          Provider.of<UserProvider>(context, listen: false).fetchUserData();
+
+          if (role == 'realtor') {
+            context.go(completedSetup ? '/home' : '/setup');
+          } else if (role == 'investor') {
+            context.go(completedSetup ? '/home' : '/setup');
+          }
+        } else if (mounted) {
+          setState(() {
+            _errorMessage = "User role not found. Please contact support.";
+          });
         }
-      } else if (mounted) {
-        setState(() {
-          _errorMessage = "User role not found. Please contact support.";
-        });
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -116,20 +346,16 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   }
 
 
-  // Handles user registration
   Future<void> _createAccount() async {
-    // Ensure passwords match before proceeding
-    if (_passwordController.text != _confirmPasswordController.text) {
-      throw FirebaseAuthException(code: 'password-mismatch', message: 'Passwords do not match');
-    }
-    // Create a new user account in Firebase
     UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
     );
 
+
     // Store user details in Firestore
     await _createUserDocument(userCredential.user!);
+    Provider.of<UserProvider>(context, listen: false).fetchUserData();
     _navigateAfterRegistration();
   }
 
@@ -138,29 +364,19 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   Future<void> _createUserDocument(User user) async {
     await _firestore.collection('users').doc(user.uid).set({
       'email': user.email,
-      'role': _selectedRole,
-      'createdAt': FieldValue.serverTimestamp(), // Stores the time of registration
-      'completedSetup': false, // Indicates if setup is completed
+      'role': 'realtor',
+      'createdAt': FieldValue.serverTimestamp(),
+      'completedSetup': false,
     });
   }
 
-
-  // Navigate to the correct page after successful registration
   void _navigateAfterRegistration() {
-    if (_selectedRole == "investor") {
-      context.go('/investorSetup');
-    } else {
-      context.go("/realtorSetup");
-    }
+    if (mounted) context.go('/setup');
   }
-
 
   // Maps Firebase authentication error codes to user-friendly messages
   String _getAuthErrorMessage(FirebaseAuthException e) {
-    // print(e.code);
-    if(_errorTimer != null) {
-      _errorTimer!.cancel();
-    }
+    _errorTimer?.cancel();
     _errorTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) {
         setState(() => _errorMessage = null);
@@ -190,88 +406,62 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
   // Builds the UI for the login page
   @override
   Widget build(BuildContext context) {
+    const Color neonPurple = Color(0xFFa78cde);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 800;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Background image
-          Positioned.fill(
-            child: Image.network(
-              'https://photos.zillowstatic.com/fp/f92e12421954f63424e6788ca770bdc4-cc_ft_1536.webp',
-              fit: BoxFit.cover,
-            ),
+          isMobile
+              ? _buildMobileLayout(neonPurple, isMobile)
+              : Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: _buildFormColumn(neonPurple, isMobile),
+              ),
+              Expanded(
+                flex: 1,
+                child: Container(
+                  color: const Color(0x33D500F9),
+                  child: Image.asset(
+                    'assets/images/login.png',
+                    fit: BoxFit.cover,
+                    height: double.infinity,
+                    width: double.infinity,
+                  ),
+                ),
+              ),
+            ],
           ),
-
-
-          // Semi-transparent white overlay for readability
-          Positioned.fill(
-            child: Container(
-              color: Colors.white.withOpacity(.90), // Adjust opacity as needed
-            ),
-          ),
-
-          // Login form
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(26.0),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400.0),
-                child: Column(
+          Positioned(
+            top: 20,
+            left: 20,
+            child: DelayedFadeIn(
+              delay: const Duration(milliseconds: 200),
+              duration: const Duration(milliseconds: 500),
+              child: GestureDetector(
+                onTap: () {
+                  context.go("/");
+                },
+                child: Row(
                   children: [
-                    const Icon(Icons.real_estate_agent, size: 200, color: Colors.black),
-                    Text(
-                      'Realest',
-                      style: GoogleFonts.poppins(fontSize: 40, color: Colors.black, fontWeight: FontWeight.bold),
+                    const Icon(
+                      Icons.real_estate_agent,
+                      size: 32,
+                      color: Colors.white,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(width: 8),
                     Text(
-                      _errorMessage ?? (_isRegister ? 'Please Sign Up' : 'Please Sign In'),
-                      style: _errorMessage != null
-                          ? const TextStyle(color: Colors.red, fontSize: 14)
-                          : GoogleFonts.poppins(
-                              fontSize: 20,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 40),
-                    _buildTextField(_emailController, 'Email', false, false),
-                    const SizedBox(height: 16),
-                    _buildTextField(_passwordController, 'Password', true, !_isRegister),
-                    if (_isRegister) ...[
-                      const SizedBox(height: 16),
-                      _buildTextField(_confirmPasswordController, 'Confirm Password', true, true),
-                      const SizedBox(height: 16),
-                      ToggleButtons(
-                        borderRadius: BorderRadius.circular(30),
-                        constraints: const BoxConstraints(minHeight: 40, minWidth: 100),
-                        isSelected: [
-                          _selectedRole == 'investor',
-                          _selectedRole == 'realtor',
-                        ],
-                        onPressed: (int index) {
-                          setState(() {
-                            _selectedRole = index == 0 ? 'investor' : 'realtor';
-                          });
-                        },
-                        children: const [
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('Investor'),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('Realtor'),
-                          ),
-                        ],
+                      'RealEst',
+                      style: GoogleFonts.poppins(
+                        fontSize: isMobile ? 20 : 24,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                    const SizedBox(height: 16),
-                    _buildActionButton(),
-                    const SizedBox(height: 16),
-                    _buildToggleAuthText(),
-                    if (_isLoading) const Padding(padding: EdgeInsets.only(top: 16.0), child: CircularProgressIndicator()),
+                    ),
                   ],
                 ),
               ),
@@ -282,64 +472,441 @@ class _CustomLoginPageState extends State<CustomLoginPage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint, bool obscure, bool isLastField) {
+  Widget _buildMobileLayout(Color neonPurple, bool isMobile) {
+    return Container(
+      color: const Color(0xFF1f1e25),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 40.0),
+                  child: SizedBox(
+                    width: 400,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: _buildFormChildren(neonPurple, isMobile),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFormColumn(Color neonPurple, bool isMobile) {
+    return Container(
+      color: const Color(0xFF1f1e25),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: SizedBox(
+                  width: 500,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: _buildFormChildren(neonPurple, isMobile),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _buildFormChildren(Color neonPurple, bool isMobile) {
+    const baseDelay = 300;
+    const delayIncrement = 200;
+    int index = 0;
+
+    List<Widget> children = [];
+
+    children.add(
+      DelayedFadeIn(
+        delay: Duration(milliseconds: baseDelay + index * delayIncrement),
+        duration: const Duration(milliseconds: 1000),
+        child: Center(
+          child: Text(
+            _isRegister ? 'Create your account' : 'Welcome to RealEst',
+            style: GoogleFonts.poppins(
+              fontSize: isMobile ? 32 : 46,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+    index++;
+
+    children.add(const SizedBox(height: 10));
+
+    children.add(
+      DelayedFadeIn(
+        delay: Duration(milliseconds: baseDelay + index * delayIncrement),
+        duration: const Duration(milliseconds: 1000),
+        child: Center(
+          child: Text(
+            _errorMessage ?? (_isRegister ? 'Please Sign Up' : 'Please Sign In'),
+            style: _errorMessage != null
+                ? TextStyle(color: Colors.red, fontSize: isMobile ? 12 : 14)
+                : GoogleFonts.poppins(fontSize: isMobile ? 16 : 20, color: Colors.white70),
+          ),
+        ),
+      ),
+    );
+    index++;
+
+    children.add(SizedBox(height: isMobile ? 20 : 40));
+
+    children.add(
+      DelayedFadeIn(
+        delay: Duration(milliseconds: baseDelay + index * delayIncrement),
+        duration: const Duration(milliseconds: 1000),
+        child: _buildAlignedField(
+          'Email',
+          _emailController,
+          false,
+          false,
+          isMobile,
+          error: _emailError,
+        ),
+      ),
+    );
+    index++;
+
+    children.add(SizedBox(height: isMobile ? 12 : 16));
+
+    children.add(
+      DelayedFadeIn(
+        delay: Duration(milliseconds: baseDelay + index * delayIncrement),
+        duration: const Duration(milliseconds: 1000),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildAlignedField(
+              'Password',
+              _passwordController,
+              _obscurePassword,
+              !_isRegister,
+              isMobile,
+              error: _passwordError,
+              toggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
+              isPassword: true,
+            ),
+            if (_showPasswordStrength) ...[
+              const SizedBox(height: 8),
+              _buildPasswordRequirements(isMobile),
+              const SizedBox(height: 8),
+              _buildPasswordStrengthBar(isMobile),
+            ],
+          ],
+        ),
+      ),
+    );
+    index++;
+
+    if (_isRegister) {
+      children.add(SizedBox(height: isMobile ? 12 : 16));
+      children.add(
+        DelayedFadeIn(
+          delay: Duration(milliseconds: baseDelay + index * delayIncrement),
+          duration: const Duration(milliseconds: 1000),
+          child: _buildAlignedField(
+            'Confirm Password',
+            _confirmPasswordController,
+            _obscureConfirmPassword,
+            true,
+            isMobile,
+            error: _confirmPasswordError,
+            toggleObscure: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+            isPassword: true,
+          ),
+        ),
+      );
+      index++;
+    }
+
+    children.add(SizedBox(height: isMobile ? 16 : 20));
+
+    children.add(
+      DelayedFadeIn(
+        delay: Duration(milliseconds: baseDelay + index * delayIncrement),
+        duration: const Duration(milliseconds: 1000),
+        child: Center(child: _buildActionButton(isMobile)),
+      ),
+    );
+    index++;
+
+    children.add(SizedBox(height: isMobile ? 12 : 16));
+
+    children.add(
+      DelayedFadeIn(
+        delay: Duration(milliseconds: baseDelay + index * delayIncrement),
+        duration: const Duration(milliseconds: 1000),
+        child: Center(child: _buildToggleAuthText(isMobile)),
+      ),
+    );
+    index++;
+
+    if (_isLoading) {
+      children.add(
+        DelayedFadeIn(
+          delay: Duration(milliseconds: baseDelay + index * delayIncrement),
+          duration: const Duration(milliseconds: 1000),
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: isMobile ? 12.0 : 16.0),
+              child: const CircularProgressIndicator(color: Color(0xFFD500F9)),
+            ),
+          ),
+        ),
+      );
+      index++;
+    }
+
+    return children;
+  }
+
+  Widget _buildAlignedField(
+      String label,
+      TextEditingController controller,
+      bool obscure,
+      bool isLastField,
+      bool isMobile, {
+        String? error,
+        VoidCallback? toggleObscure,
+        bool isPassword = false,
+      }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(fontSize: isMobile ? 16 : 18, color: Colors.white),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: isMobile ? 400 : 500,
+          child: _buildTextField(
+            controller,
+            obscure,
+            isLastField,
+            isMobile,
+            error,
+            toggleObscure,
+            isPassword,
+          ),
+        ),
+        if (error != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            error,
+            style: TextStyle(color: Colors.red, fontSize: isMobile ? 12 : 14),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTextField(
+      TextEditingController controller,
+      bool obscure,
+      bool isLastField,
+      bool isMobile,
+      String? error,
+      VoidCallback? toggleObscure,
+      bool isPassword,
+      ) {
+    const Color neonPurple = Color(0xFFa78cde);
     return TextField(
       controller: controller,
       decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.grey[200], // Keeps the background color
-        hintText: hint,
+        fillColor: Colors.grey[900],
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30.0),
-          borderSide: const BorderSide(color: Colors.purple, width: 1), // Purple border
+          borderRadius: BorderRadius.circular(15.0),
+          borderSide: BorderSide(
+            color: error != null ? Colors.red : neonPurple,
+            width: 1,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30.0),
-          borderSide: const BorderSide(color: Colors.deepPurple, width: 2), // Deeper purple when focused
+          borderRadius: BorderRadius.circular(15.0),
+          borderSide: BorderSide(
+            color: error != null ? Colors.red : neonPurple,
+            width: 2,
+          ),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15.0),
+          borderSide: const BorderSide(color: Colors.red, width: 1),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15.0),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
+        ),
+        suffixIcon: isPassword
+            ? IconButton(
+          icon: Icon(
+            obscure ? Icons.visibility_off : Icons.visibility,
+            color: Colors.white70,
+          ),
+          onPressed: toggleObscure,
+        )
+            : null,
       ),
+      style: TextStyle(color: Colors.white, fontSize: isMobile ? 14 : 16),
       obscureText: obscure,
-      keyboardType: obscure ? TextInputType.text : TextInputType.emailAddress,
-
-        // If it's the last text field, pressing Enter triggers the login logic
-        textInputAction:
-        isLastField ? TextInputAction.done : TextInputAction.next,
-        onSubmitted: (value) {
-          if (isLastField) {
-            _authenticate();
-          }
-        },
+      keyboardType: isPassword ? TextInputType.text : TextInputType.emailAddress,
+      textInputAction: isLastField ? TextInputAction.done : TextInputAction.next,
+      onSubmitted: (value) {
+        if (isLastField) {
+          _authenticate();
+        }
+      },
     );
   }
 
+  Widget _buildPasswordRequirements(bool isMobile) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        _buildRequirementText(
+          _hasMinLength ? '✔️ 8 characters' : 'x 8 characters',
+          _hasMinLength,
+          isMobile,
+        ),
+        _buildRequirementText(
+          _hasUppercase ? '✔️ Uppercase' : 'x Uppercase',
+          _hasUppercase,
+          isMobile,
+        ),
+        _buildRequirementText(
+          _hasLowercase ? '✔️ Lowercase' : 'x Lowercase',
+          _hasLowercase,
+          isMobile,
+        ),
+        _buildRequirementText(
+          _hasNumber ? '✔️ Number' : 'x Number',
+          _hasNumber,
+          isMobile,
+        ),
+        _buildRequirementText(
+          _hasSpecialChar ? '✔️ Special Character' : 'x Special character',
+          _hasSpecialChar,
+          isMobile,
+        ),
+      ],
+    );
+  }
 
-  // Builds the login/register button
-  Widget _buildActionButton() {
+  Widget _buildRequirementText(String text, bool isMet, bool isMobile) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: isMet ? Colors.green : Colors.red,
+        fontSize: isMobile ? 12 : 14,
+      ),
+    );
+  }
+
+  Widget _buildPasswordStrengthBar(bool isMobile) {
+    Color strengthColor;
+    String strengthText;
+    if (_passwordStrength < 0.4) {
+      strengthColor = Colors.red;
+      strengthText = 'Weak';
+    } else if (_passwordStrength < 0.8) {
+      strengthColor = Colors.yellow;
+      strengthText = 'Medium';
+    } else {
+      strengthColor = Colors.green;
+      strengthText = 'Strong';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LinearProgressIndicator(
+          value: _passwordStrength,
+          backgroundColor: Colors.grey[700],
+          valueColor: AlwaysStoppedAnimation<Color>(strengthColor),
+          minHeight: 5,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Password Strength: $strengthText',
+          style: TextStyle(
+            color: strengthColor,
+            fontSize: isMobile ? 12 : 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(bool isMobile) {
+    const Color neonPurple = Color(0xFFa78cde);
     return SizedBox(
-      width: double.infinity,
+      width: isMobile ? 400 : 500,
+      height: isMobile ? 45 : 50,
       child: ElevatedButton(
         onPressed: _authenticate,
         style: ElevatedButton.styleFrom(
-          textStyle: GoogleFonts.openSans(fontSize: 20, fontWeight: FontWeight.bold),
-          backgroundColor: const Color(0xFF212834),
+          textStyle: GoogleFonts.openSans(fontSize: isMobile ? 18 : 22, fontWeight: FontWeight.bold),
+          backgroundColor: neonPurple,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 15),
+          padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+            side: const BorderSide(color: Colors.black, width: 2),
+          ),
         ),
         child: Text(_isRegister ? 'REGISTER' : 'LOGIN'),
       ),
     );
   }
 
-
   // Switches between login and register modes
-  Widget _buildToggleAuthText() {
+  Widget _buildToggleAuthText(bool isMobile) {
+    const Color neonPurple = Color(0xFFa78cde);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(_isRegister ? 'Already have an account?' : 'Don\'t have an account?', style: GoogleFonts.openSans(fontSize: 20)),
+        Text(
+          _isRegister ? 'Already have an account?' : 'Don\'t have an account?',
+          style: GoogleFonts.openSans(fontSize: isMobile ? 16 : 20, color: Colors.white),
+        ),
         TextButton(
-          onPressed: () => setState(() => _isRegister = !_isRegister),
-          child: Text(_isRegister ? 'Sign In' : 'Register', style: GoogleFonts.openSans(fontSize: 20, fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
+          onPressed: () {
+            setState(() {
+              _isRegister = !_isRegister;
+              _resetFields();
+            });
+          },
+          child: Text(
+            _isRegister ? 'Sign In' : 'Register',
+            style: GoogleFonts.openSans(
+              fontSize: isMobile ? 16 : 20,
+              fontWeight: FontWeight.bold,
+              color: neonPurple,
+              decoration: TextDecoration.underline,
+              decorationColor: neonPurple,
+            ),
+          ),
         ),
       ],
     );

@@ -33,6 +33,7 @@ jobs:
       - name: Restore firebase_options.dart
         run: |
           echo "${{ secrets.FIREBASE_OPTIONS }}" | base64 --decode > lib/firebase_options.dart
+          echo "${{ secrets.ENV_FILE }}" | base64 --decode > .env
 
       - name: Run Static Analysis (Optional)
         run: flutter analyze

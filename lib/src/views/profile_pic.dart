@@ -2,51 +2,47 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:realest/main.dart';
 import '../../user_provider.dart';
-import 'package:flutter/services.dart'; // For clipboard functionality
 
 class ProfilePic extends StatelessWidget {
   final VoidCallback toggleTheme;
-  final bool isDarkMode;
   final VoidCallback onAccountSettings;
 
-  const ProfilePic({
+
+   ProfilePic({
     Key? key,
     required this.toggleTheme,
-    required this.isDarkMode,
     required this.onAccountSettings,
-  }) : super(key: key);
+   }) : super(key: key);
+
 
   void _showProfileDialog(BuildContext context) {
-    // Grab user data from the provider.
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final String fullName = '${userProvider.firstName ?? ''} ${userProvider.lastName ?? ''}'.trim();
     final String contactEmail = userProvider.contactEmail ?? '';
-    final String contactPhone = userProvider.contactPhone ?? '';
     final String profilePicUrl = userProvider.profilePicUrl ?? '';
-    final String invitationCode = userProvider.invitationCode ?? ''; // Fetch invitation code
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.5), // Grey overlay
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (BuildContext context) {
         final theme = Theme.of(context);
         return Center(
           child: Material(
             color: Colors.transparent,
             child: Container(
-              width: 300, // Fixed width for the dialog
+              width: 300,
               margin: const EdgeInsets.symmetric(horizontal: 20),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: theme.cardColor, // Uses your defined cardColor
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(15),
               ),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Profile Picture at the Top
                     CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.grey[300],
@@ -58,7 +54,6 @@ class ProfilePic extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 15),
-                    // User Details
                     Text(
                       fullName.isNotEmpty ? fullName : 'No Name',
                       style: theme.textTheme.bodyLarge?.copyWith(fontSize: 24),
@@ -70,43 +65,8 @@ class ProfilePic extends StatelessWidget {
                       style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      contactPhone.isNotEmpty ? contactPhone : 'No Phone',
-                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 5),
-                    // Invitation Code with Copy Icon
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          invitationCode.isNotEmpty ? 'Invitation Code: $invitationCode' : 'No Invitation Code',
-                          style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (invitationCode.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: Icon(Icons.copy, size: 20, color: theme.colorScheme.primary),
-                            onPressed: () {
-                              Clipboard.setData(ClipboardData(text: invitationCode));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Invitation code copied to clipboard!'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            tooltip: 'Copy to clipboard',
-                          ),
-                        ],
-                      ],
-                    ),
                     const SizedBox(height: 20),
                     const Divider(color: Colors.grey),
-                    // Account Settings: Instead of navigating, call the callback.
                     ListTile(
                       leading: Icon(Icons.settings, color: theme.colorScheme.onSurface),
                       title: Text(
@@ -119,34 +79,40 @@ class ProfilePic extends StatelessWidget {
                       },
                     ),
                     const Divider(color: Colors.grey),
-                    // Notifications Toggle with Icon
                     SwitchListTile(
-                      secondary: Icon(Icons.notifications, color: theme.colorScheme.onSurface),
+                      secondary: Icon(Icons.notifications, color: theme.disabledColor),
                       title: Text(
                         "Notifications",
-                        style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 16,
+                          color: theme.disabledColor,
+                        ),
                       ),
-                      value: true, // Replace with your actual notification state
-                      onChanged: (bool value) {
-                        // Handle notifications toggle
-                      },
+                      subtitle: Text(
+                        "Coming soon",
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.disabledColor,
+                        ),
+                      ),
+                      value: true, // or false depending on your default
+                      onChanged: null,
                     ),
+
                     const Divider(color: Colors.grey),
-                    // Dark Mode Toggle with Icon – calls global toggleTheme function.
                     SwitchListTile(
                       secondary: Icon(Icons.dark_mode, color: theme.colorScheme.onSurface),
                       title: Text(
                         "Dark Mode",
                         style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
                       ),
-                      value: isDarkMode,
+                      value: themeModeNotifier.value == ThemeMode.dark, // ✅ use directly
                       onChanged: (bool value) {
-                        toggleTheme();
+                        toggleTheme(); // Flip between dark and light
                       },
                     ),
+
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 10),
-                    // Log Out Button with Icon and Themed Confirmation Dialog
                     InkWell(
                       onTap: () async {
                         showDialog(
@@ -178,6 +144,8 @@ class ProfilePic extends StatelessWidget {
                                   onPressed: () async {
                                     Navigator.of(dialogContext).pop();
                                     await FirebaseAuth.instance.signOut();
+                                    //clear user data from provider
+                                    userProvider.clearUserData();
                                     context.go("/login");
                                   },
                                   child: Text(
@@ -195,12 +163,12 @@ class ProfilePic extends StatelessWidget {
                       child: Row(
                         children: [
                           const SizedBox(width: 18),
-                          Icon(Icons.logout, color: Theme.of(context).colorScheme.primary),
+                          Icon(Icons.logout, color: Colors.red),
                           const SizedBox(width: 12),
                           Text(
                             "Log Out",
                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
+                              color: Colors.red,
                               fontSize: 16,
                             ),
                           ),
@@ -220,7 +188,7 @@ class ProfilePic extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
+    final userProvider = Provider.of<UserProvider>(context, listen: true);
     final String profilePicUrl = userProvider.profilePicUrl ?? '';
     return GestureDetector(
       onTap: () => _showProfileDialog(context),
