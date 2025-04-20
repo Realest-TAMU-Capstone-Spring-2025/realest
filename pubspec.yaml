@@ -81,9 +81,6 @@ dependencies:
   flutter_dotenv: ^5.2.1
   shared_preferences: ^2.2.3
 
-
-
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -94,8 +91,9 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
-  build_runner: ^2.4.0 # Or a more recent version
+  build_runner: ^2.4.15 # Or a more recent version
   build_web_compilers: ^4.0.4 # Or a more recent
+  mockito: ^5.4.5
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
