@@ -2,7 +2,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:realest/data/db/entity/listing.dart'; // adjust the import to your actual file
+import 'package:realest/data/db/entity/listing.dart';
 
 /// Minimal fake for [DocumentSnapshot] so we can control `id` and `data()`.
 class FakeDocumentSnapshot extends Fake implements DocumentSnapshot {

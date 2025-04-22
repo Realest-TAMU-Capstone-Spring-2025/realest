@@ -5,7 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:realest/services/auth_service.dart'; // ← adjust to your path
+import 'package:realest/services/auth_service.dart';
 
 // ─── Mock classes ─────────────────────────────────────────────────────────────
 
