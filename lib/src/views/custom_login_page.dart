@@ -84,8 +84,8 @@ class _CustomLoginPageState extends State<CustomLoginPage>
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  late FirebaseAuth _auth;
+  late FirebaseFirestore _firestore;
 
   @override
   void initState() {
@@ -96,6 +96,10 @@ class _CustomLoginPageState extends State<CustomLoginPage>
         _isRegister = queryParams['register'] == 'true';
       });
     });
+    //grab firebase auth and firestore instances from user provider
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    _auth = userProvider.auth;
+    _firestore = userProvider.firestore;
 
     _emailController.addListener(_validateEmail);
     _passwordController.addListener(_validatePassword);

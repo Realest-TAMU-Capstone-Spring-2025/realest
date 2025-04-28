@@ -15,15 +15,14 @@ import 'package:realest/src/views/investor/properties/saved_properties.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:realest/src/views/custom_login_page.dart';
-import 'util/mock_firebase_util.dart';
+import '../../util/mock_firebase_util.dart';
 
 // Mock implementation of AuthCredential
 
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-
-    await dotenv.load(); // Initialize dotenv
+    await dotenv.load(fileName: ".env");
   });
 
   setUp(() {

@@ -5,7 +5,7 @@ import 'package:realest/src/views/navbar.dart';
 import 'package:realest/user_provider.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
-import '../util/mock_firebase_util.dart';
+import '../../util/mock_firebase_util.dart';
 
 void main() {
   setUpAll(() async {

@@ -11,6 +11,7 @@ void main() {
           home: AppOverview(),
         ),
       );
+      await tester.pump(const Duration(seconds: 2));
 
       // Verify title is displayed
       expect(find.text('App Overview'), findsOneWidget);
