@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:realest/main.dart';
 import 'package:realest/user_provider.dart';
-import 'package:realest/src/views/home/desktop/overview_page.dart';
+import 'package:realest/src/views/home/desktop/home_page.dart';
 import 'package:realest/src/views/home/mobile_home_page.dart';
 import 'dart:io';
 import 'package:realest/src/views/investor/properties/saved_properties.dart';

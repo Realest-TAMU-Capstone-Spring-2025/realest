@@ -7,7 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:realest/firebase_options.dart';
-import 'package:realest/src/views/home/desktop/overview_page.dart';
+import 'package:realest/src/views/home/desktop/home_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Views related to the investor

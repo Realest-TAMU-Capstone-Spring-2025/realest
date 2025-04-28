@@ -229,7 +229,8 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
                             ),
                           ),
                         ),
-                        Expanded(
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.4, // Pick an appropriate fraction
                           child: SlideTransition(
                             position: _carouselSlideAnimation,
                             child: FadeTransition(
@@ -359,11 +360,14 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
                         ),
                         Expanded(
                           flex: 4,
-                          child: SlideTransition(
-                            position: _carouselSlideAnimation,
-                            child: FadeTransition(
-                              opacity: _carouselFadeAnimation,
-                              child: _buildCarousel(isMobile),
+                          child: SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.4, // Pick an appropriate fraction
+                            child: SlideTransition(
+                              position: _carouselSlideAnimation,
+                              child: FadeTransition(
+                                opacity: _carouselFadeAnimation,
+                                child: _buildCarousel(isMobile),
+                              ),
                             ),
                           ),
                         ),

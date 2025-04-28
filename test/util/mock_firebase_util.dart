@@ -2,8 +2,17 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import '../firebase_core_mocks.dart';
 
+void dumpAllTextInWidgetTree(WidgetTester tester) {
+  final allTextWidgets = find.byType(Text);
+  for (var widget in allTextWidgets.evaluate()) {
+    final textWidget = widget.widget as Text;
+    debugPrint(textWidget.data);
+  }
+}
 class MockAuthCredential extends AuthCredential {
   MockAuthCredential() : super(providerId: 'mock', signInMethod: 'mock');
 }

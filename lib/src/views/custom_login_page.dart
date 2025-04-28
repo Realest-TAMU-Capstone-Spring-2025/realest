@@ -851,8 +851,9 @@ class _CustomLoginPageState extends State<CustomLoginPage>
 
   Widget _buildToggleAuthText(bool isMobile) {
     const Color neonPurple = Color(0xFFa78cde);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8.0,
       children: [
         Text(
           _isRegister ? 'Already have an account?' : 'Don\'t have an account?',

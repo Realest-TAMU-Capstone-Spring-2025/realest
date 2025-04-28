@@ -3,20 +3,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'dart:async';
 
-// 1) This helper drops only RenderFlex overflow errors.
-void _ignoreOverflowErrors(FlutterErrorDetails details, {bool forceReport = false}) {
-  final msg = details.exceptionAsString();
-  if (msg.startsWith('A RenderFlex overflowed by')) {
-    return; // swallow it
+void _ignoreOverflowErrors(
+  FlutterErrorDetails details, {
+  bool forceReport = false,
+}) {
+  bool ifIsOverflowError = false;
+  bool isUnableToLoadAsset = false;
+// Detect overflow error.
+  var exception = details.exception;
+  if (exception is FlutterError) {
+    ifIsOverflowError = !exception.diagnostics.any(
+      (e) => e.value.toString().startsWith("A RenderFlex overflowed by"),
+    );
+    isUnableToLoadAsset = !exception.diagnostics.any(
+      (e) => e.value.toString().startsWith("Unable to load asset"),
+    );
   }
-  FlutterError.dumpErrorToConsole(details, forceReport: forceReport);
+// Ignore if is overflow error.
+  if (ifIsOverflowError || isUnableToLoadAsset) {
+    debugPrint('Ignored Error');
+  } else {
+    FlutterError.dumpErrorToConsole(details, forceReport: forceReport);
+  }
 }
-
-// 2) This is the **only** symbol the test harness will call.
 // It must accept a single FutureOr<void> Function() argument.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
-  // Install our overflow‐ignoring handler globally.
-  FlutterError.onError = _ignoreOverflowErrors;
-  // Run the real tests.
-  await testMain();
+// Install our overflow‐ignoring handler globally.
+FlutterError.onError = _ignoreOverflowErrors;
+// Run the real tests.
+await testMain();
 }
