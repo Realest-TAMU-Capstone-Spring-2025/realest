@@ -1,24 +1,22 @@
 // test/flutter_test_config.dart
-
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'dart:async';
 
-/// Swallows only RenderFlex overflow errors, forwards all others.
+// 1) This helper drops only RenderFlex overflow errors.
 void _ignoreOverflowErrors(FlutterErrorDetails details, {bool forceReport = false}) {
   final msg = details.exceptionAsString();
   if (msg.startsWith('A RenderFlex overflowed by')) {
-    // drop only overflow errors
-    return;
+    return; // swallow it
   }
   FlutterError.dumpErrorToConsole(details, forceReport: forceReport);
 }
 
-/// This must match the Flutter test framework’s expected signature:
-///   Future<void> testExecutable(FutureOr<void> Function() testMain)
-///
-/// It will be called once, wrapping your test’s `main()`.
+// 2) This is the **only** symbol the test harness will call.
+// It must accept a single FutureOr<void> Function() argument.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
+  // Install our overflow‐ignoring handler globally.
   FlutterError.onError = _ignoreOverflowErrors;
-  await testMain();            // run the actual tests
+  // Run the real tests.
+  await testMain();
 }

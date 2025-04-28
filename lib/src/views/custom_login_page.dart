@@ -280,11 +280,6 @@ class _CustomLoginPageState extends State<CustomLoginPage>
         DocumentSnapshot investorDoc = investorQuery.docs.first;
         String uid = investorDoc.id;
 
-        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-
         await _firestore.collection('users').doc(uid).set({
           'email': _emailController.text.trim(),
           'role': 'investor',

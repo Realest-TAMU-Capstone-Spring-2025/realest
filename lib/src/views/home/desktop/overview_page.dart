@@ -5,7 +5,7 @@ import 'value_proposition.dart';
 import 'wave_clipper.dart';
 import 'progress_metrics.dart';
 import 'realtor_stats.dart';
-import '../footer.dart';
+import 'footer.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});

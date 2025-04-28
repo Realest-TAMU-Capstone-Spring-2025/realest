@@ -7,7 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:realest/firebase_options.dart';
-import 'package:realest/src/views/home/overview/overview_page.dart';
+import 'package:realest/src/views/home/desktop/overview_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Views related to the investor
@@ -29,10 +29,10 @@ import 'package:realest/src/views/realtor/realtor_settings.dart';
 // Common views
 import 'package:realest/src/views/custom_login_page.dart';
 import 'package:realest/src/views/navbar.dart'; // Sidebar navigation
-import 'package:realest/src/views/mobile_home_page.dart';
+import 'package:realest/src/views/home/mobile_home_page.dart';
 
 // Provider and user-related imports
-import 'user_provider.dart';
+import 'package:realest/user_provider.dart';
 
 final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.dark);
 
