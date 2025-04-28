@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 
 class UserProvider extends ChangeNotifier {
+  final FirebaseAuth auth;
+  final FirebaseFirestore firestore;
   bool isLoading = false;
   String? _userRole;
   String? get userRole => _userRole;
@@ -36,6 +38,11 @@ class UserProvider extends ChangeNotifier {
   String? get status => _status;
   String? _createdAt;
   String? get createdAt => _createdAt;
+
+   UserProvider({
+    required this.auth,
+    required this.firestore,
+  });
 
   set uid(String? value) {
     _uid = value;
@@ -120,9 +127,9 @@ class UserProvider extends ChangeNotifier {
     try {
       isLoading = true;
 
-      User? user = FirebaseAuth.instance.currentUser;
+      User? user = auth.currentUser;
       if (user != null) {
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+        DocumentSnapshot userDoc = await firestore
             .collection('users')
             .doc(user.uid)
             .get();
@@ -158,7 +165,7 @@ class UserProvider extends ChangeNotifier {
 
 
   Future<void> _fetchRealtorData(String uid) async {
-    DocumentSnapshot realtorDoc = await FirebaseFirestore.instance
+    DocumentSnapshot realtorDoc = await firestore
         .collection('realtors')
         .doc(uid)
         .get();
@@ -176,7 +183,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchInvestorData(String uid) async {
-    DocumentSnapshot investorDoc = await FirebaseFirestore.instance
+    DocumentSnapshot investorDoc = await firestore
         .collection('investors')
         .doc(uid)
         .get();
@@ -195,7 +202,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchClients(String realtorId) async {
-    QuerySnapshot investorSnapshot = await FirebaseFirestore.instance
+    QuerySnapshot investorSnapshot = await firestore
         .collection('investors')
         .where('realtorId', isEqualTo: realtorId)
         .where('status', isEqualTo: 'client')
@@ -220,7 +227,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchTags(String realtorId) async {
-    QuerySnapshot tagSnapshot = await FirebaseFirestore.instance
+    QuerySnapshot tagSnapshot = await firestore
         .collection('realtors')
         .doc(realtorId)
         .collection('tags')
