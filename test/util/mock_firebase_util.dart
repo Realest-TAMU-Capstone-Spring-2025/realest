@@ -35,12 +35,11 @@ class MockFirebaseUtil {
       'firstName': 'John',
       'lastName': 'Doe',
       'contactPhone': '123-456-7890',
-      'profilePicUrl': 'https://example.com/realtor.jpg',
+      'profilePicUrl': 'https://github.com/shadcn.png',
       'agencyName': 'Doe Realty',
       'licenseNumber': 'AB123456',
       'address': '123 Main St, Springfield',
     });
-
     await firestore.collection('users').doc(realtor.user!.uid).set({
       'email': 'realtor@example.com',
       'role': 'realtor',

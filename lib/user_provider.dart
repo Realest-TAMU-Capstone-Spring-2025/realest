@@ -54,6 +54,11 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  set profilePic(String? value) {
+    _profilePicUrl = value;
+    notifyListeners();
+  }
+
 
   // Clients list
   List<Map<String, dynamic>> _clients = [];
