@@ -1,23 +1,59 @@
 import 'package:flutter/material.dart';
+
+/// Represents a filter for property searches with various criteria.
 class PropertyFilter {
+  /// Minimum price of the property.
   int? minPrice;
+
+  /// Maximum price of the property.
   int? maxPrice;
+
+  /// Minimum number of bedrooms.
   int? minBeds;
+
+  /// Minimum number of bathrooms.
   double? minBaths;
+
+  /// Minimum square footage.
   int? minSqft;
+
+  /// Maximum square footage.
   int? maxSqft;
+
+  /// Minimum lot size.
   int? minLotSize;
+
+  /// Maximum lot size.
   int? maxLotSize;
+
+  /// Minimum year the property was built.
   int? minYearBuilt;
+
+  /// Maximum year the property was built.
   int? maxYearBuilt;
+
+  /// Maximum HOA fee.
   int? maxHoa;
+
+  /// List of selected home types (e.g., 'single_family', 'condo').
   List<String>? homeTypes;
+
+  /// List of selected property statuses (e.g., 'for_sale', 'pending').
   List<String>? selectedStatuses;
+
+  /// Indicates if only new construction properties are included.
   bool? isNewConstruction;
+
+  /// Maximum number of floors.
   int? maxFloors;
+
+  /// Maximum days the property has been on the market.
   int? maxDaysOnMarket;
+
+  /// Maximum HOA fee (alternative naming).
   int? maxHOAFee;
 
+  /// Creates a [PropertyFilter] with optional properties.
   PropertyFilter({
     this.minPrice,
     this.maxPrice,
@@ -38,6 +74,7 @@ class PropertyFilter {
     this.maxHOAFee,
   });
 
+  /// Converts the filter to a map for serialization or Firestore queries.
   Map<String, dynamic> toMap() {
     return {
       'minPrice': minPrice,
@@ -60,6 +97,7 @@ class PropertyFilter {
     };
   }
 
+  /// Creates a copy of the filter with updated properties.
   PropertyFilter copyWith({
     int? minPrice,
     int? maxPrice,

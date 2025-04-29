@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 
+/// A footer widget with branding, quick links, and a newsletter signup form.
 class Footer extends StatelessWidget {
-  static const Color neonPurple =  Color(0xFFD500F9);
+  /// Neon purple color used for styling borders and buttons.
+  static const Color neonPurple = Color(0xFFD500F9);
 
   const Footer({super.key});
 
+  /// Builds a text button for footer navigation links.
+  ///
+  /// [title] The text displayed on the button.
+  /// [isMobile] Determines font size for mobile or desktop.
+  /// Returns a [Widget] representing the footer link button.
   Widget _footerLink(String title, {required bool isMobile}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 5),
@@ -13,7 +20,7 @@ class Footer extends StatelessWidget {
         child: Text(
           title,
           style: TextStyle(
-            fontSize: isMobile ? 12 : 18, // Smaller font for mobile
+            fontSize: isMobile ? 12 : 18,
             color: Colors.white,
           ),
         ),
@@ -23,11 +30,13 @@ class Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Determines if the screen is mobile based on width
     final isMobile = MediaQuery.of(context).size.width < 800;
 
+    // Builds the footer with a responsive layout for branding, links, and newsletter
     return Container(
       color: const Color(0xFFa78cde),
-      padding: EdgeInsets.all(isMobile ? 20 : 40), // Reduced padding for mobile
+      padding: EdgeInsets.all(isMobile ? 20 : 40),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -38,13 +47,13 @@ class Footer extends StatelessWidget {
                 Icon(
                   Icons.real_estate_agent,
                   color: Colors.white,
-                  size: isMobile ? 40 : 54, // Smaller icon for mobile
+                  size: isMobile ? 40 : 54,
                 ),
                 SizedBox(height: isMobile ? 8 : 10),
                 Text(
                   'RealEst',
                   style: TextStyle(
-                    fontSize: isMobile ? 20 : 30, // Smaller font for mobile
+                    fontSize: isMobile ? 20 : 30,
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
@@ -53,7 +62,7 @@ class Footer extends StatelessWidget {
                 Text(
                   '© 2025 RealEst',
                   style: TextStyle(
-                    fontSize: isMobile ? 16 : 24, // Smaller font for mobile
+                    fontSize: isMobile ? 16 : 24,
                     color: Colors.white,
                   ),
                 ),
@@ -67,7 +76,7 @@ class Footer extends StatelessWidget {
                 Text(
                   'Quick Links',
                   style: TextStyle(
-                    fontSize: isMobile ? 14 : 22, // Smaller font for mobile
+                    fontSize: isMobile ? 14 : 22,
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
@@ -87,20 +96,20 @@ class Footer extends StatelessWidget {
                 Text(
                   'Sign Up for Newsletter',
                   style: TextStyle(
-                    fontSize: isMobile ? 14 : 18, // Smaller font for mobile
+                    fontSize: isMobile ? 14 : 18,
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 SizedBox(height: isMobile ? 10 : 20),
                 SizedBox(
-                  width: isMobile ? 200 : null, // Smaller width for mobile, null for desktop (full width)
+                  width: isMobile ? 200 : null,
                   child: TextFormField(
                     decoration: InputDecoration(
                       hintText: 'Enter your email',
                       hintStyle: TextStyle(
                         color: Colors.white,
-                        fontSize: isMobile ? 12 : 16, // Smaller hint font for mobile
+                        fontSize: isMobile ? 12 : 16,
                       ),
                       filled: true,
                       fillColor: Colors.black,
@@ -111,7 +120,7 @@ class Footer extends StatelessWidget {
                     ),
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: isMobile ? 14 : 16, // Smaller text for mobile
+                      fontSize: isMobile ? 14 : 16,
                     ),
                   ),
                 ),
@@ -125,7 +134,7 @@ class Footer extends StatelessWidget {
                       ),
                       backgroundColor: neonPurple,
                       padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 10 : 30, // Smaller padding for mobile
+                        horizontal: isMobile ? 10 : 30,
                         vertical: isMobile ? 5 : 15,
                       ),
                     ),
@@ -133,7 +142,7 @@ class Footer extends StatelessWidget {
                       'Subscribe',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: isMobile ? 14 : 16, // Smaller font for mobile
+                        fontSize: isMobile ? 14 : 16,
                       ),
                     ),
                   ),

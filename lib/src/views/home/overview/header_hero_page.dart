@@ -4,7 +4,9 @@ import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'feature_container.dart';
 
+/// A hero page displaying an animated header, subtitle, buttons, and feature cards.
 class HeaderHeroPage extends StatefulWidget {
+  /// Opacity level for the background GIF, clamped between 0.0 and 1.0.
   final double gifOpacity;
 
   const HeaderHeroPage({
@@ -16,24 +18,43 @@ class HeaderHeroPage extends StatefulWidget {
   _HeaderHeroPageState createState() => _HeaderHeroPageState();
 }
 
+/// Manages animations and APK download functionality for [HeaderHeroPage].
 class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStateMixin {
+  /// Controller for the header fade-in animation.
   late AnimationController _headerController;
+
+  /// Animation for the header's opacity transition.
   late Animation<double> _headerAnimation;
+
+  /// Controller for the subtitle fade-in animation.
   late AnimationController _subtitleController;
+
+  /// Animation for the subtitle's opacity transition.
   late Animation<double> _subtitleAnimation;
+
+  /// Controller for the download button fade-in animation.
   late AnimationController _buttonController;
+
+  /// Animation for the download button's opacity transition.
   late Animation<double> _buttonAnimation;
+
+  /// Controller for the feature cards fade-in animation.
   late AnimationController _featuresController;
+
+  /// Animation for the feature cards' opacity transition.
   late Animation<double> _featuresAnimation;
 
+  /// Tracks whether the animated header text has finished typing.
   bool _hasTyped = false;
 
-  // Firebase Storage URL for the APK
-  final String _apkDownloadUrl = 'https://firebasestorage.googleapis.com/v0/b/realest-3a0d2.firebasestorage.app/o/app-release.apk?alt=media&token=c765016a-1d08-4a4b-878b-07049821a861';
+  /// Firebase Storage URL for downloading the mobile APK.
+  final String _apkDownloadUrl =
+      'https://firebasestorage.googleapis.com/v0/b/realest-3a0d2.firebasestorage.app/o/app-release.apk?alt=media&token=8b1cc742-dd10-43f5-b498-390a14196c79';
 
   @override
   void initState() {
     super.initState();
+    // Initialize header animation
     _headerController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -42,6 +63,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
       CurvedAnimation(parent: _headerController, curve: Curves.easeIn),
     );
 
+    // Initialize subtitle animation
     _subtitleController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -50,6 +72,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
       CurvedAnimation(parent: _subtitleController, curve: Curves.easeIn),
     );
 
+    // Initialize button animation
     _buttonController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -58,6 +81,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
       CurvedAnimation(parent: _buttonController, curve: Curves.easeIn),
     );
 
+    // Initialize features animation
     _featuresController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -66,6 +90,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
       CurvedAnimation(parent: _featuresController, curve: Curves.easeIn),
     );
 
+    // Start animations with staggered delays
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) _headerController.forward();
     });
@@ -82,6 +107,7 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
 
   @override
   void dispose() {
+    // Dispose animation controllers to prevent memory leaks
     _headerController.dispose();
     _subtitleController.dispose();
     _buttonController.dispose();
@@ -89,8 +115,14 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
     super.dispose();
   }
 
+  /// Neon purple color used for styling buttons, icons, and text.
   static const Color neonPurple = Color(0xFFa78cde);
 
+  /// Builds a navigation tab button (currently non-functional).
+  ///
+  /// [context] The build context for navigation.
+  /// [title] The text displayed on the button.
+  /// Returns a [TextButton] with the specified title.
   Widget _tabButton(BuildContext context, String title) {
     return TextButton(
       onPressed: () {},
@@ -101,7 +133,9 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
     );
   }
 
-  // Function to launch the APK download URL
+  /// Launches the APK download URL in an external application.
+  ///
+  /// Displays a [SnackBar] with an error message if the URL cannot be launched.
   Future<void> _launchApkDownload() async {
     final Uri url = Uri.parse(_apkDownloadUrl);
     try {

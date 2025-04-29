@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 
+/// A reusable widget that displays a feature card with animated hover effects.
 class FeatureContainer extends StatelessWidget {
+  /// The icon displayed at the top of the card.
   final IconData icon;
+
+  /// The title text describing the feature.
   final String title;
+
+  /// The call-to-action text at the bottom of the card.
   final String cta;
 
+  /// Creates a [FeatureContainer] with the specified [icon], [title], and [cta].
   const FeatureContainer({
     required this.icon,
     required this.title,
@@ -12,10 +19,14 @@ class FeatureContainer extends StatelessWidget {
     super.key,
   });
 
+  /// Neon purple color used for styling borders, icons, and text.
   static const Color neonPurple = Color(0xFFa78cde);
 
   @override
   Widget build(BuildContext context) {
+    /// Builds the feature card with hover animations and responsive layout.
+    ///
+    /// Returns a [Widget] containing the animated card with icon, title, and CTA.
     final hoverNotifier = ValueNotifier<bool>(false);
     final isMobile = MediaQuery.of(context).size.width < 800;
 
@@ -67,8 +78,7 @@ class FeatureContainer extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                         textAlign: TextAlign.center,
-                        maxLines: 2, // Allow wrapping to 2 lines
-                        // Removed overflow: TextOverflow.ellipsis
+                        maxLines: 2,
                       ),
                     ),
                     const SizedBox(height: 4.0),
@@ -128,8 +138,7 @@ class FeatureContainer extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                       textAlign: TextAlign.center,
-                      maxLines: 2, // Allow wrapping to 2 lines
-                      // Removed overflow: TextOverflow.ellipsis
+                      maxLines: 2,
                     ),
                   ),
                   const SizedBox(height: 8),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import 'value_prop_container.dart';
 
+/// A section displaying animated value proposition cards triggered by visibility.
 class ValuePropositions extends StatefulWidget {
   const ValuePropositions({super.key});
 
@@ -9,21 +10,33 @@ class ValuePropositions extends StatefulWidget {
   _ValuePropositionsState createState() => _ValuePropositionsState();
 }
 
+/// Manages animations for title and containers in [ValuePropositions].
 class _ValuePropositionsState extends State<ValuePropositions> with TickerProviderStateMixin {
+  /// Neon purple color used for styling text and gradients.
   static const Color neonPurple = Color(0xFFa78cde);
 
+  /// Controller for title fade animation.
   late AnimationController _titleController;
+
+  /// Animation for fading in the title.
   late Animation<double> _titleFadeAnimation;
+
+  /// List of controllers for container animations.
   late List<AnimationController> _containerControllers;
+
+  /// List of fade animations for containers.
   late List<Animation<double>> _containerFadeAnimations;
+
+  /// List of slide animations for containers.
   late List<Animation<Offset>> _containerSlideAnimations;
 
+  /// Tracks if animations have already run to prevent repetition.
   bool _hasAnimated = false;
 
   @override
   void initState() {
     super.initState();
-
+    // Initialize title animation
     _titleController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -32,6 +45,7 @@ class _ValuePropositionsState extends State<ValuePropositions> with TickerProvid
       CurvedAnimation(parent: _titleController, curve: Curves.easeIn),
     );
 
+    // Initialize container animations for 4 containers
     _containerControllers = List.generate(
       4,
           (index) => AnimationController(
@@ -54,6 +68,7 @@ class _ValuePropositionsState extends State<ValuePropositions> with TickerProvid
 
   @override
   void dispose() {
+    // Dispose animation controllers to prevent memory leaks
     _titleController.dispose();
     for (var controller in _containerControllers) {
       controller.dispose();
@@ -61,6 +76,7 @@ class _ValuePropositionsState extends State<ValuePropositions> with TickerProvid
     super.dispose();
   }
 
+  /// Starts animations for title and containers with staggered delays.
   void _startAnimations() {
     if (_hasAnimated) return;
     _titleController.forward();
@@ -74,6 +90,7 @@ class _ValuePropositionsState extends State<ValuePropositions> with TickerProvid
     _hasAnimated = true;
   }
 
+  /// Resets animations when the section is no longer visible.
   void _resetAnimations() {
     _hasAnimated = false;
     _titleController.reset();
@@ -84,6 +101,7 @@ class _ValuePropositionsState extends State<ValuePropositions> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
+    // Builds the value propositions section with visibility detection
     final isMobile = MediaQuery.of(context).size.width < 800;
 
     return VisibilityDetector(
@@ -136,6 +154,10 @@ class _ValuePropositionsState extends State<ValuePropositions> with TickerProvid
     );
   }
 
+  /// Builds the container section, adapting to mobile or desktop layouts.
+  ///
+  /// [isMobile] Determines if the layout should be vertical (mobile) or horizontal (desktop).
+  /// Returns a [Widget] containing the value proposition containers.
   Widget _buildContainersSection(bool isMobile) {
     final containers = [
       SlideTransition(

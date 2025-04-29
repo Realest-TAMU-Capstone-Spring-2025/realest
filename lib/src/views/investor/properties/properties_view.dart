@@ -4,33 +4,53 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
+/// Displays detailed information about a specific property.
 class PropertiesView extends StatefulWidget {
+  /// The ID of the property to display.
   final String propertyId;
+
+  /// Whether to show the save icon in the app bar.
   final bool showSaveIcon;
 
-  const PropertiesView(
-      {super.key, required this.propertyId, this.showSaveIcon = true});
+  const PropertiesView({
+    super.key,
+    required this.propertyId,
+    this.showSaveIcon = true,
+  });
 
   @override
   State<PropertiesView> createState() => _PropertiesViewState();
 }
 
+/// Manages property data and user interactions for [PropertiesView].
 class _PropertiesViewState extends State<PropertiesView> {
+  /// Current authenticated user, if any.
   late final User? _user = FirebaseAuth.instance.currentUser;
+
+  /// Tracks if the property is saved (liked) by the user.
   bool _isSaved = false;
+
+  /// Future for fetching property data from Firestore.
   late final Future<DocumentSnapshot> _propertyData;
+
+  /// Formats numbers with commas for display (e.g., 1000 → 1,000).
   final NumberFormat currencyFormat = NumberFormat('#,##0', 'en_US');
+
+  /// Tracks if the user is a realtor.
   bool _isRealtor = false;
 
   @override
   void initState() {
     super.initState();
+    // Initialize data fetching and status checks
     _propertyData = _fetchPropertyData();
     _checkSavedStatus();
     _checkRealtorStatus();
-
   }
 
+  /// Fetches property data from Firestore using the provided property ID.
+  ///
+  /// Returns a [Future] containing the [DocumentSnapshot] of the property.
   Future<DocumentSnapshot> _fetchPropertyData() async {
     return FirebaseFirestore.instance
         .collection('listings')
@@ -38,6 +58,7 @@ class _PropertiesViewState extends State<PropertiesView> {
         .get();
   }
 
+  /// Adds the property to the user's curated list if they are a realtor.
   Future<void> _addToCuratedList() async {
     if (_user == null || !_isRealtor) return;
 
@@ -55,17 +76,21 @@ class _PropertiesViewState extends State<PropertiesView> {
     );
   }
 
+  /// Checks if the user has a realtor role in Firestore.
+  ///
+  /// Returns a [Future] indicating if the user is a realtor.
   Future<bool> _isUserRealtor() async {
     if (_user == null) return false;
-    
+
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(_user!.uid)
         .get();
-    
+
     return userDoc.data()?['role'] == 'realtor';
   }
 
+  /// Updates the realtor status based on the user's role.
   Future<void> _checkRealtorStatus() async {
     final isRealtor = await _isUserRealtor();
     if (mounted) {
@@ -73,6 +98,7 @@ class _PropertiesViewState extends State<PropertiesView> {
     }
   }
 
+  /// Checks if the property is saved (liked) by the user.
   Future<void> _checkSavedStatus() async {
     if (_user == null) return;
 
@@ -88,6 +114,7 @@ class _PropertiesViewState extends State<PropertiesView> {
     }
   }
 
+  /// Toggles the saved (liked) status of the property in Firestore.
   Future<void> _toggleSave() async {
     if (_user == null) return;
 
@@ -96,10 +123,10 @@ class _PropertiesViewState extends State<PropertiesView> {
         .doc(_user?.uid)
         .collection('decisions');
 
-    // Immediate UI update
+    // Update UI immediately
     setState(() => _isSaved = !_isSaved);
 
-    // Background Firestore update
+    // Update Firestore in the background
     if (_isSaved) {
       await collectionRef.doc(widget.propertyId).set({
         'liked': true,
@@ -112,20 +139,21 @@ class _PropertiesViewState extends State<PropertiesView> {
 
   @override
   Widget build(BuildContext context) {
+    // Builds the UI with an app bar and property details
     return Scaffold(
       appBar: AppBar(
         title: const Text('Property Details'),
         actions: widget.showSaveIcon
             ? [
-                _isRealtor
-                ? Text('Add to Curated List')
-                    : const SizedBox.shrink(),
-                IconButton(
-                  icon: Icon(_isSaved ? Icons.favorite : Icons.favorite_border),
-                  color: _isSaved ? Colors.red : Colors.green,
-                  onPressed: _toggleSave,
-                ),
-              ]
+          _isRealtor
+              ? const Text('Add to Curated List')
+              : const SizedBox.shrink(),
+          IconButton(
+            icon: Icon(_isSaved ? Icons.favorite : Icons.favorite_border),
+            color: _isSaved ? Colors.red : Colors.green,
+            onPressed: _toggleSave,
+          ),
+        ]
             : null,
       ),
       body: FutureBuilder<DocumentSnapshot>(
@@ -145,6 +173,10 @@ class _PropertiesViewState extends State<PropertiesView> {
     );
   }
 
+  /// Builds the main content with a photo gallery and detail cards.
+  ///
+  /// [data] The property data from Firestore.
+  /// Returns a [Widget] containing the content layout.
   Widget _buildContent(Map<String, dynamic> data) {
     return SingleChildScrollView(
       child: Padding(
@@ -161,27 +193,35 @@ class _PropertiesViewState extends State<PropertiesView> {
     );
   }
 
+  /// Builds a carousel slider for property photos.
+  ///
+  /// [altPhotos] A comma-separated string of photo URLs.
+  /// Returns a [Widget] containing the photo gallery.
   Widget _buildPhotoGallery(String? altPhotos) {
     final photos = altPhotos?.split(', ') ?? [];
     return SizedBox(
       height: 250,
       child: photos.isNotEmpty
           ? CarouselSlider(
-              options: CarouselOptions(
-                autoPlay: true,
-                autoPlayInterval: const Duration(seconds: 2),
-                autoPlayCurve: Curves.fastOutSlowIn,
-                enlargeCenterPage: true,
-                aspectRatio: 16 / 9,
-                viewportFraction: 0.8,
-                enableInfiniteScroll: true,
-              ),
-              items: photos.map((url) => _buildImageContainer(url)).toList(),
-            )
+        options: CarouselOptions(
+          autoPlay: true,
+          autoPlayInterval: const Duration(seconds: 2),
+          autoPlayCurve: Curves.fastOutSlowIn,
+          enlargeCenterPage: true,
+          aspectRatio: 16 / 9,
+          viewportFraction: 0.8,
+          enableInfiniteScroll: true,
+        ),
+        items: photos.map((url) => _buildImageContainer(url)).toList(),
+      )
           : const Center(child: Text('No photos available')),
     );
   }
 
+  /// Builds a container for a single image in the photo gallery.
+  ///
+  /// [url] The URL of the image to display.
+  /// Returns a [Widget] containing the image.
   Widget _buildImageContainer(String url) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 5.0),
@@ -190,7 +230,6 @@ class _PropertiesViewState extends State<PropertiesView> {
         child: Image.network(
           // "http://localhost:3000/proxy-image?url=${Uri.encodeQueryComponent(url)}",
           "https://localhost:3000/proxy-image?url=${Uri.encodeQueryComponent(url)}",
-          // "http://localhost:2999/$url",
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => Container(
             color: Colors.grey[200],
@@ -201,6 +240,10 @@ class _PropertiesViewState extends State<PropertiesView> {
     );
   }
 
+  /// Builds detail cards for basic details, property info, and description.
+  ///
+  /// [data] The property data from Firestore.
+  /// Returns a [Widget] containing the detail cards.
   Widget _buildDetailCards(Map<String, dynamic> data) {
     return Column(
       children: [
@@ -218,8 +261,7 @@ class _PropertiesViewState extends State<PropertiesView> {
         _buildDetailCard(
           'Property Information',
           [
-
-            _buildDetailRow('Price', '\$${currencyFormat.format(data['list_price']) ?? 'N/A'}'),
+            _buildDetailRow('Price', '\$${currencyFormat.format(data['list_price'])}' ?? 'N/A'),
             _buildDetailRow('Beds', data['beds']?.toString() ?? 'N/A'),
             _buildDetailRow('Baths',
                 '${data['full_baths'] ?? 0} Full | ${data['half_baths'] ?? 0} Half'),
@@ -231,8 +273,7 @@ class _PropertiesViewState extends State<PropertiesView> {
           _buildDetailCard(
             'Description',
             [
-              Text(data['text'],
-                  style: const TextStyle(fontSize: 14, height: 1.5))
+              Text(data['text'], style: const TextStyle(fontSize: 14, height: 1.5)),
             ],
           ),
         ],
@@ -240,6 +281,11 @@ class _PropertiesViewState extends State<PropertiesView> {
     );
   }
 
+  /// Builds a card containing a title and list of detail rows or text.
+  ///
+  /// [title] The title of the card.
+  /// [children] The list of widgets to display in the card.
+  /// Returns a [Widget] representing the detail card.
   Widget _buildDetailCard(String title, List<Widget> children) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -258,6 +304,10 @@ class _PropertiesViewState extends State<PropertiesView> {
     );
   }
 
+  /// Builds a section title for detail cards.
+  ///
+  /// [title] The title text to display.
+  /// Returns a [Widget] representing the section title.
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
@@ -269,6 +319,11 @@ class _PropertiesViewState extends State<PropertiesView> {
     );
   }
 
+  /// Builds a row displaying a label and value for property details.
+  ///
+  /// [label] The label for the detail.
+  /// [value] The value to display.
+  /// Returns a [Widget] representing the detail row.
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),

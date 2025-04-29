@@ -1,36 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
+/// Displays an animated overview of the app's features with a carousel of screenshots.
 class AppOverview extends StatefulWidget {
+  /// Creates an [AppOverview] instance.
   const AppOverview({super.key});
 
   @override
   _AppOverviewState createState() => _AppOverviewState();
 }
 
+/// State for [AppOverview], managing animations and carousel functionality.
 class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin {
+  /// Neon purple color used for styling text and icons.
   static const Color neonPurple = Color(0xFFa78cde);
 
+  /// Controller for the carousel slider.
   final CarouselSliderController _carouselController = CarouselSliderController();
+
+  /// Tracks the current carousel page index.
   int _currentPage = 0;
 
-  // Animation controllers
+  /// Controller for title fade animation.
   late AnimationController _titleController;
+
+  /// Fade animation for the title.
   late Animation<double> _titleFadeAnimation;
+
+  /// Controller for left text fade and slide animations.
   late AnimationController _leftTextController;
+
+  /// Fade animation for the left text section.
   late Animation<double> _leftTextFadeAnimation;
+
+  /// Slide animation for the left text section.
   late Animation<Offset> _leftTextSlideAnimation;
+
+  /// Controller for carousel fade and slide animations.
   late AnimationController _carouselControllerAnim;
+
+  /// Fade animation for the carousel.
   late Animation<double> _carouselFadeAnimation;
+
+  /// Slide animation for the carousel.
   late Animation<Offset> _carouselSlideAnimation;
 
-  // Flag to track visibility
+  /// Flag to track if the widget is visible for animation triggers.
   bool _isVisible = false;
 
   @override
   void initState() {
     super.initState();
 
+    // Initialize title animation
     _titleController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -39,6 +61,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
       CurvedAnimation(parent: _titleController, curve: Curves.easeIn),
     );
 
+    // Initialize left text animations
     _leftTextController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -53,6 +76,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
       CurvedAnimation(parent: _leftTextController, curve: Curves.easeOut),
     );
 
+    // Initialize carousel animations
     _carouselControllerAnim = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -72,12 +96,14 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
 
   @override
   void dispose() {
+    /// Disposes of all animation controllers to prevent memory leaks.
     _titleController.dispose();
     _leftTextController.dispose();
     _carouselControllerAnim.dispose();
     super.dispose();
   }
 
+  /// Starts animations with staggered delays for a smooth reveal effect.
   void _startAnimations() {
     _titleController.forward(from: 0);
     Future.delayed(const Duration(milliseconds: 400), () {
@@ -91,6 +117,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
     });
   }
 
+  /// Resets animations and visibility state when the widget is off-screen.
   void _resetAnimations() {
     _titleController.reset();
     _leftTextController.reset();
@@ -103,6 +130,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
   @override
   void didUpdateWidget(AppOverview oldWidget) {
     super.didUpdateWidget(oldWidget);
+    /// Restarts animations if the widget becomes visible again.
     if (!_isVisible) {
       _startAnimations();
     }
@@ -110,6 +138,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    /// Builds the overview section with a scroll listener for animation resets.
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollNotification) {
         if (scrollNotification is ScrollEndNotification) {
@@ -132,7 +161,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
             height: MediaQuery.of(context).size.height * (isMobile ? 1.2 : 0.9),
             color: const Color(0xFF1f1e25),
             padding: EdgeInsets.symmetric(
-              vertical: isMobile ? 16 : 40, // Reduced vertical padding on mobile
+              vertical: isMobile ? 16 : 40,
               horizontal: isMobile ? 60 : 100,
             ),
             child: isMobile
@@ -153,7 +182,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
                     child: Text(
                       'App Overview',
                       style: TextStyle(
-                        fontSize: isMobile ? 32 : 56, // Slightly smaller title on mobile
+                        fontSize: isMobile ? 32 : 56,
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
@@ -161,7 +190,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
                     ),
                   ),
                 ),
-                const SizedBox(height: 50), // Reduced from 40
+                const SizedBox(height: 50),
                 SlideTransition(
                   position: _leftTextSlideAnimation,
                   child: FadeTransition(
@@ -172,17 +201,17 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
                         const Text(
                           '📱 Dual UI Ecosystem:',
                           style: TextStyle(
-                            fontSize: 18, // Reduced from 20
+                            fontSize: 18,
                             color: neonPurple,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 8), // Reduced from 10
+                        const SizedBox(height: 8),
                         const Text(
                           'Power tools for agents, simple swipes for buyers',
-                          style: TextStyle(fontSize: 12, color: Colors.white), // Reduced from 14
+                          style: TextStyle(fontSize: 12, color: Colors.white),
                         ),
-                        const SizedBox(height: 16), // Reduced from 30
+                        const SizedBox(height: 16),
                         const Text(
                           '🚀 Cash Flow Calculator:',
                           style: TextStyle(
@@ -374,20 +403,23 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
     );
   }
 
+  /// Builds the animated carousel of app screenshots.
+  ///
+  /// [isMobile] determines the size of navigation icons.
+  /// Returns a [Widget] containing the carousel and navigation controls.
   Widget _buildCarousel(bool isMobile) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded( // Use Expanded to dynamically size the carousel
+          Expanded(
             child: Stack(
               alignment: Alignment.center,
               children: [
                 CarouselSlider(
                   carouselController: _carouselController,
                   options: CarouselOptions(
-                    // Removed fixed height, relying on Expanded
                     aspectRatio: 16 / 9,
                     viewportFraction: 1.0,
                     initialPage: 0,
@@ -470,7 +502,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
               ],
             ),
           ),
-          const SizedBox(height: 8), // Further reduced from 10
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(3, (index) {
@@ -483,7 +515,7 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
                   );
                 },
                 child: Container(
-                  width: 8, // Slightly smaller dots
+                  width: 8,
                   height: 8,
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(

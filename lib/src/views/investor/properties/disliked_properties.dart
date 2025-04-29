@@ -9,6 +9,7 @@ import '../../realtor/widgets/property_detail_sheet.dart';
 import 'properties_view.dart'; // Import PropertiesView
 import '../swiping/property_swiping.dart';
 
+/// Displays a list of properties disliked by the logged-in investor.
 class DislikedProperties extends StatefulWidget {
   const DislikedProperties({super.key});
 
@@ -16,16 +17,24 @@ class DislikedProperties extends StatefulWidget {
   State<DislikedProperties> createState() => _DislikedPropertiesState();
 }
 
+/// Manages property fetching and interactions for [DislikedProperties].
 class _DislikedPropertiesState extends State<DislikedProperties> {
+  /// Formats numbers with commas for display (e.g., 1000 → 1,000).
   final NumberFormat currencyFormat = NumberFormat('#,##0', 'en_US');
+
+  /// User ID of the logged-in investor.
   late final String? uid = FirebaseAuth.instance.currentUser?.uid;
+
+  /// Stream of disliked property interactions from Firestore.
   late final Stream<QuerySnapshot> _interactionsStream;
+
+  /// Cached future for fetched properties to avoid redundant queries.
   Future<List<Property>>? _cachedPropertiesFuture;
 
   @override
   void initState() {
     super.initState();
-
+    // Initialize the stream for disliked property interactions if user is logged in
     if (uid != null) {
       _interactionsStream = FirebaseFirestore.instance
           .collection('investors')
@@ -38,6 +47,7 @@ class _DislikedPropertiesState extends State<DislikedProperties> {
 
   @override
   Widget build(BuildContext context) {
+    // Builds the UI, handling authentication and data states
     if (uid == null) {
       return const Scaffold(
         body: Center(child: Text('User not logged in')),
@@ -89,7 +99,6 @@ class _DislikedPropertiesState extends State<DislikedProperties> {
                           child: _buildPropertyCard(property),
                         ),
                       );
-
                     }).toList(),
                   ),
                 ),
@@ -101,7 +110,10 @@ class _DislikedPropertiesState extends State<DislikedProperties> {
     );
   }
 
-
+  /// Fetches property details for disliked properties from Firestore.
+  ///
+  /// [decisionDocs] List of documents containing property interaction data.
+  /// Returns a [Future] containing a list of [Property] objects.
   Future<List<Property>> _fetchProperties(List<QueryDocumentSnapshot> decisionDocs) async {
     final List<Property> properties = [];
 
@@ -122,6 +134,10 @@ class _DislikedPropertiesState extends State<DislikedProperties> {
     return properties;
   }
 
+  /// Builds a property card with options to move to liked or view details.
+  ///
+  /// [property] The property data to display.
+  /// Returns a [Widget] representing the property card.
   Widget _buildPropertyCard(Property property) {
     debugPrint('🔍 $property');
     return PropertyCard(
@@ -150,7 +166,7 @@ class _DislikedPropertiesState extends State<DislikedProperties> {
         );
 
         if (result == 'dislike') {
-          // Update investor's interaction
+          // Update investor's interaction to 'liked' in Firestore
           await FirebaseFirestore.instance
               .collection('investors')
               .doc(uid)
@@ -158,7 +174,7 @@ class _DislikedPropertiesState extends State<DislikedProperties> {
               .doc(property.id)
               .update({'status': 'liked'});
 
-          // Get investor document to retrieve realtorId
+          // Update realtor's interaction if applicable
           final investorDoc = await FirebaseFirestore.instance
               .collection('investors')
               .doc(uid)
@@ -179,8 +195,7 @@ class _DislikedPropertiesState extends State<DislikedProperties> {
           setState(() {
             _cachedPropertiesFuture = null; // Trigger refresh
           });
-        }
-        else if (result == 'details') {
+        } else if (result == 'details') {
           final propertyData = await fetchPropertyData(property.id);
           showModalBottomSheet(
             context: context,
@@ -192,8 +207,6 @@ class _DislikedPropertiesState extends State<DislikedProperties> {
           );
         }
       },
-
     );
   }
-
 }

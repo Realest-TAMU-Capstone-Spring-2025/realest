@@ -157,8 +157,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     super.dispose();
   }
 
-  Widget _buildInteractionList(
-      String title, IconData icon, List<Map<String, dynamic>> items) {
+  Widget _buildInteractionList(String title, IconData icon, List<Map<String, dynamic>> items) {
     final theme = Theme.of(context);
 
     if (items.isEmpty) {
@@ -209,6 +208,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
       ],
     );
   }
+
   Future<void> _deleteClient() async {
     final name = '${_clientData?['firstName'] ?? ''} ${_clientData?['lastName'] ?? ''}';
     widget.onDelete?.call(widget.clientUid, name);

@@ -3,27 +3,41 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+/// A widget for calculating PITI (Principal, Interest, Taxes, Insurance) payments.
 class PitiCalculator extends StatefulWidget {
   const PitiCalculator({Key? key}) : super(key: key);
-
 
   @override
   State<PitiCalculator> createState() => _PitiCalculatorState();
 }
 
+/// State for [PitiCalculator], managing inputs and PITI calculations.
 class _PitiCalculatorState extends State<PitiCalculator> {
+  /// Controller for down payment input.
   final downPaymentController = TextEditingController();
+
+  /// Controller for interest rate input.
   final interestRateController = TextEditingController();
+
+  /// Controller for loan term input (years).
   final loanTermController = TextEditingController();
+
+  /// Controller for annual property tax input.
   final propertyTaxController = TextEditingController();
+
+  /// Controller for monthly insurance input.
   final insuranceController = TextEditingController();
+
+  /// Controller for home price input.
   final homePriceController = TextEditingController();
 
-
+  /// Calculated monthly PITI payment.
   double _monthlyPayment = 0.0;
 
+  /// Formatter for currency display.
   final currencyFormat = NumberFormat.currency(symbol: "\$");
 
+  /// Calculates the monthly PITI payment based on user inputs.
   void _calculatePITI() {
     final homePrice = _parseDouble(homePriceController.text);
     final downPayment = _parseDouble(downPaymentController.text);
@@ -69,14 +83,12 @@ class _PitiCalculatorState extends State<PitiCalculator> {
                 ),
               ),
               const SizedBox(height: 24),
-
               _buildTextField("Home Price (\$)", homePriceController, "e.g. 300000"),
               _buildTextField("Down Payment (\$)", downPaymentController, "e.g. 60000"),
               _buildTextField("Interest Rate (%)", interestRateController, "e.g. 5.5"),
               _buildTextField("Loan Term (Years)", loanTermController, "e.g. 30"),
               _buildTextField("Annual Property Tax (\$)", propertyTaxController, "e.g. 3600"),
               _buildTextField("Monthly Insurance (\$)", insuranceController, "e.g. 100"),
-
               const SizedBox(height: 24),
               Center(
                 child: ElevatedButton.icon(
@@ -90,9 +102,7 @@ class _PitiCalculatorState extends State<PitiCalculator> {
                   onPressed: _calculatePITI,
                 ),
               ),
-
               const SizedBox(height: 32),
-
               if (_monthlyPayment > 0)
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
@@ -123,7 +133,6 @@ class _PitiCalculatorState extends State<PitiCalculator> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
                       Text(
                         "Estimated Monthly Payment: \$${_monthlyPayment.toStringAsFixed(2)}",
                         style: theme.textTheme.titleLarge?.copyWith(
@@ -134,7 +143,6 @@ class _PitiCalculatorState extends State<PitiCalculator> {
                     ],
                   ),
                 ),
-
               if (_monthlyPayment == 0)
                 Padding(
                   padding: const EdgeInsets.only(top: 12.0),
@@ -152,6 +160,7 @@ class _PitiCalculatorState extends State<PitiCalculator> {
     );
   }
 
+  /// Builds pie chart sections for principal/interest, tax, and insurance.
   List<PieChartSectionData> _buildPieSections() {
     final homePrice = _parseDouble(homePriceController.text);
     final downPayment = _parseDouble(downPaymentController.text);
@@ -189,6 +198,7 @@ class _PitiCalculatorState extends State<PitiCalculator> {
     ];
   }
 
+  /// Builds a text field for user input with consistent styling.
   Widget _buildTextField(String label, TextEditingController controller, String hintText) {
     final theme = Theme.of(context);
     return Padding(
@@ -211,6 +221,9 @@ class _PitiCalculatorState extends State<PitiCalculator> {
     );
   }
 
+  /// Parses a string to a double, returning 0 if invalid.
   double _parseDouble(String val) => double.tryParse(val.trim()) ?? 0;
+
+  /// Parses a string to an integer, returning 0 if invalid.
   int _parseInt(String val) => int.tryParse(val.trim()) ?? 0;
 }

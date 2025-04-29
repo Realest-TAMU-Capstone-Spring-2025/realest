@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+/// A widget for calculating home affordability based on user inputs.
 class AffordabilityCalculator extends StatefulWidget {
   const AffordabilityCalculator({Key? key}) : super(key: key);
 
@@ -9,22 +10,45 @@ class AffordabilityCalculator extends StatefulWidget {
   State<AffordabilityCalculator> createState() => _AffordabilityCalculatorState();
 }
 
+/// State for [AffordabilityCalculator], managing inputs and calculations.
 class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
+  /// Controller for annual income input.
   final annualIncomeController = TextEditingController();
+
+  /// Controller for monthly debt input.
   final monthlyDebtController = TextEditingController();
+
+  /// Controller for down payment input (dollar or percentage).
   final downPaymentController = TextEditingController();
+
+  /// Controller for interest rate input.
   final interestRateController = TextEditingController();
+
+  /// Controller for loan term input (years).
   final loanTermController = TextEditingController();
 
+  /// Target home price based on calculations.
   double _targetPrice = 0.0;
+
+  /// Lower-bound price estimate (90% of target).
   double _lowPrice = 0.0;
+
+  /// Upper-bound price estimate (110% of target).
   double _highPrice = 0.0;
+
+  /// Maximum monthly payment the user can afford.
   double _monthlyLimit = 0.0;
+
+  /// Calculated loan amount.
   double _loanAmount = 0.0;
+
+  /// Down payment amount (parsed as dollar or percentage).
   double _downPayment = 0.0;
 
+  /// Formatter for currency display.
   final currencyFormat = NumberFormat.currency(symbol: "\$");
 
+  /// Calculates affordability based on income, debt, down payment, interest, and loan term.
   void _calculateAffordability() {
     final annualIncome = _parseDouble(annualIncomeController.text);
     final monthlyDebt = _parseDouble(monthlyDebtController.text);
@@ -90,13 +114,11 @@ class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
                 style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 24),
-
               _buildTextField("Annual Income (\$)", annualIncomeController, "e.g. 100000"),
               _buildTextField("Monthly Debt (\$)", monthlyDebtController, "e.g. 500"),
               _buildTextField("Down Payment (\$ or %)", downPaymentController, "e.g. 20000 or 20%"),
               _buildTextField("Interest Rate (%)", interestRateController, "e.g. 6"),
               _buildTextField("Loan Term (Years)", loanTermController, "e.g. 30"),
-
               const SizedBox(height: 24),
               Center(
                 child: ElevatedButton.icon(
@@ -111,7 +133,6 @@ class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
                 ),
               ),
               const SizedBox(height: 32),
-
               if (_targetPrice > 0) _buildResultLayout(theme),
               if (_targetPrice == 0)
                 Center(
@@ -127,6 +148,7 @@ class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
     );
   }
 
+  /// Builds the result layout displaying price range and mortgage breakdown.
   Widget _buildResultLayout(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -160,6 +182,7 @@ class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
     );
   }
 
+  /// Creates a card displaying a price value with a label and color.
   Widget _priceCard(String label, double value, Color color) {
     return Container(
       width: 100,
@@ -182,6 +205,7 @@ class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
     );
   }
 
+  /// Creates a row displaying a labeled statistic (e.g., loan amount).
   Widget _labeledStat(String label, double value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -195,6 +219,7 @@ class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
     );
   }
 
+  /// Builds a text field for user input with consistent styling.
   Widget _buildTextField(String label, TextEditingController controller, String hintText) {
     final theme = Theme.of(context);
     return Padding(
@@ -217,6 +242,9 @@ class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
     );
   }
 
+  /// Parses a string to a double, returning 0 if invalid.
   double _parseDouble(String val) => double.tryParse(val.trim()) ?? 0;
+
+  /// Parses a string to an integer, returning 0 if invalid.
   int _parseInt(String val) => int.tryParse(val.trim()) ?? 0;
 }

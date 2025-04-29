@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
 
+/// A reusable widget displaying a value proposition card with hover animations.
 class ValuePropContainer extends StatelessWidget {
+  /// Icon displayed at the top of the card.
   final IconData icon;
+
+  /// Main title of the value proposition.
   final String title;
+
+  /// Subheading providing additional context.
   final String subheading;
+
+  /// List of detailed points about the value proposition.
   final List<String> details;
+
+  /// Neon purple color used for styling borders, icons, and text.
+  static const Color neonPurple = Color(0xFFa78cde);
 
   const ValuePropContainer({
     required this.icon,
@@ -14,13 +25,15 @@ class ValuePropContainer extends StatelessWidget {
     super.key,
   });
 
-  static const Color neonPurple = Color(0xFFa78cde);
-
   @override
   Widget build(BuildContext context) {
+    // Tracks hover state for animation effects
     final hoverNotifier = ValueNotifier<bool>(false);
+
+    // Determines if the screen is mobile based on width
     final isMobile = MediaQuery.of(context).size.width < 600;
 
+    // Builds the value proposition card with responsive layout and hover effects
     return MouseRegion(
       onEnter: (_) => hoverNotifier.value = true,
       onExit: (_) => hoverNotifier.value = false,

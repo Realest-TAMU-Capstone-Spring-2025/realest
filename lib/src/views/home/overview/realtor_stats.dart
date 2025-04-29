@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+/// A section showcasing realtor statistics with animated bars and testimonials.
 class RealtorStats extends StatefulWidget {
+  /// Scroll controller to track visibility for animation triggers.
   final ScrollController scrollController;
 
   const RealtorStats({super.key, required this.scrollController});
@@ -10,20 +12,36 @@ class RealtorStats extends StatefulWidget {
   _RealtorStatsState createState() => _RealtorStatsState();
 }
 
+/// Manages animations and visibility state for [RealtorStats].
 class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderStateMixin {
+  /// Neon purple color used for styling text, buttons, and bars.
   static const Color neonPurple = Color(0xFFa78cde);
+
+  /// Dark purple color used for progress bar gradients.
   static const Color darkPurple = Color(0xFF4A0072);
 
+  /// Controller for all animations in the section.
   late AnimationController _animationController;
+
+  /// Animation for progress bar growth effect.
   late Animation<double> _barAnimation;
+
+  /// Animation for fading in elements.
   late Animation<double> _fadeAnimation;
+
+  /// Animation for sliding in the testimonial text.
   late Animation<Offset> _slideAnimation;
+
+  /// Animation for scaling the profile image.
   late Animation<double> _scaleAnimation;
+
+  /// Tracks whether the section is visible on screen to trigger animations.
   bool _isVisible = false;
 
   @override
   void initState() {
     super.initState();
+    // Initialize animation controller and animations
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 2300),
       vsync: this,
@@ -48,9 +66,11 @@ class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderSt
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
 
+    // Attach listener to check visibility and trigger animations
     widget.scrollController.addListener(_checkVisibility);
   }
 
+  /// Checks if the section is visible on screen and triggers or resets animations.
   void _checkVisibility() {
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
@@ -77,6 +97,7 @@ class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderSt
 
   @override
   void dispose() {
+    // Dispose scroll listener and animation controller to prevent memory leaks
     widget.scrollController.removeListener(_checkVisibility);
     _animationController.dispose();
     super.dispose();
@@ -84,10 +105,11 @@ class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    // Builds the stats section with a responsive layout and animated elements
     final isMobile = MediaQuery.of(context).size.width < 800;
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: MediaQuery.of(context).size.width < 800 ? 20 : 100,
+        horizontal: isMobile ? 20 : 100,
         vertical: 40,
       ),
       color: const Color(0xFF1f1e25),
@@ -120,31 +142,36 @@ class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderSt
     );
   }
 
+  /// Builds the main content, adapting to mobile or desktop layouts.
+  ///
+  /// [context] The build context for responsive sizing.
+  /// Returns a [Widget] containing the profile and progress sections.
   Widget _buildContent(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
 
-    if (isMobile) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildProfileSection(),
-          const SizedBox(height: 40),
-          _buildProgressSection(context),
-        ],
-      );
-    } else {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(flex: 1, child: _buildProfileSection()),
-          const SizedBox(width: 40),
-          Expanded(flex: 1, child: _buildProgressSection(context)),
-        ],
-      );
-    }
+    return isMobile
+        ? Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildProfileSection(),
+        const SizedBox(height: 40),
+        _buildProgressSection(context),
+      ],
+    )
+        : Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(flex: 1, child: _buildProfileSection()),
+        const SizedBox(width: 40),
+        Expanded(flex: 1, child: _buildProgressSection(context)),
+      ],
+    );
   }
 
+  /// Builds the profile section with an animated image and testimonial.
+  ///
+  /// Returns a [Widget] containing the profile image and testimonial text.
   Widget _buildProfileSection() {
     final isMobile = MediaQuery.of(context).size.width < 800;
     return Column(
@@ -153,8 +180,8 @@ class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderSt
         ScaleTransition(
           scale: _scaleAnimation,
           child: Container(
-            width: isMobile ? 120 :200 ,
-            height: isMobile ? 120 :200 ,
+            width: isMobile ? 120 : 200,
+            height: isMobile ? 120 : 200,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: neonPurple, width: 2),
@@ -186,11 +213,13 @@ class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderSt
     );
   }
 
+  /// Builds the progress section with animated bars and a call-to-action.
+  ///
+  /// [context] The build context for responsive sizing.
+  /// Returns a [Widget] containing the progress bars and call-to-action button.
   Widget _buildProgressSection(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
-    final barWidth = MediaQuery.of(context).size.width < 800
-        ? MediaQuery.of(context).size.width * 0.8
-        : MediaQuery.of(context).size.width * 0.5;
+    final barWidth = isMobile ? MediaQuery.of(context).size.width * 0.8 : MediaQuery.of(context).size.width * 0.5;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -298,7 +327,7 @@ class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderSt
           "Greg's clients close 28% faster – will you be next?",
           style: TextStyle(
             color: neonPurple,
-            fontSize: isMobile ? 18: 24,
+            fontSize: isMobile ? 18 : 24,
             fontWeight: FontWeight.bold,
             fontFamily: 'homePage',
           ),
@@ -306,9 +335,7 @@ class _RealtorStatsState extends State<RealtorStats> with SingleTickerProviderSt
         ),
         const SizedBox(height: 40),
         ElevatedButton(
-          onPressed: () {
-            context.go('/login');
-          },
+          onPressed: () => context.go('/login'),
           style: ElevatedButton.styleFrom(
             backgroundColor: neonPurple,
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),

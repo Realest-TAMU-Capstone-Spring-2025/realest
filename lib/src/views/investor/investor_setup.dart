@@ -7,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
+/// InvestorSetupPage allows an investor to set up their profile, including contact info and password.
 class InvestorSetupPage extends StatefulWidget {
   const InvestorSetupPage({Key? key}) : super(key: key);
 
@@ -14,6 +15,7 @@ class InvestorSetupPage extends StatefulWidget {
   _InvestorSetupPageState createState() => _InvestorSetupPageState();
 }
 
+/// State for InvestorSetupPage. Manages form fields, validations, and profile updates.
 class _InvestorSetupPageState extends State<InvestorSetupPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -87,6 +89,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     super.dispose();
   }
 
+  /// Prefills form fields with existing investor data if available.
   Future<void> _prefillUserData() async {
     User? currentUser = _auth.currentUser;
     if (currentUser != null && currentUser.email != null) {
@@ -109,6 +112,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     }
   }
 
+  /// Validates first name input.
   void _validateFirstName() {
     final value = _firstNameController.text.trim();
     setState(() {
@@ -120,6 +124,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     });
   }
 
+  /// Validates last name input.
   void _validateLastName() {
     final value = _lastNameController.text.trim();
     setState(() {
@@ -131,6 +136,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     });
   }
 
+  /// Validates email format and presence.
   void _validateContactEmail() {
     final value = _contactEmailController.text.trim();
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
@@ -145,6 +151,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     });
   }
 
+  /// Validates phone number to ensure it's 10 digits.
   void _validateContactPhone() {
     final value = _contactPhoneController.text.trim();
     final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
@@ -159,6 +166,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     });
   }
 
+  /// Validates password based on strength requirements.
   void _validateNewPassword() {
     final password = _newPasswordController.text;
     setState(() {
@@ -197,6 +205,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     });
   }
 
+  /// Calculates and returns password strength as a score.
   double _calculatePasswordStrength(String password) {
     int strength = 0;
     if (password.length >= 8) strength++;
@@ -207,6 +216,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     return strength / 5.0;
   }
 
+  /// Validates that confirm password matches the new password.
   void _validateConfirmPassword() {
     final confirmPassword = _confirmPasswordController.text;
     setState(() {
@@ -220,6 +230,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     });
   }
 
+  /// Runs all validators and collects form errors.
   List<String> _validateFields() {
     List<String> errors = [];
     _validateFirstName();
@@ -239,6 +250,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     return errors;
   }
 
+  /// Allows user to pick a profile picture from their device.
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -249,6 +261,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     }
   }
 
+  /// Reauthenticates user using email and temporary password.
   Future<void> _reAuthenticateUser(String email, String tempPassword) async {
     try {
       AuthCredential credential = EmailAuthProvider.credential(
@@ -261,6 +274,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     }
   }
 
+  /// Validates form and saves investor data to Firestore.
   void _saveInvestorData() async {
     List<String> errors = _validateFields();
     if (errors.isNotEmpty) {
@@ -362,6 +376,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     }
   }
 
+  /// Builds a reusable styled text field.
   Widget _buildTextField(
       TextEditingController controller,
       String label, {
@@ -440,6 +455,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     );
   }
 
+  /// Builds password requirements checklist widget.
   Widget _buildPasswordRequirements(bool isMobile) {
     return Visibility(
       visible: _showPasswordStrength,
@@ -477,6 +493,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     );
   }
 
+  /// Builds a single requirement text widget.
   Widget _buildRequirementText(String text, bool isMet, bool isMobile) {
     return Text(
       text,
@@ -487,6 +504,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     );
   }
 
+  /// Displays a password strength bar with label.
   Widget _buildPasswordStrengthBar(bool isMobile) {
     Color strengthColor;
     String strengthText;
@@ -557,6 +575,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     );
   }
 
+  /// Builds layout for mobile screens.
   Widget _buildMobileLayout(bool isMobile) {
     return Container(
       color: const Color(0xFF1f1e25),
@@ -601,6 +620,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     );
   }
 
+  /// Builds layout for larger desktop/tablet screens.
   Widget _buildFormColumn(bool isMobile) {
     return Container(
       color: const Color(0xFF1f1e25),
@@ -645,6 +665,7 @@ class _InvestorSetupPageState extends State<InvestorSetupPage> {
     );
   }
 
+  /// Returns all form fields as a list of widgets.
   List<Widget> _buildFormChildren(bool isMobile) {
     return [
       Center(

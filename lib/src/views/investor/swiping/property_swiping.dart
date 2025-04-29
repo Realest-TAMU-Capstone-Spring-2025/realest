@@ -9,9 +9,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:realest/src/views/realtor/widgets/property_card/cashflow_badge.dart';
 import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
-
 import '../../../../util/property_fetch_helpers.dart';
 
+/// Displays a Tinder-like swiping interface for properties.
 class PropertySwipingView extends StatefulWidget {
   const PropertySwipingView({super.key});
 
@@ -19,30 +19,59 @@ class PropertySwipingView extends StatefulWidget {
   _PropertySwipingViewState createState() => _PropertySwipingViewState();
 }
 
+/// Manages property loading, swiping interactions, and activity tracking.
 class _PropertySwipingViewState extends State<PropertySwipingView> {
+  /// Controller for managing card swiping actions.
   final CardSwiperController _controller = CardSwiperController();
+
+  /// Firestore instance for database operations.
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  /// List of properties to display in the swiper.
   List<Property> _properties = [];
+
+  /// List of properties that have been swiped.
   List<Property> _swipedProperties = [];
+
+  /// Timestamp when the current card view started.
   DateTime? _cardViewStartTime;
+
+  /// ID of the currently viewed property.
   String? _currentPropertyId;
+
+  /// Timer for tracking long activity on a property.
   Timer? _longActivityTimer;
+
+  /// Threshold (in seconds) for considering an activity as long.
   final int _longActivityThreshold = 50;
+
+  /// Indicates if there are no more properties to display.
   bool _noMoreProperties = false;
+
+  /// Indicates if the user has no assigned realtor.
   bool _noRealtorAssigned = true;
+
+  /// Toggles between realtor-sent and recommended properties.
   bool _useRealtorDecisions = false;
-  int _realtorPropertyCount = 0; // Add this to your state
+
+  /// Count of properties sent by the realtor.
+  int _realtorPropertyCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadProperties();
   }
+
+  /// Starts tracking the view time for a property.
+  ///
+  /// [propertyId] The ID of the property being viewed.
   void _startCardViewTracking(String propertyId) {
     _cardViewStartTime = DateTime.now();
     _currentPropertyId = propertyId;
   }
 
+  /// Records long activity if the user spends significant time on a property.
   Future<void> _checkAndRecordLongActivity() async {
     if (_cardViewStartTime == null || _currentPropertyId == null) return;
 
@@ -72,6 +101,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     }
   }
 
+  /// Loads properties based on the current mode (realtor or recommended).
   Future<void> _loadProperties() async {
     setState(() {
       _properties = [];
@@ -86,19 +116,23 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     }
   }
 
+  /// Loads the count of realtor-sent properties.
   Future<void> _loadRealtorPropertiesCount() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
+
     try {
       final investorDoc = await _db.collection('investors').doc(userId).get();
       final realtorId = investorDoc.data()?['realtorId'] as String?;
       if (realtorId == null) return;
+
       final propertyCountSnapshot = await _db
           .collection('investors')
           .doc(userId)
           .collection('property_interactions')
           .where('status', isEqualTo: 'sent')
           .get();
+
       setState(() {
         _realtorPropertyCount = propertyCountSnapshot.docs.length;
       });
@@ -107,12 +141,9 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     }
   }
 
-
-
+  /// Loads properties sent by the user's realtor.
   Future<void> _loadRealtorProperties() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-
-// After propertyIds is populated
     if (userId == null) {
       setState(() {
         _noMoreProperties = true;
@@ -139,20 +170,18 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           .collection('property_interactions');
 
       final likedDislikedSnapshot = await interactionsRef
-          .where('status', whereIn: ['liked', 'disliked']).get();
+          .where('status', whereIn: ['liked', 'disliked'])
+          .get();
       final excludedIds = likedDislikedSnapshot.docs
           .map((doc) => doc['propertyId'] as String)
           .toSet();
 
-      // Try loading sent properties first
       final sentSnapshot =
-          await interactionsRef.where('status', isEqualTo: 'sent').get();
+      await interactionsRef.where('status', isEqualTo: 'sent').get();
       List<String> propertyIds = sentSnapshot.docs
           .where((doc) => !excludedIds.contains(doc['propertyId']))
           .map((doc) => doc['propertyId'] as String)
           .toList();
-
-      _realtorPropertyCount = propertyIds.length;
 
       if (propertyIds.isEmpty) {
         setState(() {
@@ -173,7 +202,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
       setState(() {
         _properties = properties;
-        _realtorPropertyCount =  propertyIds.length;
+        _realtorPropertyCount = propertyIds.length;
         _noRealtorAssigned = false;
         _noMoreProperties = false;
       });
@@ -186,56 +215,57 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     }
   }
 
+  /// Loads recommended properties not yet interacted with.
   Future<void> _loadNormalProperties() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
 
     try {
-      // Step 1: Fetch excluded property IDs from interactions
       final interactionsSnapshot = await _db
           .collection('investors')
           .doc(userId)
           .collection('property_interactions')
-          .where('status', whereIn: ['liked', 'disliked', 'sent']).get();
+          .where('status', whereIn: ['liked', 'disliked', 'sent'])
+          .get();
 
       final excludedIds = interactionsSnapshot.docs
           .map((doc) => doc['propertyId'] as String)
           .toSet();
 
-      // Step 2: Fetch recommended properties
       final listingsSnapshot = await _db
           .collection('listings')
           .where('status', isEqualTo: 'FOR_SALE')
-          .limit(100) // fetch more since you'll filter some out
+          .limit(100)
           .get();
 
       final allProperties = listingsSnapshot.docs
-          .where((doc) => !excludedIds.contains(doc.id)) // filter out excluded
+          .where((doc) => !excludedIds.contains(doc.id))
           .map((doc) => Property.fromFirestore(doc))
           .toList();
 
-      setState(() {
+          setState(() {
         _properties = allProperties;
         _noMoreProperties = allProperties.isEmpty;
       });
     } catch (e) {
-      debugPrint('Error loading recommended properties: $e');
-      setState(() {
-        _properties = [];
-        _noMoreProperties = true;
-      });
+    debugPrint('Error loading recommended properties: $e');
+    setState(() {
+    _properties = [];
+    _noMoreProperties = true;
+    });
     }
   }
 
+  /// Shows an animation for swipe actions (like or dislike).
+  ///
+  /// [direction] The direction of the swipe (right for like, left for dislike).
   void _showSwipeAnimation(CardSwiperDirection direction) {
     final overlay = Overlay.of(context);
     final screenSize = MediaQuery.of(context).size;
 
     final bool isRightSwipe = direction == CardSwiperDirection.right;
-    final double startX = isRightSwipe
-        ? screenSize.width * 0.75
-        : screenSize.width * 0.15; // Start from the side
-    final double startY = screenSize.height * 0.8; // Start from the bottom area
+    final double startX = isRightSwipe ? screenSize.width * 0.75 : screenSize.width * 0.15;
+    final double startY = screenSize.height * 0.8;
 
     final overlayEntry = OverlayEntry(
       builder: (context) {
@@ -245,25 +275,19 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           builder: (context, value, child) {
             return Positioned(
               left: startX,
-              top: startY - (value * 100), // Move up by 100 pixels
+              top: startY - (value * 100),
               child: Transform.scale(
-                scale: value < 0.7
-                    ? value * 1.5
-                    : (1.5 - (value - 0.7) * 4), // Bubble up and explode
+                scale: value < 0.7 ? value * 1.5 : (1.5 - (value - 0.7) * 4),
                 child: AnimatedOpacity(
-                  opacity: value < 0.8
-                      ? 1
-                      : (1 - (value - 0.8) * 5), // Fade out at the end
+                  opacity: value < 0.8 ? 1 : (1 - (value - 0.8) * 5),
                   duration: const Duration(milliseconds: 200),
                   child: isRightSwipe
-                      ? const Icon(Icons.favorite,
-                          color: Colors.red,
-                          size: 100) // ❤️ Heart for right swipe
+                      ? const Icon(Icons.favorite, color: Colors.red, size: 100)
                       : Image.network(
-                          'https://emojicdn.elk.sh/❌️', //there were issues with the background of certain emojis
-                          width: 80,
-                          height: 80,
-                        ),
+                    'https://emojicdn.elk.sh/❌️',
+                    width: 80,
+                    height: 80,
+                  ),
                 ),
               ),
             );
@@ -273,14 +297,17 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     );
 
     overlay.insert(overlayEntry);
-
-    Future.delayed(const Duration(milliseconds: 700), () {
-      overlayEntry.remove();
-    });
+    Future.delayed(const Duration(milliseconds: 700), () => overlayEntry.remove());
   }
 
-  Future<bool> _handleSwipe(int previousIndex, int? currentIndex,
-      CardSwiperDirection direction) async {
+  /// Handles swipe actions and updates Firestore with interaction data.
+  ///
+  /// [previousIndex] The index of the swiped property.
+  /// [currentIndex] The index of the next property (if any).
+  /// [direction] The swipe direction (right for like, left for dislike).
+  /// Returns a [Future<bool>] indicating if the swipe was successful.
+  Future<bool> _handleSwipe(
+      int previousIndex, int? currentIndex, CardSwiperDirection direction) async {
     await _checkAndRecordLongActivity();
 
     final property = _properties[previousIndex];
@@ -299,6 +326,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
     final investorDoc = await _db.collection('investors').doc(userId).get();
     final realtorId = investorDoc.data()?['realtorId'] as String?;
+
     if (realtorId != null) {
       final investorRef = _db
           .collection('investors')
@@ -318,12 +346,12 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
         'realtorId': realtorId,
         'status': isLiked ? 'liked' : 'disliked',
         'timestamp': FieldValue.serverTimestamp(),
-        'sentByRealtor': (_useRealtorDecisions)? true : false,
+        'sentByRealtor': _useRealtorDecisions ? true : false,
         'propertyData': {
           'price': property.price,
           'address': property.address,
           'status': property.status,
-        }
+        },
       };
 
       await Future.wait([
@@ -335,11 +363,11 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     if (mounted) {
       setState(() {
         _swipedProperties.add(property);
-        _properties.removeAt(previousIndex); // ✅ Remove swiped property
+        _properties.removeAt(previousIndex);
         if (_properties.isEmpty) {
           _noMoreProperties = true;
         }
-        if(_useRealtorDecisions) {
+        if (_useRealtorDecisions) {
           _realtorPropertyCount--;
         }
       });
@@ -349,6 +377,10 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     return true;
   }
 
+  /// Checks if the property was previously liked by the user.
+  ///
+  /// [propertyId] The ID of the property to check.
+  /// Returns a [Future<bool>] indicating if the property was liked.
   Future<bool> _wasPropertyPreviouslyLiked(String propertyId) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return false;
@@ -428,7 +460,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           IconButton(
             icon: const Icon(Icons.help_rounded),
             onPressed: () {
-              // your help dialog
+              // Placeholder for help dialog
             },
           ),
         ],
@@ -519,8 +551,6 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
             _startCardViewTracking(property.id);
           }
 
-          final wasSent = _useRealtorDecisions;
-
           return PropertySwipeCard(
             property: property,
             controller: _controller,
@@ -531,8 +561,12 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   }
 }
 
+/// A card widget for displaying a property in the swiping interface.
 class PropertySwipeCard extends StatelessWidget {
+  /// The property data to display.
   final Property property;
+
+  /// The controller for managing swipe actions.
   final CardSwiperController controller;
 
   const PropertySwipeCard({
@@ -567,7 +601,6 @@ class PropertySwipeCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 👇 image section that takes remaining space
               Expanded(
                 child: Stack(
                   children: [
@@ -592,15 +625,13 @@ class PropertySwipeCard extends StatelessWidget {
                           imageUrl: property.image != null
                               ? (kDebugMode ? 'http://localhost:8080/${property.image}' : property.image!)
                               : 'https://placehold.co/600x400',
-                          width: double.infinity, // 👈 full width
+                          width: double.infinity,
                           fit: BoxFit.fill,
                           placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
                           errorWidget: (context, url, error) => const Icon(Icons.error),
                         ),
                       ),
                     ),
-
-
                     Positioned(
                       left: 10,
                       bottom: 60,
@@ -619,7 +650,7 @@ class PropertySwipeCard extends StatelessWidget {
                         ),
                         child: Text(
                           property.price != null
-                              ? "\$ ${currencyFormat.format(property.price)}"
+                              ? "\$${currencyFormat.format(property.price)}"
                               : "N/A",
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
@@ -629,13 +660,11 @@ class PropertySwipeCard extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     Positioned(
                       right: 10,
                       bottom: 60,
                       child: CashFlowBadge(propertyId: property.id),
                     ),
-
                     Positioned(
                       left: 0,
                       bottom: 0,
@@ -660,7 +689,6 @@ class PropertySwipeCard extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     Positioned(
                       top: 12,
                       right: 12,
@@ -687,8 +715,6 @@ class PropertySwipeCard extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // 👇 Bottom Section - height based on content
               Padding(
                 padding: EdgeInsets.all(isMobile ? 12 : 16),
                 child: Column(
@@ -754,30 +780,45 @@ class PropertySwipeCard extends StatelessWidget {
     );
   }
 
-
+  /// Builds a vertical divider for separating stats.
   Widget _verticalDivider() => Container(
-        width: 1,
-        height: 20,
-        color: Colors.grey[400],
-        margin: const EdgeInsets.symmetric(horizontal: 12),
-      );
-  Widget _buildStat(
-      {required IconData icon,
-      required String label,
-      required ThemeData theme}) {
+    width: 1,
+    height: 20,
+    color: Colors.grey[400],
+    margin: const EdgeInsets.symmetric(horizontal: 12),
+  );
+
+  /// Builds a stat widget for displaying property details (e.g., beds, baths).
+  ///
+  /// [icon] The icon to display.
+  /// [label] The text label for the stat.
+  /// [theme] The current theme data.
+  /// Returns a [Widget] representing the stat.
+  Widget _buildStat({
+    required IconData icon,
+    required String label,
+    required ThemeData theme,
+  }) {
     return Row(
       children: [
         Icon(icon, size: 18, color: theme.colorScheme.primary),
         const SizedBox(width: 6),
         Text(
           label,
-          style:
-              theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
       ],
     );
   }
 
+  /// Builds a swipe button for liking or disliking a property.
+  ///
+  /// [icon] The icon to display.
+  /// [color] The background color of the button.
+  /// [tooltip] The tooltip text for the button.
+  /// [onPressed] The callback when the button is pressed.
+  /// [isMobile] Whether the device is mobile-sized.
+  /// Returns a [Widget] representing the swipe button.
   Widget _buildSwipeButton({
     required IconData icon,
     required Color color,
@@ -799,31 +840,47 @@ class PropertySwipeCard extends StatelessWidget {
     );
   }
 
+  /// Navigates to the property detail view in a bottom sheet.
   Future<void> _navigateToPropertyView(BuildContext context) async {
     final propertyData = await fetchPropertyData(property.id);
     showModalBottomSheet(
       context: context,
-      constraints: BoxConstraints(
-        maxWidth: 1000,
-      ),
+      constraints: const BoxConstraints(maxWidth: 1000),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => PropertyDetailSheet(property: propertyData),
-      //disable swipe to close
       enableDrag: false,
     );
   }
 }
 
+/// Represents a property with relevant details.
 class Property {
+  /// The unique ID of the property.
   final String id;
+
+  /// The URL of the primary photo.
   final String? image;
+
+  /// The listing price of the property.
   final double? price;
+
+  /// The number of bedrooms.
   final int? beds;
+
+  /// The number of bathrooms.
   final int? baths;
+
+  /// The street address of the property.
   final String? address;
+
+  /// The square footage of the property.
   final int? sqft;
+
+  /// The annual tax amount.
   final double? tax;
+
+  /// The current status of the property (e.g., FOR_SALE).
   final String? status;
 
   Property({
@@ -838,6 +895,7 @@ class Property {
     this.status,
   });
 
+  /// Creates a [Property] from a Firestore document.
   factory Property.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return Property(
@@ -845,8 +903,7 @@ class Property {
       image: data['primary_photo'],
       price: (data['list_price'] as num?)?.toDouble(),
       beds: data['beds'] as int?,
-      baths: data['full_baths'] as int? ??
-          0 + (data['half_baths'] as int? ?? 0) ~/ 2,
+      baths: (data['full_baths'] as int? ?? 0) + (data['half_baths'] as int? ?? 0) ~/ 2,
       address: data['street'],
       sqft: data['sqft'] as int?,
       tax: (data['tax'] as num?)?.toDouble(),
@@ -859,7 +916,7 @@ class Property {
     return 'Property{id: $id, image: $image, price: $price, beds: $beds, baths: $baths, address: $address, sqft: $sqft, tax: $tax, status: $status}';
   }
 
-  // to Map<String, dynamic>
+  /// Converts the property to a map for use in widgets.
   Map<String, dynamic> toMap() {
     return {
       'id': id,

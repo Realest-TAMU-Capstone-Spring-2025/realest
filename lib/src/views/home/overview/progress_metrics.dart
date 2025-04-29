@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+/// A section displaying animated progress metrics with scroll-triggered animations.
 class ProgressMetricsSection extends StatefulWidget {
+  /// Optional scroll controller to track visibility for animation triggers.
   final ScrollController? scrollController;
 
   const ProgressMetricsSection({super.key, this.scrollController});
@@ -10,18 +12,33 @@ class ProgressMetricsSection extends StatefulWidget {
   _ProgressMetricsSectionState createState() => _ProgressMetricsSectionState();
 }
 
+/// Manages animations and visibility state for [ProgressMetricsSection].
 class _ProgressMetricsSectionState extends State<ProgressMetricsSection> with SingleTickerProviderStateMixin {
+  /// Neon purple color used for styling text and buttons.
   static const Color neonPurple = Color(0xFFa78cde);
+
+  /// Controller for fade and scale animations of metrics.
   late AnimationController _controller;
+
+  /// Animation for fading and scaling the metric displays.
   late Animation<double> _fadeScaleAnimation;
+
+  /// Animation for counting the first metric (86% time reduction).
   late Animation<int> _countAnimation1;
+
+  /// Animation for counting the second metric (92% client satisfaction).
   late Animation<int> _countAnimation2;
+
+  /// Animation for counting the third metric (63 properties reviewed).
   late Animation<int> _countAnimation3;
+
+  /// Tracks whether the section is visible on screen to trigger animations.
   bool _isVisible = false;
 
   @override
   void initState() {
     super.initState();
+    // Initialize animation controller and animations
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -41,10 +58,12 @@ class _ProgressMetricsSectionState extends State<ProgressMetricsSection> with Si
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
 
+    // Attach listener to check visibility and trigger animations
     widget.scrollController?.addListener(_checkVisibility);
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkVisibility());
   }
 
+  /// Checks if the section is visible on screen and triggers or resets animations.
   void _checkVisibility() {
     if (!mounted) return;
 
@@ -67,6 +86,7 @@ class _ProgressMetricsSectionState extends State<ProgressMetricsSection> with Si
 
   @override
   void dispose() {
+    // Dispose animation controller and remove scroll listener to prevent memory leaks
     _controller.dispose();
     widget.scrollController?.removeListener(_checkVisibility);
     super.dispose();
@@ -74,6 +94,7 @@ class _ProgressMetricsSectionState extends State<ProgressMetricsSection> with Si
 
   @override
   Widget build(BuildContext context) {
+    // Builds the metrics section with a responsive layout and call-to-action button
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Container(
@@ -99,9 +120,7 @@ class _ProgressMetricsSectionState extends State<ProgressMetricsSection> with Si
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  context.go('/login');
-                },
+                onPressed: () => context.go('/login'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: neonPurple,
                   padding: EdgeInsets.symmetric(
@@ -128,6 +147,10 @@ class _ProgressMetricsSectionState extends State<ProgressMetricsSection> with Si
     );
   }
 
+  /// Builds the metrics section, adapting to mobile or desktop layouts.
+  ///
+  /// [isMobile] Determines if the layout should be vertical (mobile) or horizontal (desktop).
+  /// Returns a [Widget] containing the metrics display.
   Widget _buildMetricsSection(bool isMobile) {
     final metrics = [
       _buildMetricColumn(
@@ -176,6 +199,14 @@ class _ProgressMetricsSectionState extends State<ProgressMetricsSection> with Si
     );
   }
 
+  /// Builds a single metric column with an animated counter and descriptive text.
+  ///
+  /// [countAnimation] The animation for the metric's counter value.
+  /// [title] The main title of the metric.
+  /// [subtitle] The subtitle providing context for the metric.
+  /// [isPercentage] Whether to append a '%' symbol to the counter.
+  /// [isMobile] Determines font sizes and spacing for mobile or desktop.
+  /// Returns a [Widget] representing the metric column.
   Widget _buildMetricColumn(
       Animation<int> countAnimation,
       String title,
