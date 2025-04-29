@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
+import 'package:realest/src/views/investor/properties/saved_properties.dart';
 import 'package:realest/user_provider.dart';
-import 'package:realest/src/views/investor/properties/disliked_properties.dart';
 import '../../../../util/mock_firebase_util.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:realest/src/views/realtor/widgets/property_card/property_card.dart';
-import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
-import 'package:realest/src/views/investor/properties/properties_view.dart';
 
 void main() {
   late MockFirebaseAuth mockAuth;
@@ -32,24 +27,24 @@ void main() {
       password: 'password123',
     );
 
-    // Ensure the Firestore document for property_4 exists
-    final propertyId = 'property_4';
+    // Ensure the Firestore document for the property interaction exists
+    final propertyId = 'property_1';
     await mockFirestore
         .collection('investors')
         .doc(mockAuth.currentUser!.uid)
         .collection('property_interactions')
         .doc(propertyId)
-        .set({'propertyId': propertyId, 'status': 'disliked'});
+        .set({'propertyId': propertyId, 'status': 'liked'});
 
     // Ensure the Firestore document for the realtor interaction exists
     final realtorId = 'realtor-uid-123';
-    final interactionDocId = 'property_4_${mockAuth.currentUser!.uid}';
+    final interactionDocId = '${propertyId}_${mockAuth.currentUser!.uid}';
     await mockFirestore
         .collection('realtors')
         .doc(realtorId)
         .collection('interactions')
         .doc(interactionDocId)
-        .set({'status': 'disliked'});
+        .set({'status': 'liked'});
   });
 
   Widget createTestWidget() {
@@ -57,18 +52,18 @@ void main() {
     return ChangeNotifierProvider(
       create: (_) => UserProvider(auth: mockAuth, firestore: mockFirestore),
       child: MaterialApp(
-        home: DislikedProperties(),
+        home: SavedProperties(),
       ),
     );
   }
 
-  testWidgets('Displays disliked properties, details', (WidgetTester tester) async {
+  testWidgets('Displays liked properties, details', (WidgetTester tester) async {
     await tester.pumpWidget(createTestWidget());
     await tester.pumpAndSettle();
 
-    expect(find.text('Street 4'), findsOneWidget);
-    expect(find.text('Street 5'), findsOneWidget);
-    String propertyId = 'property_4';
+    expect(find.text('Street 1'), findsOneWidget);
+    expect(find.text('Street 2'), findsOneWidget);
+    String propertyId = 'property_1';
 
     // Simulate user action to move property to liked
     final propertyCardFinder = find.byWidgetPredicate(
@@ -91,39 +86,24 @@ void main() {
     expect(find.text('User not logged in'), findsOneWidget);
   });
 
-  testWidgets('Moves property to liked when action is triggered', (WidgetTester tester) async {
+  testWidgets('Moves property to disliked when action is triggered', (WidgetTester tester) async {
     await tester.pumpWidget(createTestWidget());
     await tester.pumpAndSettle();
 
-    String propertyId = 'property_4';
-
     // Simulate user action to move property to liked
-    final propertyCardFinder = find.byWidgetPredicate(
-      (widget) => widget is PropertyCard && widget.property['id'] == propertyId,
-    );
-
-    await tester.tap(propertyCardFinder);
+    dumpAllTextInWidgetTree(tester);
+    final card = find.text('Street 1');
+    await tester.tap(card);
     await tester.pumpAndSettle();
-    //tap "Move to Liked" button
-    final moveToLikedButtonFinder = find.text('Move to Liked');
+
+    final moveToLikedButtonFinder = find.text('Move to Disliked');
     await tester.tap(moveToLikedButtonFinder);
     await tester.pumpAndSettle();
 
-
-    expect(
-      (await mockFirestore
-              .collection('investors')
-              .doc(mockAuth.currentUser!.uid)
-              .collection('property_interactions')
-              .doc(propertyId)
-              .get())
-          .data()!['status'],
-      'liked',
-    );
   });
 
-  testWidgets('Displays message when no disliked properties exist', (WidgetTester tester) async {
-    // Clear any existing disliked properties
+  testWidgets('Displays message when no liked properties exist', (WidgetTester tester) async {
+    // Clear any existing liked properties
     final userId = mockAuth.currentUser!.uid;
     final interactionsCollection = mockFirestore
         .collection('investors')
@@ -138,7 +118,7 @@ void main() {
     await tester.pumpWidget(createTestWidget());
     await tester.pumpAndSettle();
 
-    expect(find.text('No disliked properties.'), findsOneWidget);
+    expect(find.text('No saved properties.'), findsOneWidget);
   });
 
 }

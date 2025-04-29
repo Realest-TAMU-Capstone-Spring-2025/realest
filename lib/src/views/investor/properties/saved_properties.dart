@@ -8,6 +8,8 @@ import '../../realtor/widgets/property_card/property_card.dart';
 import '../../realtor/widgets/property_detail_sheet.dart';
 import 'properties_view.dart'; // Import PropertiesView
 import '../swiping/property_swiping.dart';
+import 'package:provider/provider.dart';
+import 'package:realest/user_provider.dart';
 
 class SavedProperties extends StatefulWidget {
   const SavedProperties({super.key});
@@ -18,16 +20,22 @@ class SavedProperties extends StatefulWidget {
 
 class _SavedPropertiesState extends State<SavedProperties> {
   final NumberFormat currencyFormat = NumberFormat('#,##0', 'en_US');
-  late final String? uid = FirebaseAuth.instance.currentUser?.uid;
+  late final String? uid;
   late final Stream<QuerySnapshot> _interactionsStream;
   Future<List<Property>>? _cachedPropertiesFuture;
+  late final FirebaseFirestore _firestore;
+  late final FirebaseAuth _auth;
 
   @override
   void initState() {
     super.initState();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    _auth = userProvider.auth;
+    uid = _auth.currentUser?.uid;
+    _firestore = userProvider.firestore;
 
     if (uid != null) {
-      _interactionsStream = FirebaseFirestore.instance
+      _interactionsStream = _firestore
           .collection('investors')
           .doc(uid)
           .collection('property_interactions')
@@ -109,7 +117,7 @@ class _SavedPropertiesState extends State<SavedProperties> {
       final propertyId = decisionDoc['propertyId'] as String?;
       if (propertyId == null) continue;
 
-      final listingDoc = await FirebaseFirestore.instance
+      final listingDoc = await _firestore
           .collection('listings')
           .doc(propertyId)
           .get();
@@ -151,7 +159,7 @@ class _SavedPropertiesState extends State<SavedProperties> {
 
         if (result == 'dislike') {
           // Update investor's interaction
-          await FirebaseFirestore.instance
+          await _firestore
               .collection('investors')
               .doc(uid)
               .collection('property_interactions')
@@ -159,7 +167,7 @@ class _SavedPropertiesState extends State<SavedProperties> {
               .update({'status': 'disliked'});
 
           // Get investor document to retrieve realtorId
-          final investorDoc = await FirebaseFirestore.instance
+          final investorDoc = await _firestore
               .collection('investors')
               .doc(uid)
               .get();
@@ -168,7 +176,7 @@ class _SavedPropertiesState extends State<SavedProperties> {
           final interactionDocId = '${property.id}_$uid';
 
           if (realtorId != null) {
-            await FirebaseFirestore.instance
+            await _firestore
                 .collection('realtors')
                 .doc(realtorId)
                 .collection('interactions')

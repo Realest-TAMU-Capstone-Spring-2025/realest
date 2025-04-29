@@ -80,7 +80,6 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
       operation.cancel();
     }
     _pendingOperations.clear();
-    debugPrint('All pending operations cleared.');
     _titleController.dispose();
     _leftTextController.dispose();
     _carouselControllerAnim.dispose();

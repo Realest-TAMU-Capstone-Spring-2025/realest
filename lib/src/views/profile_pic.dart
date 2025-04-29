@@ -50,7 +50,6 @@ class ProfilePic extends StatelessWidget {
                           ? NetworkImage(profilePicUrl)
                           : const AssetImage('assets/images/profile.png') as ImageProvider,
                       onBackgroundImageError: (_, __) {
-                        debugPrint("Error loading profile picture, showing default.");
                       },
                     ),
                     const SizedBox(height: 15),
@@ -199,7 +198,6 @@ class ProfilePic extends StatelessWidget {
             ? NetworkImage(profilePicUrl)
             : const AssetImage('assets/images/profile.png') as ImageProvider,
         onBackgroundImageError: (_, __) {
-          debugPrint("Error loading profile picture, showing default.");
         },
       ),
     );

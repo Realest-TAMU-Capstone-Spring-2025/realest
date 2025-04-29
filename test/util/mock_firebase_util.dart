@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; //timestamp
 import '../firebase_core_mocks.dart';
 
 void dumpAllTextInWidgetTree(WidgetTester tester) {
@@ -93,6 +94,26 @@ class MockFirebaseUtil {
       });
     }
 
+    // Add disliked properties for tests
+    for (int i = 1; i <= 3; i++) {
+      final propertyId = 'property_$i';
+      await firestore
+          .collection('investors')
+          .doc(auth.currentUser?.uid)
+          .collection('property_interactions')
+          .doc(propertyId)
+          .set({'propertyId': propertyId, 'status': 'disliked'});
+
+      await firestore.collection('listings').doc(propertyId).set({
+        'id': propertyId,
+        'address': 'Property $i',
+        'price': 100000 * i,
+        'location': 'Location $i',
+      });
+    }
+
+    // Create 9 properties for testing
+
     return {'firestore': firestore, 'auth': auth};
   }
 
@@ -159,32 +180,54 @@ class MockFirebaseUtil {
         'firstName': 'Jane',
         'lastName': 'Smith',
       });
-    }
-    // Create dummy properties
-    for (int i = 1; i <= 5; i++) {
-      await firestore.collection('listings').add({
-        'address': 'Property $i, Springfield',
-        'price': 100000 + (i * 5000),
-        'status': 'available',
-      });
-    }
-    for (int i = 1; i <= 3; i++) {
-      final propertyId = 'property_$i';
-      await firestore
-          .collection('investors')
-          .doc(auth.currentUser?.uid)
-          .collection('property_interactions')
-          .doc(propertyId)
-          .set({'propertyId': propertyId, 'status': 'disliked'});
+      for (int i = 1; i <= 9; i++) {
+        final propertyId = 'property_$i';
+        await firestore.collection('listings').doc(propertyId).set({
+          'id': propertyId,
+          'street': 'Street $i',
+          'city': 'City $i',
+          'state': 'State $i',
+          'zip_code': '0000$i',
+          'neighborhoods': 'Neighborhood $i',
+          'list_price': 100000 + (i * 5000),
+          'beds': i % 3 + 1,
+          'full_baths': i % 2 + 1,
+          'half_baths': i % 2,
+          'sqft': 1000 + (i * 100),
+          'alt_photos': 'photo$i.jpg, photo${i + 1}.jpg',
+          'text': 'Description for property $i',
+        });
 
-      await firestore.collection('listings').doc(propertyId).set({
-        'id': propertyId,
-        'title': 'Property $i',
-        'price': 100000 * i,
-        'location': 'Location $i',
-      });
+        if (i <= 3) {
+          // Like the first 3 properties
+          await firestore
+              .collection('investors')
+              .doc(auth.currentUser?.uid)
+              .collection('property_interactions')
+              .doc(propertyId)
+              .set({
+            'status': 'liked',
+            'propertyId': propertyId,
+            'sentByRealtor': false,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+        } else if (i <= 6) {
+          // Dislike the next 3 properties
+          await firestore
+              .collection('investors')
+              .doc(auth.currentUser?.uid)
+              .collection('property_interactions')
+              .doc(propertyId)
+              .set({
+            'status': 'disliked',
+            'propertyId': propertyId,
+            'sentByRealtor': false,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+        }
+        // Leave the last 3 properties untouched
+      }
     }
-
     print("Current User ID: ${auth.currentUser?.uid}");
     //signout
     await auth.signOut();

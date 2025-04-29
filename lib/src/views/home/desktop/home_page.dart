@@ -46,7 +46,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    debugPrint('Disposing scroll controller');
     _scrollController.removeListener(_updateGifOpacity);
     if (widget.scrollController == null) {
       _scrollController.dispose();
