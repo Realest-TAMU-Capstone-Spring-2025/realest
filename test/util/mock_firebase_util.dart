@@ -41,6 +41,13 @@ class MockFirebaseUtil {
       'address': '123 Main St, Springfield',
     });
 
+    await firestore.collection('users').doc(realtor.user!.uid).set({
+      'email': 'realtor@example.com',
+      'role': 'realtor',
+      'firstName': 'John',
+      'lastName': 'Doe',
+    });
+
     // Create primary investor
     final investor = await auth.createUserWithEmailAndPassword(
       email: 'investor@example.com',
@@ -55,6 +62,13 @@ class MockFirebaseUtil {
       'notes': 'Interested in high ROI properties.',
       'realtorId': realtor.user!.uid,
       'status': 'client',
+    });
+
+    await firestore.collection('users').doc(investor.user!.uid).set({
+      'email': 'investor@example.com',
+      'role': 'investor',
+      'firstName': 'Jane',
+      'lastName': 'Smith',
     });
 
     // Create dummy clients

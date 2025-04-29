@@ -20,6 +20,7 @@ class FeatureContainer extends StatelessWidget {
     final isMobile = MediaQuery.of(context).size.width < 800;
 
     return MouseRegion(
+      key: const Key('FeatureContainerMouseRegion'), // Added key for testing
       onEnter: (_) => hoverNotifier.value = true,
       onExit: (_) => hoverNotifier.value = false,
       child: ValueListenableBuilder<bool>(
@@ -68,7 +69,6 @@ class FeatureContainer extends StatelessWidget {
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 2, // Allow wrapping to 2 lines
-                        // Removed overflow: TextOverflow.ellipsis
                       ),
                     ),
                     const SizedBox(height: 4.0),
@@ -98,7 +98,7 @@ class FeatureContainer extends StatelessWidget {
           } else {
             return AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              width: isHovered ? 220 : 200,
+              width: isHovered ? 220 : 210, // Adjusted width for desktop
               padding: const EdgeInsets.all(16),
               transform: isHovered ? Matrix4.identity().scaled(1.05) : Matrix4.identity(),
               transformAlignment: Alignment.center,
@@ -129,7 +129,6 @@ class FeatureContainer extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 2, // Allow wrapping to 2 lines
-                      // Removed overflow: TextOverflow.ellipsis
                     ),
                   ),
                   const SizedBox(height: 8),

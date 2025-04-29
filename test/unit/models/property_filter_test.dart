@@ -1,5 +1,3 @@
-// File: test/services/property_filter_test.dart
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:realest/src/models/property_filter.dart';
 

@@ -26,10 +26,10 @@ void _ignoreOverflowErrors(
     FlutterError.dumpErrorToConsole(details, forceReport: forceReport);
   }
 }
-// It must accept a single FutureOr<void> Function() argument.
+
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
-// Install our overflow‐ignoring handler globally.
-FlutterError.onError = _ignoreOverflowErrors;
-// Run the real tests.
-await testMain();
+  // Install your overflow-ignoring handler globally.
+  FlutterError.onError = _ignoreOverflowErrors;
+  // Run the real tests.
+  await testMain();
 }

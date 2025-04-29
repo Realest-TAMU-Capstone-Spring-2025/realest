@@ -139,6 +139,13 @@ class UserProvider extends ChangeNotifier {
           _contactEmail = data['email'];
           _userRole = data['role'];
           _uid = user.uid;
+          // _firstName = data['firstName'];
+          // _lastName = data['lastName'];
+
+          // // Debug log for userRole and other properties
+          // print('Fetched userRole: $_userRole');
+          // print('Fetched firstName: $_firstName');
+          // print('Fetched lastName: $_lastName');
 
           String userRole = data['role'];
           if (userRole == 'realtor') {

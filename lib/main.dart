@@ -346,9 +346,12 @@ class MainLayout extends StatelessWidget {
       body: Row(
         children: [
           if (!isSmallScreen)
-            NavBar(
-              toggleTheme: toggleTheme,
-              isDarkMode: themeMode == ThemeMode.dark,
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
+              child: NavBar(
+                toggleTheme: toggleTheme,
+                isDarkMode: themeMode == ThemeMode.dark,
+              ),
             ),
           Expanded(child: child),
         ],

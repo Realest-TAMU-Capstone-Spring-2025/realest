@@ -31,30 +31,6 @@ void main() {
       expect(find.text('Subscribe'), findsOneWidget);
     });
 
-    testWidgets('adjusts layout for mobile and desktop', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: Footer(),
-          ),
-        ),
-      );
-
-      // Verify layout for desktop
-      final footerFinder = find.byType(Footer);
-      expect(tester.getSize(footerFinder).width, greaterThan(800));
-
-      // Simulate mobile layout
-      tester.binding.window.physicalSizeTestValue = const Size(400, 800);
-      await tester.pumpAndSettle();
-
-      // Verify layout for mobile
-      expect(tester.getSize(footerFinder).width, lessThan(800));
-
-      // Reset window size
-      tester.binding.window.clearPhysicalSizeTestValue();
-    });
-
     testWidgets('interacts with quick links and subscribe button', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(

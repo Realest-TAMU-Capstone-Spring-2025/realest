@@ -133,9 +133,7 @@ class _RentalPropertyCalculatorState extends State<RentalPropertyCalculator> {
                 ),
               ),
               const SizedBox(height: 32),
-
-              if (_annualCashFlow > 0)
-                _resultBox(theme),
+              _resultBox(theme),
             ],
           ),
         ),
