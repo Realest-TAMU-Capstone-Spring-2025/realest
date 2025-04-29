@@ -49,14 +49,6 @@ void main() {
       final mouseRegionFinder = find.byKey(const Key('FeatureContainerMouseRegion'));
       expect(mouseRegionFinder, findsOneWidget); // Ensure the correct MouseRegion exists
 
-      // Define hover position
-      const hoverPosition = Offset(100, 100);
-
-      // // Simulate hover
-      // await tester.sendEventToBinding(PointerEnterEvent(position: hoverPosition)); // Simulate hover
-      // await tester.sendEventToBinding(PointerEnterEvent(position: hoverPosition)); // Simulate hover
-      // await tester.pumpAndSettle();
-
       // Verify hover state
       final animatedContainerFinder = find.descendant(
         of: containerFinder,

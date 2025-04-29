@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:async/async.dart';
 import 'feature_container.dart';
 
 class HeaderHeroPage extends StatefulWidget {
@@ -24,6 +25,8 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
   late Animation<double> _buttonAnimation;
   late AnimationController _featuresController;
   late Animation<double> _featuresAnimation;
+
+  final List<CancelableOperation> _pendingOperations = [];
 
   bool _hasTyped = false;
 
@@ -62,22 +65,26 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
       CurvedAnimation(parent: _featuresController, curve: Curves.easeIn),
     );
 
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) _headerController.forward();
-    });
-    Future.delayed(const Duration(milliseconds: 2000), () {
-      if (mounted) _subtitleController.forward();
-    });
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) _buttonController.forward();
-    });
-    Future.delayed(const Duration(milliseconds: 3200), () {
-      if (mounted) _featuresController.forward();
-    });
+    _scheduleAnimation(_headerController, const Duration(milliseconds: 500));
+    _scheduleAnimation(_subtitleController, const Duration(milliseconds: 2000));
+    _scheduleAnimation(_buttonController, const Duration(milliseconds: 2500));
+    _scheduleAnimation(_featuresController, const Duration(milliseconds: 3200));
+  }
+
+  void _scheduleAnimation(AnimationController controller, Duration delay) {
+    final operation = CancelableOperation.fromFuture(
+      Future.delayed(delay, () {
+        if (mounted) controller.forward();
+      }),
+    );
+    _pendingOperations.add(operation);
   }
 
   @override
   void dispose() {
+    for (final operation in _pendingOperations) {
+      operation.cancel();
+    }
     _headerController.dispose();
     _subtitleController.dispose();
     _buttonController.dispose();
@@ -143,28 +150,11 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
                               ),
                               if (!isMobile)
                                 Expanded(
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: neonPurple),
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            _tabButton(context, 'Overview'),
-                                            const SizedBox(width: 16),
-                                            _tabButton(context, 'Realtors'),
-                                            const SizedBox(width: 16),
-                                            _tabButton(context, 'Investors'),
-                                            const SizedBox(width: 16),
-                                            _tabButton(context, 'Solutions'),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                    ),
                                   ),
                                 ),
                               Row(

@@ -4,8 +4,20 @@ import 'package:realest/src/views/home/mobile_home_page.dart';
 import 'package:go_router/go_router.dart';
 import '../../../util/mock_firebase_util.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/animation.dart';
 
 void main() {
+  setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    TestWidgetsFlutterBinding.instance.window.physicalSizeTestValue = const Size(400, 800);
+    TestWidgetsFlutterBinding.instance.window.devicePixelRatioTestValue = 1.0;
+  });
+
+  tearDownAll(() {
+    TestWidgetsFlutterBinding.instance.window.clearPhysicalSizeTestValue();
+    TestWidgetsFlutterBinding.instance.window.clearDevicePixelRatioTestValue();
+  });
+
   late GoRouter mockRouter;
 
   Widget makeApp() {

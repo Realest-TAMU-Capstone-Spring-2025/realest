@@ -16,7 +16,6 @@ void dumpAllTextInWidgetTree(WidgetTester tester) {
 class MockAuthCredential extends AuthCredential {
   MockAuthCredential() : super(providerId: 'mock', signInMethod: 'mock');
 }
-
 class MockFirebaseUtil {
   static Future<Map<String, dynamic>> initializeMockFirebase() async {
     // Initialize Firebase core for testing
@@ -95,5 +94,105 @@ class MockFirebaseUtil {
     }
 
     return {'firestore': firestore, 'auth': auth};
+  }
+
+  static Future<Map<String, dynamic>> initializeMockFirebaseRoled(bool isRealtor) async {
+    // Initialize Firebase core for testing
+    setupFirebaseAuthMocks();
+    await Firebase.initializeApp();
+
+    final firestore = FakeFirebaseFirestore();
+    final auth = MockFirebaseAuth();
+
+    // Create primary realtor
+    if(isRealtor){
+      final realtor = await auth.createUserWithEmailAndPassword(
+        email: 'realtor@example.com',
+        password: 'password123',
+      );
+      await firestore.collection('realtors').doc(realtor.user!.uid).set({
+        'firstName': 'John',
+        'lastName': 'Doe',
+        'contactPhone': '123-456-7890',
+        'profilePicUrl': 'https://github.com/shadcn.png',
+        'agencyName': 'Doe Realty',
+        'licenseNumber': 'AB123456',
+        'address': '123 Main St, Springfield',
+      });
+      await firestore.collection('users').doc(realtor.user!.uid).set({
+        'email': 'realtor@example.com',
+        'role': 'realtor',
+        'firstName': 'John',
+        'lastName': 'Doe',
+      });
+      for (int i = 1; i <= 3; i++) {
+        await firestore.collection('investors').add({
+          'firstName': 'Client$i',
+          'lastName': 'Test',
+          'contactPhone': '555-000-000$i',
+          'contactEmail': 'client$i@example.com',
+          'profilePicUrl': '',
+          'notes': 'Test client $i',
+          'realtorId': realtor.user!.uid,
+          'status': 'client',
+        });
+      }
+    }else{
+      final investor = await auth.createUserWithEmailAndPassword(
+        email: 'investor@example.com',
+        password: 'password123',
+      );
+      await firestore.collection('investors').doc(investor.user!.uid).set({
+        'firstName': 'Jane',
+        'lastName': 'Smith',
+        'contactPhone': '987-654-3210',
+        'contactEmail': 'investor@example.com',
+        'profilePicUrl': 'https://example.com/investor.jpg',
+        'notes': 'Interested in high ROI properties.',
+        'realtorId': "realtor-uid-123",
+        'status': 'client',
+      });
+
+      await firestore.collection('users').doc(investor.user!.uid).set({
+        'email': 'investor@example.com',
+        'role': 'investor',
+        'firstName': 'Jane',
+        'lastName': 'Smith',
+      });
+    }
+    // Create dummy properties
+    for (int i = 1; i <= 5; i++) {
+      await firestore.collection('listings').add({
+        'address': 'Property $i, Springfield',
+        'price': 100000 + (i * 5000),
+        'status': 'available',
+      });
+    }
+    for (int i = 1; i <= 3; i++) {
+      final propertyId = 'property_$i';
+      await firestore
+          .collection('investors')
+          .doc(auth.currentUser?.uid)
+          .collection('property_interactions')
+          .doc(propertyId)
+          .set({'propertyId': propertyId, 'status': 'disliked'});
+
+      await firestore.collection('listings').doc(propertyId).set({
+        'id': propertyId,
+        'title': 'Property $i',
+        'price': 100000 * i,
+        'location': 'Location $i',
+      });
+    }
+
+    print("Current User ID: ${auth.currentUser?.uid}");
+    //signout
+    await auth.signOut();
+    return {'firestore': firestore, 'auth': auth};
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchAll(FakeFirebaseFirestore firestore, String collection) async {
+    final snapshot = await firestore.collection(collection).get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
   }
 }

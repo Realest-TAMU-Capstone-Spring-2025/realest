@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import '../../../../util/property_fetch_helpers.dart';
-import '../../realtor/widgets/property_card/property_card.dart';
-import '../../realtor/widgets/property_detail_sheet.dart';
-import 'properties_view.dart'; // Import PropertiesView
-import '../swiping/property_swiping.dart';
+import 'package:realest/util/property_fetch_helpers.dart';
+import 'package:realest/src/views/realtor/widgets/property_card/property_card.dart';
+import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
+import 'package:realest/src/views/investor/properties/properties_view.dart';
+import 'package:realest/src/views/investor/swiping/property_swiping.dart';
+import 'package:provider/provider.dart';
+import 'package:realest/user_provider.dart';
 
 class DislikedProperties extends StatefulWidget {
   const DislikedProperties({super.key});
@@ -18,13 +20,15 @@ class DislikedProperties extends StatefulWidget {
 
 class _DislikedPropertiesState extends State<DislikedProperties> {
   final NumberFormat currencyFormat = NumberFormat('#,##0', 'en_US');
-  late final String? uid = FirebaseAuth.instance.currentUser?.uid;
+  late final String? uid;
   late final Stream<QuerySnapshot> _interactionsStream;
   Future<List<Property>>? _cachedPropertiesFuture;
 
   @override
   void initState() {
     super.initState();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    uid = userProvider.auth.currentUser?.uid;
 
     if (uid != null) {
       _interactionsStream = FirebaseFirestore.instance

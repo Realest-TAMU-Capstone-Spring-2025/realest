@@ -1,0 +1,26 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:realest/user_provider.dart';
+import 'package:realest/src/views/profile_pic.dart';
+import 'package:realest/user_provider.dart';
+import '../../../../util/mock_firebase_util.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+void main() {
+  late MockFirebaseAuth mockAuth;
+  late FakeFirebaseFirestore mockFirestore;
+
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final mocks = await MockFirebaseUtil.initializeMockFirebase();
+    mockAuth = mocks['auth'] as MockFirebaseAuth;
+    mockFirestore = mocks['firestore'] as FakeFirebaseFirestore;
+  });
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+}
