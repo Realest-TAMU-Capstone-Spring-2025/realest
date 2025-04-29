@@ -519,7 +519,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
 
   Widget _buildExpenseBar(Map<String, dynamic> breakdown) {
     final total = breakdown.values.fold(
-        0.0, (sum, v) => sum + (v as num).toDouble());
+        0.0, (double sum, v) => sum + ((v as num?)?.toDouble() ?? 0.0));
 
     final colors = {
       'Principal': Colors.blue,
