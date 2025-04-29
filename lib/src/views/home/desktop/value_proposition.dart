@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:visibility_detector/visibility_detector.dart';
+import 'package:async/async.dart';
 import 'value_prop_container.dart';
 
 class ValuePropositions extends StatefulWidget {
@@ -17,6 +18,8 @@ class _ValuePropositionsState extends State<ValuePropositions> with TickerProvid
   late List<AnimationController> _containerControllers;
   late List<Animation<double>> _containerFadeAnimations;
   late List<Animation<Offset>> _containerSlideAnimations;
+
+  final List<CancelableOperation> _pendingOperations = [];
 
   bool _hasAnimated = false;
 
@@ -54,6 +57,10 @@ class _ValuePropositionsState extends State<ValuePropositions> with TickerProvid
 
   @override
   void dispose() {
+    for (final operation in _pendingOperations) {
+      operation.cancel();
+    }
+    _pendingOperations.clear();
     _titleController.dispose();
     for (var controller in _containerControllers) {
       controller.dispose();
@@ -65,11 +72,14 @@ class _ValuePropositionsState extends State<ValuePropositions> with TickerProvid
     if (_hasAnimated) return;
     _titleController.forward();
     for (int i = 0; i < _containerControllers.length; i++) {
-      Future.delayed(Duration(milliseconds: i * 200 + 300), () {
-        if (mounted) {
-          _containerControllers[i].forward();
-        }
-      });
+      final operation = CancelableOperation.fromFuture(
+        Future.delayed(Duration(milliseconds: i * 200 + 300), () {
+          if (mounted) {
+            _containerControllers[i].forward();
+          }
+        }),
+      );
+      _pendingOperations.add(operation);
     }
     _hasAnimated = true;
   }

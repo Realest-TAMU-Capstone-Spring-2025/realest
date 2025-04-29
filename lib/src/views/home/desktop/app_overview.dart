@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:async/async.dart';
 
 class AppOverview extends StatefulWidget {
   const AppOverview({super.key});
@@ -26,6 +27,9 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
 
   // Flag to track visibility
   bool _isVisible = false;
+
+  // List to track pending operations
+  final List<CancelableOperation> _pendingOperations = [];
 
   @override
   void initState() {
@@ -72,6 +76,11 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
 
   @override
   void dispose() {
+    for (final operation in _pendingOperations) {
+      operation.cancel();
+    }
+    _pendingOperations.clear();
+    debugPrint('All pending operations cleared.');
     _titleController.dispose();
     _leftTextController.dispose();
     _carouselControllerAnim.dispose();
@@ -80,12 +89,20 @@ class _AppOverviewState extends State<AppOverview> with TickerProviderStateMixin
 
   void _startAnimations() {
     _titleController.forward(from: 0);
-    Future.delayed(const Duration(milliseconds: 400), () {
-      _leftTextController.forward(from: 0);
+    final leftTextOperation = CancelableOperation.fromFuture(
       Future.delayed(const Duration(milliseconds: 400), () {
-        _carouselControllerAnim.forward(from: 0);
-      });
-    });
+        if (mounted) _leftTextController.forward(from: 0);
+      }),
+    );
+    _pendingOperations.add(leftTextOperation);
+
+    final carouselOperation = CancelableOperation.fromFuture(
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) _carouselControllerAnim.forward(from: 0);
+      }),
+    );
+    _pendingOperations.add(carouselOperation);
+
     setState(() {
       _isVisible = true;
     });

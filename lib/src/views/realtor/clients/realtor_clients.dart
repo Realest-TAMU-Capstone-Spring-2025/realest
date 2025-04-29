@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart'; // For Firestore
 import 'package:realest/user_provider.dart';
 import 'client_details_drawer.dart';
 import 'mouse_region_provider.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:algolia_helper_flutter/algolia_helper_flutter.dart' as algolia;
 import 'package:flutter_dotenv/flutter_dotenv.dart';

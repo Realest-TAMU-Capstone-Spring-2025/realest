@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:realest/util/property_fetch_helpers.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -43,7 +42,6 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
   bool _notesExpanded = false;
 
 
-  final DefaultCacheManager _cacheManager = DefaultCacheManager();
   late AnimationController _animationController;
   List<Map<String, dynamic>> _notes = [];
   List<Map<String, dynamic>> _availableTags = [];

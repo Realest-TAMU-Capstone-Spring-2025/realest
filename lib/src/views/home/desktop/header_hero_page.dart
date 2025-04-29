@@ -85,6 +85,8 @@ class _HeaderHeroPageState extends State<HeaderHeroPage> with TickerProviderStat
     for (final operation in _pendingOperations) {
       operation.cancel();
     }
+    _pendingOperations.clear(); // Ensure the list is cleared
+
     _headerController.dispose();
     _subtitleController.dispose();
     _buttonController.dispose();

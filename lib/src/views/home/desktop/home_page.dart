@@ -8,7 +8,9 @@ import 'realtor_stats.dart';
 import 'footer.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.scrollController});
+
+  final ScrollController? scrollController;
 
   @override
   _HomePageState createState() => _HomePageState();
@@ -22,7 +24,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    _scrollController = widget.scrollController ?? ScrollController();
     _scrollController.addListener(_updateGifOpacity);
   }
 
@@ -46,7 +48,9 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     debugPrint('Disposing scroll controller');
     _scrollController.removeListener(_updateGifOpacity);
-    _scrollController.dispose();
+    if (widget.scrollController == null) {
+      _scrollController.dispose();
+    }
     super.dispose();
   }
 

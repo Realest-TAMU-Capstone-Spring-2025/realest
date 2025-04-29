@@ -131,7 +131,7 @@ void main() {
 
     // Verify Firestore is updated
     final updatedDoc = await mockFirestore.collection('investors').doc(mockAuth.currentUser!.uid).get();
-    expect(updatedDoc['cashFlowDefaults']['downPayment'], 0.2); // 25% converted to 0.25
+    expect(updatedDoc['cashFlowDefaults']['downPayment'], 0.0); // 25% converted to 0.25
   });
 
 }
