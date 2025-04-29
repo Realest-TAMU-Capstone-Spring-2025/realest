@@ -1,11 +1,14 @@
+// Importing necessary Flutter and third-party packages
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Firebase authentication for user sign-in and sign-up
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore for storing user data
+import 'package:provider/provider.dart'; // State management provider for managing user data
+import '../../user_provider.dart'; // Custom provider for user data management
+import 'package:google_fonts/google_fonts.dart'; // Custom fonts for UI styling
+import "package:realest/services/auth_service.dart";
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../user_provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// A helper widget that fades in its child after a given delay.
 class DelayedFadeIn extends StatefulWidget {
@@ -87,6 +90,13 @@ class _CustomLoginPageState extends State<CustomLoginPage>
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  final authService = AuthService(
+    auth: FirebaseAuth.instance,
+    firestore: FirebaseFirestore.instance,
+  );
+
+
+  // Dispose controllers when the widget is removed from the tree to prevent memory leaks
   @override
   void initState() {
     super.initState();
@@ -251,13 +261,17 @@ class _CustomLoginPageState extends State<CustomLoginPage>
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _errorMessage = null; // Reset error message
     });
     try {
       if (_isRegister) {
-        await _createAccount();
+        await authService.createAccount(
+            email: _emailController.text,
+            password: _passwordController.text,
+            confirmPassword: _confirmPasswordController.text,
+            role: _selectedRole);
       } else {
-        await _signInWithEmail();
+        await authService.signInWithEmail(_emailController.text, _passwordController.text);
       }
     } on FirebaseAuthException catch (e) {
       final message = _getAuthErrorMessage(e);
@@ -267,8 +281,11 @@ class _CustomLoginPageState extends State<CustomLoginPage>
     }
   }
 
+
+  // Handles sign-in using email and password
   Future<void> _signInWithEmail() async {
     try {
+
       QuerySnapshot investorQuery = await _firestore
           .collection('investors')
           .where('contactEmail', isEqualTo: _emailController.text.trim())
@@ -292,6 +309,7 @@ class _CustomLoginPageState extends State<CustomLoginPage>
           'completedSetup': false,
         }, SetOptions(merge: true));
 
+        // Navigate based on user role
         Provider.of<UserProvider>(context, listen: false).fetchUserData();
         if (mounted) context.go('/setup');
       } else {
@@ -327,17 +345,22 @@ class _CustomLoginPageState extends State<CustomLoginPage>
     }
   }
 
+
   Future<void> _createAccount() async {
     UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
     );
 
+
+    // Store user details in Firestore
     await _createUserDocument(userCredential.user!);
     Provider.of<UserProvider>(context, listen: false).fetchUserData();
     _navigateAfterRegistration();
   }
 
+
+  // Creates a Firestore document for the new user
   Future<void> _createUserDocument(User user) async {
     await _firestore.collection('users').doc(user.uid).set({
       'email': user.email,
@@ -351,6 +374,7 @@ class _CustomLoginPageState extends State<CustomLoginPage>
     if (mounted) context.go('/setup');
   }
 
+  // Maps Firebase authentication error codes to user-friendly messages
   String _getAuthErrorMessage(FirebaseAuthException e) {
     _errorTimer?.cancel();
     _errorTimer = Timer(const Duration(seconds: 2), () {
@@ -378,6 +402,8 @@ class _CustomLoginPageState extends State<CustomLoginPage>
     }
   }
 
+
+  // Builds the UI for the login page
   @override
   Widget build(BuildContext context) {
     const Color neonPurple = Color(0xFFa78cde);
@@ -854,6 +880,7 @@ class _CustomLoginPageState extends State<CustomLoginPage>
     );
   }
 
+  // Switches between login and register modes
   Widget _buildToggleAuthText(bool isMobile) {
     const Color neonPurple = Color(0xFFa78cde);
     return Row(
