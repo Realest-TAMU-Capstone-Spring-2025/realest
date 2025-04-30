@@ -4,6 +4,25 @@ RealEst is a cross-platform Flutter application that enables realtors and invest
 
 ---
 
+## Complete API Documentation
+
+For full documentation including all files, classes, methods, and detailed comments:
+
+- Navigate to: doc/api/
+- Open index.html in your browser
+
+This comprehensive documentation includes:
+
+- Detailed descriptions of all modules and files
+- Complete API reference
+- Code comments and usage examples
+- Inheritance diagrams and type information
+- For the best viewing experience, we recommend using Chrome or Firefox.
+
+Note: Documentation is generated from source code comments - ensure you have the latest version of the codebase for accurate documentation.
+
+---
+
 ## 📁 Project Structure
 
 ```bash
