@@ -1,8 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:realest/src/views/realtor/dashboard/pinned_clients.dart';
 import 'package:realest/src/views/realtor/dashboard/investor_activity.dart';
 import 'package:realest/src/views/realtor/dashboard/new_notes.dart';
+
+import '../../../../user_provider.dart';
 
 class RealtorDashboard extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -33,7 +36,6 @@ class RealtorDashboardState extends State<RealtorDashboard> {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
-      color: Colors.grey[200],
       margin: const EdgeInsets.all(8),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -46,6 +48,9 @@ class RealtorDashboardState extends State<RealtorDashboard> {
     final isMobile = MediaQuery.of(context).size.width < 600;
     final screenHeight = MediaQuery.of(context).size.height;
 
+    UserProvider userProvider = Provider.of<UserProvider>(context);
+
+    final firstName = userProvider.firstName;
     return Scaffold(
       body: AnimatedOpacity(
         opacity: _contentOpacity,
@@ -60,7 +65,7 @@ class RealtorDashboardState extends State<RealtorDashboard> {
                   children: [
                     Text(
                       "Dashboard",
-                      style: Theme.of(context).textTheme.headlineSmall,
+                      style: Theme.of(context).textTheme.headlineMedium,
                       textAlign: TextAlign.start,
 
                     ),

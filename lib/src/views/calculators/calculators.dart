@@ -38,32 +38,50 @@ class _CalculatorsState extends State<Calculators> {
   /// Mobile layout with dropdown
   Widget _buildMobileLayout() {
     return Column(
+      mainAxisSize: MainAxisSize.min, // Adjusted to handle unbounded height
       children: [
         Padding(
-          padding:
-          const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-          child: DropdownButtonFormField<int>(
-            value: _selectedCalculator,
-            onChanged: (index) {
-              if (index != null) {
-                setState(() => _selectedCalculator = index);
-              }
-            },
-            items: List.generate(
-              calculatorNames.length,
-                  (index) => DropdownMenuItem(
-                value: index,
-                child: Text(calculatorNames[index]),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Adjusted to handle unbounded height
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Flexible( // Replaced Expanded with Flexible
+                child: DropdownButtonFormField<int>(
+                  isExpanded: true, // Added to prevent overflow
+                  value: _selectedCalculator,
+                  items: List.generate(
+                    calculatorNames.length,
+                    (index) => DropdownMenuItem(
+                      value: index,
+                      child: Text(calculatorNames[index]),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCalculator = value!;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    labelText: "Select Calculator",
+                    border: OutlineInputBorder(),
+                    filled: true,
+                  ),
+                ),
               ),
-            ),
-            decoration: const InputDecoration(
-              labelText: "Select Calculator",
-              border: OutlineInputBorder(),
-              filled: true,
-            ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {},
+                  child: const Text('Calculate'),
+                ),
+              ),
+            ],
           ),
         ),
-        Expanded(
+        Flexible(
+          fit: FlexFit.loose, // Adjusted to avoid unbounded height issues
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: _buildSelectedCalculator(),
@@ -82,11 +100,7 @@ class _CalculatorsState extends State<Calculators> {
           width: 250,
           height: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: const BorderRadius.only(
-              topRight: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
+            color: Theme.of(context).cardColor,
             boxShadow: const [
               BoxShadow(
                 color: Colors.black12,
@@ -97,6 +111,8 @@ class _CalculatorsState extends State<Calculators> {
           ),
           padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 10),
           child: Column(
+            mainAxisSize: MainAxisSize.min, // Adjusted to handle unbounded height
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 "Calculators",
@@ -105,14 +121,15 @@ class _CalculatorsState extends State<Calculators> {
               const SizedBox(height: 30),
               ...List.generate(
                 calculatorNames.length,
-                    (index) => _buildSidebarItem(calculatorNames[index], index),
+                (index) => _buildSidebarItem(calculatorNames[index], index),
               )
             ],
           ),
         ),
 
         // Main Content
-        Expanded(
+        Flexible(
+          fit: FlexFit.loose, // Adjusted to avoid unbounded height issues
           child: Padding(
             padding: const EdgeInsets.all(32.0),
             child: _buildSelectedCalculator(),
@@ -133,8 +150,7 @@ class _CalculatorsState extends State<Calculators> {
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
         margin: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color:
-          isSelected ? theme.colorScheme.primary.withOpacity(0.1) : null,
+          color: isSelected ? theme.colorScheme.primary.withOpacity(0.1) : null,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(

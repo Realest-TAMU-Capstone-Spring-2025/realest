@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:provider/provider.dart';
+import 'package:realest/user_provider.dart';
 
 class RealtorSettings extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -20,8 +22,8 @@ class RealtorSettings extends StatefulWidget {
 }
 
 class _RealtorSettingsState extends State<RealtorSettings> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  late FirebaseAuth _auth;
+  late FirebaseFirestore _firestore;
 
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
@@ -73,29 +75,95 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     'valueAppreciation': 'percent',
   };
 
-
   bool _isLoading = false;
   String? _errorMessage;
-
-  // New state variables for profile picture
   Uint8List? _profileImageBytes;
   String _profilePicUrl = '';
+
+  // Validation error states
+  String? _firstNameError;
+  String? _lastNameError;
+  String? _agencyNameError;
+  String? _licenseNumberError;
+  String? _contactEmailError;
+  String? _contactPhoneError;
+  String? _addressError;
+  final Map<String, String?> _cashFlowErrors = {
+    'closingCost': null,
+    'costToSell': null,
+    'defaultHOA': null,
+    'downPayment': null,
+    'holdingLength': null,
+    'insurance': null,
+    'interestRate': null,
+    'loanTerm': null,
+    'maintenance': null,
+    'managementFee': null,
+    'needsRepair': null,
+    'otherCosts': null,
+    'otherIncome': null,
+    'propertyTax': null,
+    'repairCost': null,
+    'useLoan': null,
+    'vacancyRate': null,
+    'valueAfterRepair': null,
+    'valueAppreciation': null,
+  };
 
   @override
   void initState() {
     super.initState();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    _auth = userProvider.auth;
+    _firestore = userProvider.firestore;
     _loadUserData();
+
+    // Add listeners for real-time validation
+    _firstNameController.addListener(_validateFirstName);
+    _lastNameController.addListener(_validateLastName);
+    _agencyNameController.addListener(_validateAgencyName);
+    _licenseNumberController.addListener(_validateLicenseNumber);
+    _contactEmailController.addListener(_validateContactEmail);
+    _contactPhoneController.addListener(_validateContactPhone);
+    _addressController.addListener(_validateAddress);
+    _cashFlowControllers.forEach((key, controller) {
+      controller.addListener(() => _validateCashFlowField(key));
+    });
   }
 
-  /// Loads realtor data from Firestore (including profilePicUrl)
+  @override
+  void dispose() {
+    // Remove listeners
+    _firstNameController.removeListener(_validateFirstName);
+    _lastNameController.removeListener(_validateLastName);
+    _agencyNameController.removeListener(_validateAgencyName);
+    _licenseNumberController.removeListener(_validateLicenseNumber);
+    _contactEmailController.removeListener(_validateContactEmail);
+    _contactPhoneController.removeListener(_validateContactPhone);
+    _addressController.removeListener(_validateAddress);
+    _cashFlowControllers.forEach((key, controller) {
+      controller.removeListener(() => _validateCashFlowField(key));
+      controller.dispose();
+    });
+
+    // Dispose controllers
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _agencyNameController.dispose();
+    _licenseNumberController.dispose();
+    _contactEmailController.dispose();
+    _contactPhoneController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadUserData() async {
     setState(() => _isLoading = true);
 
     User? user = _auth.currentUser;
     if (user != null) {
       try {
-        DocumentSnapshot doc =
-        await _firestore.collection('realtors').doc(user.uid).get();
+        DocumentSnapshot doc = await _firestore.collection('realtors').doc(user.uid).get();
 
         if (doc.exists) {
           setState(() {
@@ -118,7 +186,6 @@ class _RealtorSettingsState extends State<RealtorSettings> {
                 }
               }
             });
-
           });
         }
       } catch (e) {
@@ -130,10 +197,177 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     setState(() => _isLoading = false);
   }
 
-  /// Opens the gallery to pick a new profile picture
+  void _validateFirstName() {
+    final value = _firstNameController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _firstNameError = 'First name is required';
+      } else {
+        _firstNameError = null;
+      }
+    });
+  }
+
+  void _validateLastName() {
+    final value = _lastNameController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _lastNameError = 'Last name is required';
+      } else {
+        _lastNameError = null;
+      }
+    });
+  }
+
+  void _validateAgencyName() {
+    final value = _agencyNameController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _agencyNameError = 'Agency name is required';
+      } else if (value.length < 2) {
+        _agencyNameError = 'Agency name must be at least 2 characters';
+      } else if (!RegExp(r'^[a-zA-Z0-9 ]+$').hasMatch(value)) {
+        _agencyNameError = 'Agency name must contain only letters, numbers, or spaces';
+      } else {
+        _agencyNameError = null;
+      }
+    });
+  }
+
+  void _validateLicenseNumber() {
+    final value = _licenseNumberController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _licenseNumberError = 'License number is required';
+      } else if (value.length < 5) {
+        _licenseNumberError = 'License number must be at least 5 characters';
+      } else if (!RegExp(r'^[a-zA-Z0-9- ]+$').hasMatch(value)) {
+        _licenseNumberError = 'License number must contain only letters, numbers, dashes, or spaces';
+      } else {
+        _licenseNumberError = null;
+      }
+    });
+  }
+
+  void _validateContactEmail() {
+    final value = _contactEmailController.text.trim();
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    setState(() {
+      if (value.isEmpty) {
+        _contactEmailError = 'Email is required';
+      } else if (!emailRegex.hasMatch(value)) {
+        _contactEmailError = 'Enter a valid email';
+      } else {
+        _contactEmailError = null;
+      }
+    });
+  }
+
+  void _validateContactPhone() {
+    final value = _contactPhoneController.text.trim();
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    setState(() {
+      if (value.isEmpty) {
+        _contactPhoneError = 'Phone number is required';
+      } else if (digits.length != 10) {
+        _contactPhoneError = 'Phone number must be 10 digits';
+      } else {
+        _contactPhoneError = null;
+      }
+    });
+  }
+
+  void _validateAddress() {
+    final value = _addressController.text.trim();
+    setState(() {
+      if (value.isEmpty) {
+        _addressError = 'Address is required';
+      } else if (value.length < 5) {
+        _addressError = 'Address must be at least 5 characters';
+      } else if (!RegExp(r'^[a-zA-Z0-9,. -]+$').hasMatch(value)) {
+        _addressError = 'Address must contain only letters, numbers, commas, periods, dashes, or spaces';
+      } else {
+        _addressError = null;
+      }
+    });
+  }
+
+  void _validateCashFlowField(String key) {
+    final controller = _cashFlowControllers[key];
+    final value = controller!.text.trim();
+    final type = _cashFlowFieldTypes[key];
+
+    setState(() {
+      if (value.isEmpty) {
+        _cashFlowErrors[key] = '${_formatCashFlowLabel(key)} is required';
+        return;
+      }
+
+      if (type == 'bool') {
+        final lowerVal = value.toLowerCase();
+        if (lowerVal != 'true' && lowerVal != 'false') {
+          _cashFlowErrors[key] = '${_formatCashFlowLabel(key)} must be true or false';
+        } else {
+          _cashFlowErrors[key] = null;
+        }
+        return;
+      }
+
+      final number = double.tryParse(value);
+      if (number == null) {
+        _cashFlowErrors[key] = '${_formatCashFlowLabel(key)} must be a valid number';
+        return;
+      }
+
+      if (type == 'percent') {
+        if (number < 0 || number > 100) {
+          _cashFlowErrors[key] = '${_formatCashFlowLabel(key)} must be between 0 and 100';
+        } else {
+          _cashFlowErrors[key] = null;
+        }
+      } else if (type == 'cash') {
+        if (number < 0) {
+          _cashFlowErrors[key] = '${_formatCashFlowLabel(key)} cannot be negative';
+        } else {
+          _cashFlowErrors[key] = null;
+        }
+      } else if (type == 'years') {
+        if (number < 1) {
+          _cashFlowErrors[key] = '${_formatCashFlowLabel(key)} must be at least 1';
+        } else {
+          _cashFlowErrors[key] = null;
+        }
+      }
+    });
+  }
+
+  List<String> _validateFields() {
+    List<String> errors = [];
+    _validateFirstName();
+    _validateLastName();
+    _validateAgencyName();
+    _validateLicenseNumber();
+    _validateContactEmail();
+    _validateContactPhone();
+    _validateAddress();
+    _cashFlowControllers.keys.forEach(_validateCashFlowField);
+
+    if (_firstNameError != null) errors.add(_firstNameError!);
+    if (_lastNameError != null) errors.add(_lastNameError!);
+    if (_agencyNameError != null) errors.add(_agencyNameError!);
+    if (_licenseNumberError != null) errors.add(_licenseNumberError!);
+    if (_contactEmailError != null) errors.add(_contactEmailError!);
+    if (_contactPhoneError != null) errors.add(_contactPhoneError!);
+    if (_addressError != null) errors.add(_addressError!);
+    _cashFlowErrors.forEach((key, error) {
+      if (error != null) errors.add(error);
+    });
+
+    return errors;
+  }
+
   Future<void> _pickImage() async {
-    final pickedFile =
-    await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       Uint8List bytes = await pickedFile.readAsBytes();
       setState(() {
@@ -142,8 +376,29 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     }
   }
 
-  /// Updates Firestore with new realtor data and uploads a new profile picture if picked
   Future<void> _updateRealtorData() async {
+    List<String> errors = _validateFields();
+    if (errors.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Validation Error'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: errors.map((error) => Text('• $error')).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -153,7 +408,6 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     if (user != null) {
       String updatedProfilePicUrl = _profilePicUrl;
       try {
-        // If a new profile image has been picked, upload it.
         if (_profileImageBytes != null) {
           Reference storageRef = FirebaseStorage.instance
               .ref()
@@ -167,7 +421,6 @@ class _RealtorSettingsState extends State<RealtorSettings> {
           updatedProfilePicUrl = await snapshot.ref.getDownloadURL();
         }
 
-        // Update Firestore with new data (including profilePicUrl)
         await _firestore.collection('realtors').doc(user.uid).update({
           'firstName': _firstNameController.text.trim(),
           'lastName': _lastNameController.text.trim(),
@@ -195,6 +448,65 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     setState(() => _isLoading = false);
   }
 
+  Future<void> _saveCashFlowDefaults() async {
+    List<String> errors = [];
+    _cashFlowControllers.keys.forEach(_validateCashFlowField);
+    _cashFlowErrors.forEach((key, error) {
+      if (error != null) errors.add(error);
+    });
+
+    if (errors.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Validation Error'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: errors.map((error) => Text('• $error')).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final User? user = _auth.currentUser;
+    if (user == null) return;
+
+    final Map<String, dynamic> updated = {};
+    _cashFlowControllers.forEach((key, controller) {
+      final val = controller.text.trim();
+      final type = _cashFlowFieldTypes[key];
+
+      if (type == 'bool') {
+        updated[key] = val.toLowerCase() == 'true';
+      } else if (type == 'percent') {
+        updated[key] = (double.tryParse(val) ?? 0) / 100;
+      } else {
+        updated[key] = double.tryParse(val) ?? val;
+      }
+    });
+
+    try {
+      await _firestore.collection('realtors').doc(user.uid).update({
+        'cashFlowDefaults': updated,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cash Flow Defaults updated")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update: $e")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -217,7 +529,6 @@ class _RealtorSettingsState extends State<RealtorSettings> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // Profile Picture Picker Section
                   Center(
                     child: GestureDetector(
                       onTap: _pickImage,
@@ -228,8 +539,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
                             ? MemoryImage(_profileImageBytes!)
                             : (_profilePicUrl.isNotEmpty
                             ? NetworkImage(_profilePicUrl)
-                            : const AssetImage('assets/images/profile.png')
-                        as ImageProvider),
+                            : const AssetImage('assets/images/profile.png') as ImageProvider),
                         child: _profileImageBytes == null && _profilePicUrl.isEmpty
                             ? const Icon(Icons.camera_alt, size: 40, color: Colors.black54)
                             : null,
@@ -243,7 +553,6 @@ class _RealtorSettingsState extends State<RealtorSettings> {
                       style: theme.textTheme.bodyMedium,
                     ),
                   ),
-
                   const SizedBox(height: 30),
                   if (_errorMessage != null)
                     Padding(
@@ -253,16 +562,17 @@ class _RealtorSettingsState extends State<RealtorSettings> {
                         style: const TextStyle(color: Colors.red, fontSize: 16),
                       ),
                     ),
-                  // All the text fields
-                  _buildTextField("First Name:", _firstNameController, theme),
-                  _buildTextField("Last Name:", _lastNameController, theme),
-                  _buildTextField("Agency Name:", _agencyNameController, theme),
-                  _buildTextField("License Number:", _licenseNumberController, theme),
-                  _buildTextField("Contact Email:", _contactEmailController, theme),
-                  _buildTextField("Contact Phone:", _contactPhoneController, theme),
-                  _buildTextField("Address:", _addressController, theme),
+                  _buildTextField("First Name:", _firstNameController, theme, error: _firstNameError),
+                  _buildTextField("Last Name:", _lastNameController, theme, error: _lastNameError),
+                  _buildTextField("Agency Name:", _agencyNameController, theme, error: _agencyNameError),
+                  _buildTextField(
+                      "License Number:", _licenseNumberController, theme, error: _licenseNumberError),
+                  _buildTextField("Contact Email:", _contactEmailController, theme,
+                      error: _contactEmailError),
+                  _buildTextField("Contact Phone:", _contactPhoneController, theme,
+                      error: _contactPhoneError),
+                  _buildTextField("Address:", _addressController, theme, error: _addressError),
                   const SizedBox(height: 20),
-                  // Theme Toggle Switch
                   SwitchListTile(
                     title: Text(
                       "Dark Mode",
@@ -280,6 +590,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
                         final key = entry.key;
                         final controller = entry.value;
                         final type = _cashFlowFieldTypes[key] ?? 'text';
+                        final error = _cashFlowErrors[key];
 
                         Widget suffix;
                         switch (type) {
@@ -297,45 +608,60 @@ class _RealtorSettingsState extends State<RealtorSettings> {
                         }
 
                         if (type == 'bool') {
-                          // Render as switch
                           final boolVal = controller.text.toLowerCase() == 'true';
-                          return SwitchListTile(
-                            title: Text(_formatCashFlowLabel(key)),
-                            value: boolVal,
-                            onChanged: (val) {
-                              setState(() {
-                                controller.text = val.toString();
-                              });
-                            },
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SwitchListTile(
+                                title: Text(_formatCashFlowLabel(key)),
+                                value: boolVal,
+                                onChanged: (val) {
+                                  setState(() {
+                                    controller.text = val.toString();
+                                  });
+                                },
+                              ),
+                              if (error != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
+                                  child: Text(
+                                    error,
+                                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                                  ),
+                                ),
+                            ],
                           );
                         }
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: TextField(
-                            controller: controller,
-                            keyboardType: TextInputType.numberWithOptions(decimal: true),
-                            decoration: InputDecoration(
-                              labelText: _formatCashFlowLabel(key),
-                              suffix: suffix,
-                              border: const OutlineInputBorder(),
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextField(
+                                controller: controller,
+                                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                decoration: InputDecoration(
+                                  labelText: _formatCashFlowLabel(key),
+                                  suffix: suffix,
+                                  border: const OutlineInputBorder(),
+                                  errorText: error,
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       }).toList(),
-
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         child: ElevatedButton(
-                          onPressed: _saveCashFlowDefaults,
+                          onPressed: _isLoading ? null : _saveCashFlowDefaults,
                           child: const Text("Save Cash Flow Defaults"),
                         ),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
-                  // Save / Cancel Buttons
                   Center(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -376,72 +702,48 @@ class _RealtorSettingsState extends State<RealtorSettings> {
       ),
     );
   }
+
   String _formatCashFlowLabel(String key) {
     return key.replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (match) {
       return '${match.group(1)} ${match.group(2)}';
     }).replaceFirstMapped(RegExp(r'^.'), (m) => m.group(0)!.toUpperCase());
   }
-  Future<void> _saveCashFlowDefaults() async {
-    final User? user = _auth.currentUser;
-    if (user == null) return;
 
-    final Map<String, dynamic> updated = {};
-    _cashFlowControllers.forEach((key, controller) {
-      final val = controller.text.trim();
-      final type = _cashFlowFieldTypes[key];
-
-      if (type == 'bool') {
-        updated[key] = val.toLowerCase() == 'true';
-      } else if (type == 'percent') {
-        updated[key] = (double.tryParse(val) ?? 0) / 100;
-      } else {
-        updated[key] = double.tryParse(val) ?? val;
-      }
-    });
-
-
-    try {
-      await _firestore.collection('realtors').doc(user.uid).update({
-        'cashFlowDefaults': updated,
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Cash Flow Defaults updated")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to update: $e")),
-      );
-    }
-  }
-
-
-
-
-  /// Creates a modern input field that adapts to the theme
-  Widget _buildTextField(String label, TextEditingController controller, ThemeData theme) {
+  Widget _buildTextField(
+      String label,
+      TextEditingController controller,
+      ThemeData theme, {
+        String? error,
+      }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              label,
-              style: theme.textTheme.bodyLarge,
-            ),
-          ),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: theme.inputDecorationTheme.fillColor,
-                border: theme.inputDecorationTheme.border,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 150,
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodyLarge,
+                ),
               ),
-              style: theme.textTheme.bodyLarge,
-            ),
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: theme.inputDecorationTheme.fillColor,
+                    border: theme.inputDecorationTheme.border,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    errorText: error,
+                  ),
+                  style: theme.textTheme.bodyLarge,
+                ),
+              ),
+            ],
           ),
         ],
       ),

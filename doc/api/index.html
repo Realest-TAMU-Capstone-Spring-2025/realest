@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+  <meta name="description" content="realest API docs, for the Dart programming language.">
+  <title>realest - Dart API docs</title>
+
+
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  
+  <link rel="stylesheet" href="static-assets/github.css?v1">
+  <link rel="stylesheet" href="static-assets/styles.css?v1">
+  <link rel="icon" href="static-assets/favicon.png?v1">
+  
+</head>
+
+<body data-base-href="" data-using-base-href="false" class="light-theme">
+<div id="overlay-under-drawer"></div>
+<header id="title">
+  <span id="sidenav-left-toggle" class="material-symbols-outlined" role="button" tabindex="0">menu</span>
+  <ol class="breadcrumbs gt-separated dark hidden-xs">
+    <li class="self-crumb">realest package</li>
+  </ol>
+  <div class="self-name">realest</div>
+  <form class="search navbar-right" role="search">
+    <input type="text" id="search-box" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+  <div class="toggle" id="theme-button" title="Toggle brightness">
+    <label for="theme">
+      <input type="checkbox" id="theme" value="light-theme">
+      <span id="dark-theme-button" class="material-symbols-outlined">
+        dark_mode
+      </span>
+      <span id="light-theme-button" class="material-symbols-outlined">
+        light_mode
+      </span>
+    </label>
+  </div>
+</header>
+<main>
+  <div id="dartdoc-main-content" class="main-content">
+      
+<section class="desc markdown">
+  <h1 id="realest-property-swiping--client-matching-software">RealEst: Property Swiping &amp; Client Matching Software</h1>
+<p>RealEst is a cross-platform Flutter application that enables realtors and investors to connect efficiently through intelligent property matching, personalized dashboards, and secure authentication.</p>
+<hr>
+<h2 id="-project-structure">📁 Project Structure</h2>
+<pre class="language-bash"><code class="language-bash">lib/
+├── data/
+│   └── db/
+│       └── entity/
+│           ├── listing.dart           # Listing model for property data
+│           ├── settings.dart          # User preferences/settings model
+│           ├── swipe.dart             # Model for tracking swipes
+│           └── user.dart              # Core user model (investor/realtor)
+│
+├── services/
+│   ├── auth_service.dart              # Handles sign up, login, logout, update
+│   ├── calculator_service.dart        # Contains affordability, PITI, ROI calculators
+│   └── realtor_settings_service.dart  # Manages realtor filter and settings
+│
+├── src/
+│   ├── config/                        # Constants and environment-specific setup
+│   ├── models/                        # Business logic models (e.g., PropertyFilter)
+│   └── views/
+│       ├── calculators/               # UI for affordability and rental tools
+│       ├── home/
+│       │   └── overview/              # Landing page, about section, hero panels
+│       ├── investor/
+│       │   ├── swipe_view.dart        # Main investor swiping interface
+│       │   ├── saved.dart             # Saved listings view
+│       │   └── disliked.dart          # Disliked properties view
+│       └── realtor/
+│           ├── dashboard/             # Realtor analytics and activity tracking
+│           ├── clients/               # Panels for managing clients/leads
+│           ├── helpers/               # Firebase query helpers, card builders, etc.
+│           └── widgets/               # Reusable UI components like buttons, cards
+│
+├── util/
+│   ├── firebase_options.dart          # Firebase config (auto-generated)
+│   ├── theme_provider.dart            # Theme management (dark/light mode)
+│   └── property_fetch_helpers.dart    # API integration with HomeHarvest
+│
+├── user_provider.dart                 # Global provider for current user info
+├── main.dart                          # App entry point, routes, and initialization
+</code></pre>
+<h3 id="class-models">Class Models</h3>
+<ul>
+<li><strong>User</strong>: Represents app users (realtors, investors); includes <code>email</code>, <code>role</code>, <code>completedSetup</code>, <code>createdAt</code></li>
+<li><strong>Listing</strong>: Stores property metadata such as location, price, images, and tags</li>
+<li><strong>Swipe</strong>: Tracks swipe direction, timestamp, and user-listing interactions</li>
+<li><strong>Settings</strong>: Manages investor/realtor preferences (e.g., budget, location filters)</li>
+</ul>
+<h3 id="filter--logic-models-srcmodels">Filter &amp; Logic Models (<code>src/models/</code>)</h3>
+<ul>
+<li><strong>PropertyFilter</strong>: Stores dynamic filters applied by investors (e.g., price range, radius, type)</li>
+</ul>
+<h3 id="service-classes-services">Service Classes (<code>services/</code>)</h3>
+<ul>
+<li><strong>AuthService</strong>: Handles login, signup, sign out, and user updates</li>
+<li><strong>CalculatorService</strong>: Affordability, mortgage (PITI), and ROI calculators</li>
+<li><strong>RealtorSettingsService</strong>: Saves and loads realtor preferences from Firestore</li>
+</ul>
+<h3 id="state-management">State Management</h3>
+<ul>
+<li><strong>UserProvider</strong>: Global state for the current user</li>
+<li><strong>ThemeProvider</strong>: Manages app-wide light/dark theme</li>
+</ul>
+<h3 id="views--widgets-srcviews">Views &amp; Widgets (<code>src/views/</code>)</h3>
+<ul>
+<li>Investor and Realtor views are separated by role</li>
+<li>Each screen is a <code>StatefulWidget</code> or <code>StatelessWidget</code></li>
+<li>Reusable UI components are found in <code>widgets/</code></li>
+<li>Logic is abstracted into <code>helpers/</code> for separation of concerns</li>
+</ul>
+<p>All models support <code>fromJson()</code> and <code>toJson()</code> for Firestore integration.</p>
+<hr>
+<h2 id="-api-specification">⚙️ API Specification</h2>
+<h3 id="-firebase-authentication">🔐 Firebase Authentication</h3>
+<p>Implemented via <code>auth_service.dart</code>:</p>
+<ul>
+<li><code>createUserWithEmailAndPassword(email, password)</code></li>
+<li><code>signInWithEmailAndPassword(email, password)</code></li>
+<li><code>signOut()</code></li>
+<li><code>updateEmail(newEmail)</code></li>
+<li><code>updatePassword(newPassword)</code></li>
+<li><code>sendPasswordResetEmail(email)</code></li>
+</ul>
+<h3 id="-firebase-cloud-function-promotequalifiedlead">⚡ Firebase Cloud Function: <code>promoteQualifiedLead</code></h3>
+<p>A secure callable function that allows realtors to promote a user to a qualified investor.</p>
+<p><strong>Functionality</strong>:</p>
+<ul>
+<li>Verifies that the caller is a realtor</li>
+<li>Creates a Firebase Auth user</li>
+<li>Sets up a Firestore profile under <code>/users</code></li>
+<li>Updates <code>/investors</code> status to <code>qualified-lead</code></li>
+<li>Sends a welcome email via SendGrid with a temporary password</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+<li><code>success: true</code></li>
+<li><code>uid</code></li>
+<li><code>password</code></li>
+</ul>
+<h3 id="-external-apis">🌍 External APIs</h3>
+<h4 id="algolia">Algolia</h4>
+<ul>
+<li>Real-time property and user search</li>
+<li>Uses <code>ALGOLIA_APP_ID</code> and <code>ALGOLIA_API_KEY</code></li>
+</ul>
+<h4 id="google-maps">Google Maps</h4>
+<ul>
+<li>Interactive property mapping and distance filtering</li>
+<li>API key is manually added in code</li>
+</ul>
+<h4 id="homeharvest">HomeHarvest</h4>
+<ul>
+<li>Provides property listing data (price, location, attributes)</li>
+<li>Accessed via <code>property_fetch_helpers.dart</code></li>
+</ul>
+<hr>
+<h2 id="-setup-guide">🛠 Setup Guide</h2>
+<h3 id="step-1-install-required-command-line-tools">Step 1: Install Required Command Line Tools</h3>
+<ul>
+<li><a href="https://docs.flutter.dev/get-started/install">Flutter SDK</a></li>
+<li>Dart SDK (included with Flutter)</li>
+<li><a href="https://git-scm.com/downloads">Git</a></li>
+<li><a href="https://nodejs.org/en">Node.js</a></li>
+<li>Firebase CLI:</li>
+</ul>
+<pre class="language-bash"><code class="language-bash">  npm install -g firebase-tools
+</code></pre>
+<ul>
+<li>FlutterFire CLI:</li>
+</ul>
+<pre class="language-bash"><code class="language-bash">dart pub global activate flutterfire_cli
+</code></pre>
+<ul>
+<li>Clone the Repository</li>
+</ul>
+<pre class="language-bash"><code class="language-bash">git clone https://github.com/Realest-TAMU-Capstone-Spring-2025.git
+cd Realest-TAMU-Capstone-Spring-2025
+</code></pre>
+<ul>
+<li>Install Dependencies</li>
+</ul>
+<pre class="language-bash"><code class="language-bash">flutter pub get
+</code></pre>
+<h3 id="step-2-configure-firebase">Step 2: Configure Firebase</h3>
+<p>From your project directory, run:</p>
+<pre class="language-bash"><code class="language-bash">flutterfire configure
+</code></pre>
+<p>If you get an error about null strings, run the previous command just for android + ios
+manually check the <code>firebase_options.dart</code> file. Create a <code>FirebaseOptions</code> object for web and return that .</p>
+<p>This will:</p>
+<ul>
+<li>Guide you through creating or selecting a Firebase project</li>
+<li>Register your app with Firebase</li>
+<li>Generate the necessary configuration files (<code>firebase_options.dart</code>)</li>
+</ul>
+<h3 id="step-3-initialize-firebase-in-your-app">Step 3: Initialize Firebase in Your App</h3>
+<p>Add Firebase core to your project:</p>
+<pre class="language-bash"><code class="language-bash">flutter pub add firebase_core
+</code></pre>
+<p>Ensure your <code>lib/main.dart</code> file initializes Firebase:</p>
+<pre class="language-dart"><code class="language-dart">import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
+}
+</code></pre>
+<h3 id="step-4-add-required-firebase-plugins">Step 4: Add Required Firebase Plugins</h3>
+<p>Add the Firebase plugins needed for the project:</p>
+<pre class="language-bash"><code class="language-bash">flutter pub get
+</code></pre>
+<h2 id="required-api-keys">Required API Keys</h2>
+<p>The application requires several API keys to function properly. Create a <code>.env</code> file in the root directory with the following keys:</p>
+<pre class="language-dart"><code># Algolia API Keys
+ALGOLIA_APP_ID=your_algolia_app_id
+ALGOLIA_API_KEY=your_algolia_api_key
+
+# Google Maps API Key
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+</code></pre>
+<p><strong>Note:</strong> Google maps key won't work with <code>.env</code> you need to do that manually.</p>
+<p><strong>Note:</strong> Make sure to add the <code>.env</code> file to your <code>.gitignore</code> to prevent exposing sensitive keys.</p>
+<h2 id="firebase-configuration-file">Firebase Configuration File</h2>
+<p>Ensure you have the <code>firebase.json</code> file in your project root. This file is typically generated during the Firebase initialization process. If it's missing, create it with the following content:</p>
+<pre class="language-json"><code class="language-json">{
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}
+</code></pre>
+<h2 id="running-the-app">Running the App</h2>
+<p>Once everything is set up, you can run the app using:</p>
+<pre class="language-bash"><code class="language-bash">flutter run
+</code></pre>
+<h2 id="deployment">Deployment</h2>
+<p>To deploy the web version to Firebase Hosting:</p>
+<pre class="language-bash"><code class="language-bash">flutter build web --release
+firebase deploy
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p>If you encounter issues with Firebase configuration:</p>
+<ol>
+<li>Ensure all required files (<code>firebase_options.dart</code>, <code>firebase.json</code>, etc.) are present</li>
+<li>Verify that you've added the correct Google Services files:
+<ul>
+<li><code>google-services.json</code> in the <code>android/app</code> directory</li>
+<li><code>GoogleService-Info.plist</code> in the <code>ios/Runner</code> directory</li>
+</ul>
+</li>
+<li>Make sure all environment variables and API keys are properly configured</li>
+</ol>
+<h2 id="contributing">Contributing</h2>
+<p>Please read our contributing guidelines before submitting pull requests to the project.</p>
+<h2 id="license">License</h2>
+<p>This project is licensed under the MIT License - see the LICENSE file for details.</p>
+</section>
+
+
+      <section class="summary">
+          <h2>Libraries</h2>
+        <dl>
+          <dt id="listing">
+  <span class="name"><a href="data_db_entity_listing/">data\db\entity\listing</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="settings">
+  <span class="name"><a href="data_db_entity_settings/">data\db\entity\settings</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="swipe">
+  <span class="name"><a href="data_db_entity_swipe/">data\db\entity\swipe</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="user">
+  <span class="name"><a href="data_db_entity_user/">data\db\entity\user</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="firebase_options">
+  <span class="name"><a href="firebase_options/">firebase_options</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="main">
+  <span class="name"><a href="main/">main</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="auth_service">
+  <span class="name"><a href="services_auth_service/">services\auth_service</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="calculator_service">
+  <span class="name"><a href="services_calculator_service/">services\calculator_service</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="realtor_settings_service">
+  <span class="name"><a href="services_realtor_settings_service/">services\realtor_settings_service</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="src">
+  <span class="name"><a href="src/">src</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="theme_provider">
+  <span class="name"><a href="theme_provider/">theme_provider</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="user_provider">
+  <span class="name"><a href="user_provider/">user_provider</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="property_fetch_helpers">
+  <span class="name"><a href="util_property_fetch_helpers/">util\property_fetch_helpers</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+        </dl>
+      </section>
+  </div> <!-- /.main-content -->
+  <div id="dartdoc-sidebar-left" class="sidebar sidebar-offcanvas-left">
+    <!-- The search input and breadcrumbs below are only responsively visible at low resolutions. -->
+<header id="header-search-sidebar" class="hidden-l">
+  <form class="search-sidebar" role="search">
+    <input type="text" id="search-sidebar" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+</header>
+<ol class="breadcrumbs gt-separated dark hidden-l" id="sidebar-nav">
+    <li class="self-crumb">realest package</li>
+</ol>
+
+    <h5 class="hidden-xs"><span class="package-name">realest</span> <span class="package-kind">package</span></h5>
+    <ol>
+      <li class="section-title">Libraries</li>
+      <li><a href="data_db_entity_listing/">data\db\entity\listing</a></li>
+      <li><a href="data_db_entity_settings/">data\db\entity\settings</a></li>
+      <li><a href="data_db_entity_swipe/">data\db\entity\swipe</a></li>
+      <li><a href="data_db_entity_user/">data\db\entity\user</a></li>
+      <li><a href="firebase_options/">firebase_options</a></li>
+      <li><a href="main/">main</a></li>
+      <li><a href="services_auth_service/">services\auth_service</a></li>
+      <li><a href="services_calculator_service/">services\calculator_service</a></li>
+      <li><a href="services_realtor_settings_service/">services\realtor_settings_service</a></li>
+      <li><a href="src/">src</a></li>
+      <li><a href="theme_provider/">theme_provider</a></li>
+      <li><a href="user_provider/">user_provider</a></li>
+      <li><a href="util_property_fetch_helpers/">util\property_fetch_helpers</a></li>
+</ol>
+
+  </div>
+  <div id="dartdoc-sidebar-right" class="sidebar sidebar-offcanvas-right">
+  </div>
+</main>
+<footer>
+  <span class="no-break">
+    realest
+      1.0.0+1
+  </span>
+  
+</footer>
+
+
+<script src="static-assets/highlight.pack.js?v1"></script>
+<script src="static-assets/docs.dart.js"></script>
+
+</body>
+</html>
+

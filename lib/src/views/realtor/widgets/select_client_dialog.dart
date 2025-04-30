@@ -464,16 +464,26 @@ class _SelectClientDialogState extends State<SelectClientDialog> {
   }
 
   void _updateSelectedClientsFromTags() {
-    selectedClientIds.clear();
-    for (var tag in selectedTags) {
-      final tagInvestorIds = List<String>.from(tag['investors'] ?? []);
-      for (var client in filteredClients) {
-        if (tagInvestorIds.contains(client['id']) && !selectedClientIds.contains(client['id'])) {
-          selectedClientIds.add(client['id']);
-        }
-      }
+    if (selectedTags.isEmpty) return;
+
+    // Start with the full list of client IDs from the first tag
+    Set<String> matchingClientIds = Set<String>.from(selectedTags.first['investors'] ?? []);
+
+    // Intersect with the rest of the tag investor lists
+    for (var tag in selectedTags.skip(1)) {
+      final tagInvestorIds = Set<String>.from(tag['investors'] ?? []);
+      matchingClientIds = matchingClientIds.intersection(tagInvestorIds);
     }
+
+    // Filter only clients in filteredClients list
+    selectedClientIds = filteredClients
+        .where((client) => matchingClientIds.contains(client['id']))
+        .map((client) => client['id'] as String)
+        .toList();
+
+    setState(() {});
   }
+
 
   void _checkAndRemoveTags() {
     final tagsToCheck = List<Map<String, dynamic>>.from(selectedTags);

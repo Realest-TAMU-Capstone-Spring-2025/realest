@@ -1,23 +1,33 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:realest/util/property_fetch_helpers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../dashboard/new_notes.dart';
 import '../widgets/property_card/property_list_card.dart';
 import '../widgets/property_detail_sheet.dart';
+import 'package:realest/user_provider.dart';
+import 'package:provider/provider.dart';
 
 class ClientDetailsDrawer extends StatefulWidget {
   final String clientUid;
   final VoidCallback onClose;
+  final void Function(String clientId, String newStatus)? onStatusChange;
+  final void Function(String uid, String name)? onDelete;
 
-  const ClientDetailsDrawer({
+  late FirebaseFirestore firestore;
+  late FirebaseAuth auth;
+
+  ClientDetailsDrawer({
     super.key,
     required this.clientUid,
     required this.onClose,
+    this.onStatusChange,
+    this.onDelete, // 👈 add this
   });
 
   @override
@@ -37,7 +47,6 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
   String? _error;
   bool _notesExpanded = false;
 
-  final DefaultCacheManager _cacheManager = DefaultCacheManager();
   late AnimationController _animationController;
   List<Map<String, dynamic>> _notes = [];
   List<Map<String, dynamic>> _availableTags = [];
@@ -50,13 +59,15 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
       duration: const Duration(milliseconds: 300),
       vsync: this,
     )..forward();
-
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    widget.auth = userProvider.auth;
+    widget.firestore = userProvider.firestore;
     _loadClientData();
   }
 
   Future<void> _loadClientData() async {
     try {
-      final investorDoc = await FirebaseFirestore.instance
+      final investorDoc = await widget.firestore
           .collection('investors')
           .doc(widget.clientUid)
           .get();
@@ -70,14 +81,11 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
       }
 
       final data = investorDoc.data()!;
-      data['createdAt'] =
-          (data['createdAt'] as Timestamp?)?.toDate().toIso8601String() ??
-              DateTime.now().toIso8601String();
       _clientData = data;
 
-      final realtorId = FirebaseAuth.instance.currentUser?.uid;
+      final realtorId = widget.auth.currentUser?.uid;
 
-      final snapshot = await FirebaseFirestore.instance
+      final snapshot = await widget.firestore
           .collection('realtors')
           .doc(realtorId)
           .collection('interactions')
@@ -107,7 +115,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
         if (status == 'liked' && sentByRealtor) {
           _groupedDecisions['sentAndLiked']!.add(entry);
         }
-        final notesSnapshot = await FirebaseFirestore.instance
+        final notesSnapshot = await widget.firestore
             .collection('realtors')
             .doc(realtorId)
             .collection('notes')
@@ -121,7 +129,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
           return data;
         }).toList();
       }
-      final tagsSnapshot = await FirebaseFirestore.instance
+      final tagsSnapshot = await widget.firestore
           .collection('realtors')
           .doc(realtorId)
           .collection('tags')
@@ -198,7 +206,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                     enableDrag: false,
                   );
                 },
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onTertiary,
               ),
             );
           },
@@ -207,12 +215,81 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     );
   }
 
+  Future<void> _deleteClient() async {
+    final name = '${_clientData?['firstName'] ?? ''} ${_clientData?['lastName'] ?? ''}';
+    widget.onDelete?.call(widget.clientUid, name);
+    //TODO make more through and delete all user data
+    widget.onClose();
+  }
+
+  Widget _buildTagList() {
+    final theme = Theme.of(context);
+    final assignedTags = _assignedTags
+        .map((id) => _availableTags.firstWhere((tag) => tag['id'] == id))
+        .toList();
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: assignedTags.map((tag) {
+        final color = Color(tag['color'] ?? 0xFFCCCCCC);
+        final name = tag['name'] ?? '';
+
+        return Chip(
+          label: Text(
+            name,
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white),
+          ),
+          backgroundColor: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: color, width: 0),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  void _showEditNotesDialog(TextEditingController notesController) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Edit Notes"),
+        content: TextField(
+          controller: notesController,
+          maxLines: 10,
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await widget.firestore
+                  .collection('investors')
+                  .doc(widget.clientUid)
+                  .update({'notes': notesController.text});
+              Navigator.pop(context);
+            },
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_error != null) return Center(child: Text('Error: $_error'));
-    if (_clientData == null)
+    if (_clientData == null) {
       return const Center(child: Text('Client not found'));
+    }
+
+    final status = _clientData?['status'] ?? 'inactive';
+    final canViewInteractions = status == 'client' || status == 'qualified-lead';
 
     final name =
         '${_clientData?['firstName'] ?? ''} ${_clientData?['lastName'] ?? ''}';
@@ -220,297 +297,352 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     final phone = _clientData?['contactPhone'] ?? 'N/A';
     final profilePicUrl = _clientData?['profilePicUrl'] ?? '';
     final notes = _clientData?['notes'] ?? '';
-    final createdAt = DateTime.parse(_clientData!['createdAt']);
-    final status = _clientData?['status'] ?? 'inactive';
+    final createdAt = (_clientData!['createdAt'] as Timestamp).toDate();
+    final isQualifiedLead = status == 'qualified-lead';
+    final TextEditingController notesController = TextEditingController(text: _clientData?['notes'] ?? '');
+    final isNewLead = status == 'lead';
+    final isClient = status == 'client';
+
+    // Use AssetImage for testing to avoid network issues
+    final profileImageProvider = profilePicUrl.startsWith('assets/')
+        ? AssetImage(profilePicUrl)
+        : kIsWeb
+            ? AssetImage('assets/images/profile.png') // Default for tests
+            : NetworkImage(profilePicUrl) as ImageProvider;
 
     return SlideTransition(
-        position:
-            Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
-          CurvedAnimation(parent: _animationController, curve: Curves.ease),
-        ),
-        child: Center(
-          child: Material(
-            borderRadius: BorderRadius.circular(16),
-            elevation: 10,
-            color: Colors.white,
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: 1000,
-              ),
-              padding: const EdgeInsets.all(16),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+      position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
+        CurvedAnimation(parent: _animationController, curve: Curves.ease),
+      ),
+      child: Center(
+        child: Material(
+          borderRadius: BorderRadius.circular(16),
+          elevation: 10,
+          child: Container(
+            width: 500,
+            height: MediaQuery.of(context).size.height, // 👈 Full height
+            constraints: const BoxConstraints(maxWidth: 1000),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundImage: profilePicUrl.isNotEmpty
-                              ? NetworkImage(profilePicUrl)
-                              : const AssetImage('assets/images/profile.png')
-                                  as ImageProvider,
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundImage: profileImageProvider,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(name,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall),
+                                  Text(status.toUpperCase(),
+                                      style:
+                                          Theme.of(context).textTheme.bodyMedium),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: widget.onClose,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(name,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall),
-                              Text(status.toUpperCase(),
-                                  style:
-                                      Theme.of(context).textTheme.bodyMedium),
-                            ],
+                        SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildTagList()),
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert),
+                              onSelected: (value) async {
+                                switch (value) {
+                                  case 'manageTags':
+                                    _showManageTagsDialog();
+                                    break;
+                                  case 'editNotes':
+                                    _showEditNotesDialog(notesController);
+                                    break;
+                                  case 'promote':
+                                    await widget.firestore
+                                        .collection('investors')
+                                        .doc(widget.clientUid)
+                                        .update({'status': 'client'});
+                                    widget.onStatusChange?.call(widget.clientUid, 'client');
+                                    final updatedDoc = await widget.firestore
+                                        .collection('investors')
+                                        .doc(widget.clientUid)
+                                        .get();
+                                    setState(() => _clientData = updatedDoc.data());
+                                    break;
+                                  case 'promoteQualified':
+                                    await widget.firestore
+                                        .collection('investors')
+                                        .doc(widget.clientUid)
+                                        .update({'status': 'qualified-lead'});
+                                    widget.onStatusChange?.call(widget.clientUid, 'qualified-lead');
+                                    final updated = await widget.firestore
+                                        .collection('investors')
+                                        .doc(widget.clientUid)
+                                        .get();
+                                    setState(() => _clientData = updated.data());
+                                    break;
+                                  case 'delete':
+                                    _deleteClient();
+                                    break;
+                                }
+                              },
+                              itemBuilder: (context) {
+                                final isLead = _clientData?['status'] == 'lead';
+                                final isQualified = _clientData?['status'] == 'qualified-lead';
+                                final isClient = _clientData?['status'] == 'client';
+
+                                return [
+                                  const PopupMenuItem(value: 'manageTags', child: Text('Manage Tags')),
+                                  const PopupMenuItem(value: 'editNotes', child: Text('Edit Notes')),
+                                  if (isLead)
+                                    const PopupMenuItem(
+                                      value: 'promoteQualified',
+                                      child: Text('Accept as Qualified Lead'),
+                                    ),
+                                  if (isQualified)
+                                    const PopupMenuItem(
+                                      value: 'promote',
+                                      child: Text('Promote to Client'),
+                                    ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text('Delete user', style: TextStyle(color: Colors.red)),
+                                  ),
+                                ];
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
+                        Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          color: Theme.of(context).colorScheme.onTertiary,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Contact Info',
+                                    style: Theme.of(context).textTheme.titleMedium),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.email_outlined, size: 20),
+                                    const SizedBox(width: 8),
+                                    InkWell(
+                                      onTap: () async {
+                                        final uri =
+                                            Uri(scheme: 'mailto', path: email);
+                                        if (await canLaunchUrl(uri)) {
+                                          await launchUrl(uri);
+                                        }
+                                      },
+                                      child: Text(
+                                        email,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: Theme.of(context).colorScheme.primary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.phone_outlined, size: 20),
+                                    const SizedBox(width: 8),
+                                    InkWell(
+                                      onTap: () async {
+                                        final uri = Uri(scheme: 'tel', path: phone);
+                                        if (await canLaunchUrl(uri)) {
+                                          await launchUrl(uri);
+                                        }
+                                      },
+                                      child: Text(
+                                        phone,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: Theme.of(context).colorScheme.primary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: widget.onClose,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton.icon(
-                      onPressed: _showManageTagsDialog,
-                      icon: Icon(Icons.label_outline, color: Theme.of(context).colorScheme.primary),
-                      label: Text('Manage Tags'),
-                    ),
-                    const SizedBox(height: 16),
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      color: Colors.grey[200],
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Contact Info',
-                                style: Theme.of(context).textTheme.titleMedium),
-                            const SizedBox(height: 8),
-                            Row(
+                        const SizedBox(height: 16),
+                        Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          color: Theme.of(context).colorScheme.onTertiary,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.email_outlined, size: 20),
-                                const SizedBox(width: 8),
-                                InkWell(
-                                  onTap: () async {
-                                    final uri =
-                                        Uri(scheme: 'mailto', path: email);
-                                    if (await canLaunchUrl(uri)) {
-                                      await launchUrl(uri);
-                                    }
-                                  },
-                                  child: Text(
-                                    email,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                  ),
+                                Text('Account Details',
+                                    style: Theme.of(context).textTheme.titleMedium),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Created: ${createdAt.day}/${createdAt.month}/${createdAt.year}',
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Icon(Icons.phone_outlined, size: 20),
-                                const SizedBox(width: 8),
-                                InkWell(
-                                  onTap: () async {
-                                    final uri = Uri(scheme: 'tel', path: phone);
-                                    if (await canLaunchUrl(uri)) {
-                                      await launchUrl(uri);
-                                    }
-                                  },
-                                  child: Text(
-                                    phone,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      color: Colors.grey[200],
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Account Details',
-                                style: Theme.of(context).textTheme.titleMedium),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Icon(Icons.calendar_today, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Created: ${createdAt.day}/${createdAt.month}/${createdAt.year}',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ],
+                        SizedBox(height: 16),
+                        Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12), // 👈 Rounded corners
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    ExpansionPanelList(
-                      expansionCallback: (panelIndex, isExpanded) {
-                        setState(() {
-                          _notesExpanded = !_notesExpanded;
-                        });
-                      },
-                      children: [
-                        ExpansionPanel(
-                          isExpanded: _notesExpanded,
-                          canTapOnHeader: true,
-                          headerBuilder: (context, isExpanded) {
-                            return ListTile(
-                              title: Text(
-                                'Client Notes',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                            );
+                            child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: ExpansionPanelList(
+                          expansionCallback: (panelIndex, isExpanded) {
+                            setState(() {
+                              _notesExpanded = !_notesExpanded;
+                            });
                           },
-                          body: _notes.isEmpty
-                              ? Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Text('No notes yet.'),
-                                )
-                              : Column(
-                                  children: _notes.map((note) {
-                                    final ts = (note['timestamp'] as Timestamp?)
-                                        ?.toDate();
-                                    final formattedTime = ts != null
-                                        ? '${ts.month}/${ts.day}/${ts.year} ${ts.hour}:${ts.minute.toString().padLeft(2, '0')}'
-                                        : 'N/A';
-
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      child: NoteCard(
-                                        name: _clientData?['firstName'] ?? '',
-                                        email:
-                                            _clientData?['contactEmail'] ?? '',
-                                        note: note['note'] ?? '',
-                                        propertyId: note['propertyId'] ?? '',
-                                        read: note['read'] ?? false,
-                                        timestamp: formattedTime,
-                                        profilePicUrl:
-                                            _clientData?['profilePicUrl'],
-                                        onPropertyTap: () => _openPropertyDetails(note['propertyId']),
-                                        onDelete: () async {
-                                          final realtorId = FirebaseAuth.instance.currentUser?.uid;
-                                          final noteId = note['id']; // Make sure `id` is included when loading notes
-                                          print("Deleting note with ID: $noteId");
-                                          if (noteId != null && realtorId != null) {
-                                            await FirebaseFirestore.instance
-                                                .collection('realtors')
-                                                .doc(realtorId)
-                                                .collection('notes')
-                                                .doc(noteId)
-                                                .delete();
-
-                                            setState(() {
-                                              _notes.removeWhere((n) => n['id'] == noteId);
-                                            });
-                                          }
-                                        },
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 32),
-                     DefaultTabController(
-                        length: 4,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const TabBar(
-                              labelColor: Colors.deepPurple,
-                              unselectedLabelColor: Colors.black54,
-                              tabs: [
-                                Tab(
-                                    icon: Icon(Icons.favorite_border),
-                                    text: 'Liked'),
-                                Tab(
-                                    icon: Icon(Icons.thumb_down_alt_outlined),
-                                    text: 'Disliked'),
-                                Tab(
-                                    icon: Icon(Icons.send_outlined),
-                                    text: 'Sent'),
-                                Tab(icon: Icon(Icons.check), text: 'Matched')
+                            ExpansionPanel(
+                              isExpanded: _notesExpanded,
+                              canTapOnHeader: true,
+                              headerBuilder: (context, isExpanded) {
+                                return ListTile(
+                                  title: const Text("Notes",
+                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                );
+                              },
+                              body: _notes.isEmpty
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Text('No notes yet.'),
+                                    )
+                                  : Column(
+                                      children: _notes.map((note) {
+                                        final ts = (note['timestamp'] as Timestamp?)
+                                            ?.toDate();
+                                        final formattedTime = ts != null
+                                            ? '${ts.month}/${ts.day}/${ts.year} ${ts.hour}:${ts.minute.toString().padLeft(2, '0')}'
+                                            : 'N/A';
+
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 4),
+                                          child: NoteCard(
+                                            name: _clientData?['firstName'] ?? '',
+                                            email:
+                                                _clientData?['contactEmail'] ?? '',
+                                            note: note['note'] ?? '',
+                                            propertyId: note['propertyId'] ?? '',
+                                            read: note['read'] ?? false,
+                                            timestamp: formattedTime,
+                                            profilePicUrl:
+                                                _clientData?['profilePicUrl'],
+                                            onPropertyTap: () => _openPropertyDetails(note['propertyId']),
+                                            onDelete: () async {
+                                              final realtorId = widget.auth.currentUser?.uid;
+                                              final noteId = note['id']; // Make sure `id` is included when loading notes
+                                              print("Deleting note with ID: $noteId");
+                                              if (noteId != null && realtorId != null) {
+                                                await widget.firestore
+                                                    .collection('realtors')
+                                                    .doc(realtorId)
+                                                    .collection('notes')
+                                                    .doc(noteId)
+                                                    .delete();
+
+                                                setState(() {
+                                                  _notes.removeWhere((n) => n['id'] == noteId);
+                                                });
+                                              }
+                                            },
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                            ),
+                          ],
+                        ))),
+                        if (canViewInteractions) ...[
+                          const Divider(height: 32),
+                          DefaultTabController(
+                            length: 4,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const TabBar(
+                                  tabs: [
+                                    Tab(icon: Icon(Icons.favorite_border), text: 'Liked'),
+                                    Tab(icon: Icon(Icons.thumb_down_alt_outlined), text: 'Disliked'),
+                                    Tab(icon: Icon(Icons.send_outlined), text: 'Sent'),
+                                    Tab(icon: Icon(Icons.check), text: 'Matched'),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  height: 400,
+                                  child: TabBarView(
+                                    children: [
+                                      _buildScrollableTabContent('Liked', Icons.favorite_border, _groupedDecisions['liked']!),
+                                      _buildScrollableTabContent('Disliked', Icons.thumb_down_alt_outlined, _groupedDecisions['disliked']!),
+                                      _buildScrollableTabContent('Sent', Icons.send_outlined, _groupedDecisions['sent']!),
+                                      _buildScrollableTabContent('Matched', Icons.check, _groupedDecisions['sentAndLiked']!),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-
-                           SizedBox(
-                             height: 400, // Or any reasonable height
-                             child: TabBarView(
-                                    children: [
-                                      _buildScrollableTabContent(
-                                          'Liked',
-                                          Icons.favorite_border,
-                                          _groupedDecisions['liked']!),
-                                      _buildScrollableTabContent(
-                                          'Disliked',
-                                          Icons.thumb_down_alt_outlined,
-                                          _groupedDecisions['disliked']!),
-                                      _buildScrollableTabContent(
-                                          'Sent',
-                                          Icons.send_outlined,
-                                          _groupedDecisions['sent']!),
-                                      _buildScrollableTabContent(
-                                          'properties that you sent and client liked',
-                                          Icons.check,
-                                          _groupedDecisions['sentAndLiked']!),
-                                    ],
-
-                                ),
-                               )],
-                        ),
-                      ),
-
-                  ],
+                          ),
+                        ]
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
-        ));
+        ),
+      ),
+    );
   }
 
   Future<void> _openPropertyDetails(String propertyId) async {
-    final doc = await FirebaseFirestore.instance.collection('listings').doc(propertyId).get();
+    final doc = await widget.firestore.collection('listings').doc(propertyId).get();
 
     if (!doc.exists) {
       print("Property not found");
@@ -531,7 +663,6 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     );
   }
 
-
   Widget _buildScrollableTabContent(
       String title, IconData icon, List<Map<String, dynamic>> items) {
     return SingleChildScrollView(
@@ -541,12 +672,12 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
   }
 
   void _showManageTagsDialog() async {
-    final realtorId = FirebaseAuth.instance.currentUser?.uid;
+    final realtorId = widget.auth.currentUser?.uid;
     final clientUid = widget.clientUid;
 
     if (realtorId == null) return;
 
-    final tagsSnapshot = await FirebaseFirestore.instance
+    final tagsSnapshot = await widget.firestore
         .collection('realtors')
         .doc(realtorId)
         .collection('tags')
@@ -604,7 +735,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
                           title: Text(tagDoc['name']),
                           value: isAssigned,
                           onChanged: (checked) async {
-                            final docRef = FirebaseFirestore.instance
+                            final docRef = widget.firestore
                                 .collection('realtors')
                                 .doc(realtorId)
                                 .collection('tags')
@@ -644,5 +775,4 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
       },
     );
   }
-
 }

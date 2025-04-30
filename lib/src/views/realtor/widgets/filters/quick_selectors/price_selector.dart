@@ -28,17 +28,16 @@ class PriceSelector extends StatelessWidget {
       link: link,
       child: SizedBox(
         width: 160,
-        child: ElevatedButton(
+        child: OutlinedButton(
           onPressed: () => _showOverlay(context),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.deepPurple,
+          style: OutlinedButton.styleFrom(
             elevation: 2,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 22),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: const BorderSide(color: Colors.deepPurple),
             ),
+            side: BorderSide.none, // Remove the border
           ),
           child: Row(
             children: [
@@ -95,7 +94,6 @@ class PriceSelector extends StatelessWidget {
                   builder: (context, setState) => Container(
                     padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.deepPurple.withOpacity(0.3)),
                     ),

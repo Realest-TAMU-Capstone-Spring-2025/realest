@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 class PitiCalculator extends StatefulWidget {
   const PitiCalculator({Key? key}) : super(key: key);
 
-
   @override
   State<PitiCalculator> createState() => _PitiCalculatorState();
 }
@@ -18,7 +17,6 @@ class _PitiCalculatorState extends State<PitiCalculator> {
   final propertyTaxController = TextEditingController();
   final insuranceController = TextEditingController();
   final homePriceController = TextEditingController();
-
 
   double _monthlyPayment = 0.0;
 
@@ -80,7 +78,7 @@ class _PitiCalculatorState extends State<PitiCalculator> {
               const SizedBox(height: 24),
               Center(
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.calculate),
+                  icon: const Icon(Icons.calculate, color: Colors.white),
                   label: const Text("Calculate"),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),

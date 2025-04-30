@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 
 class UserProvider extends ChangeNotifier {
+  final FirebaseAuth auth;
+  final FirebaseFirestore firestore;
   bool isLoading = false;
   String? _userRole;
   String? get userRole => _userRole;
@@ -36,8 +38,11 @@ class UserProvider extends ChangeNotifier {
   String? get status => _status;
   String? _createdAt;
   String? get createdAt => _createdAt;
-  String? _tempPassword;
-  String? get tempPassword => _tempPassword;
+
+   UserProvider({
+    required this.auth,
+    required this.firestore,
+  });
 
   set uid(String? value) {
     _uid = value;
@@ -46,6 +51,11 @@ class UserProvider extends ChangeNotifier {
 
   set userRole(String? value) {
     _userRole = value;
+    notifyListeners();
+  }
+
+  set profilePic(String? value) {
+    _profilePicUrl = value;
     notifyListeners();
   }
 
@@ -89,7 +99,6 @@ class UserProvider extends ChangeNotifier {
     await prefs.setString('realtorId', _realtorId ?? '');
     await prefs.setString('status', _status ?? '');
     await prefs.setString('createdAt', _createdAt ?? '');
-    await prefs.setString('tempPassword', _tempPassword ?? '');
     if(_userRole == 'realtor') {
       await prefs.setStringList('clients', _clients.map((client) => client['id'] as String).toList());
       await prefs.setStringList('tags', _tags.map((tag) => tag['id'] as String).toList());
@@ -123,9 +132,9 @@ class UserProvider extends ChangeNotifier {
     try {
       isLoading = true;
 
-      User? user = FirebaseAuth.instance.currentUser;
+      User? user = auth.currentUser;
       if (user != null) {
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+        DocumentSnapshot userDoc = await firestore
             .collection('users')
             .doc(user.uid)
             .get();
@@ -135,6 +144,13 @@ class UserProvider extends ChangeNotifier {
           _contactEmail = data['email'];
           _userRole = data['role'];
           _uid = user.uid;
+          // _firstName = data['firstName'];
+          // _lastName = data['lastName'];
+
+          // // Debug log for userRole and other properties
+          // print('Fetched userRole: $_userRole');
+          // print('Fetched firstName: $_firstName');
+          // print('Fetched lastName: $_lastName');
 
           String userRole = data['role'];
           if (userRole == 'realtor') {
@@ -161,7 +177,7 @@ class UserProvider extends ChangeNotifier {
 
 
   Future<void> _fetchRealtorData(String uid) async {
-    DocumentSnapshot realtorDoc = await FirebaseFirestore.instance
+    DocumentSnapshot realtorDoc = await firestore
         .collection('realtors')
         .doc(uid)
         .get();
@@ -175,12 +191,11 @@ class UserProvider extends ChangeNotifier {
       _agencyName = data['agencyName'];
       _licenseNumber = data['licenseNumber'];
       _address = data['address'];
-      _invitationCode = data['invitationCode'];
     }
   }
 
   Future<void> _fetchInvestorData(String uid) async {
-    DocumentSnapshot investorDoc = await FirebaseFirestore.instance
+    DocumentSnapshot investorDoc = await firestore
         .collection('investors')
         .doc(uid)
         .get();
@@ -195,12 +210,11 @@ class UserProvider extends ChangeNotifier {
       _investorNotes = data['notes'];
       _realtorId = data['realtorId'];
       _status = data['status'];
-      _tempPassword = data['tempPassword'];
     }
   }
 
   Future<void> _fetchClients(String realtorId) async {
-    QuerySnapshot investorSnapshot = await FirebaseFirestore.instance
+    QuerySnapshot investorSnapshot = await firestore
         .collection('investors')
         .where('realtorId', isEqualTo: realtorId)
         .where('status', isEqualTo: 'client')
@@ -218,7 +232,6 @@ class UserProvider extends ChangeNotifier {
         'notes': doc['notes'] ?? '',
         'realtorId': doc['realtorId'] ?? '',
         'status': doc['status'] ?? '',
-        'tempPassword': doc['tempPassword'] ?? '',
       };
     }).toList();
 
@@ -226,7 +239,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchTags(String realtorId) async {
-    QuerySnapshot tagSnapshot = await FirebaseFirestore.instance
+    QuerySnapshot tagSnapshot = await firestore
         .collection('realtors')
         .doc(realtorId)
         .collection('tags')
@@ -266,7 +279,6 @@ class UserProvider extends ChangeNotifier {
     _realtorId = null;
     _status = null;
     _createdAt = null;
-    _tempPassword = null;
 
     _clients.clear();
     _tags.clear();

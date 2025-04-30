@@ -100,7 +100,7 @@ class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
               const SizedBox(height: 24),
               Center(
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.calculate),
+                  icon: const Icon(Icons.calculate, color: Colors.white),
                   label: const Text("Calculate"),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
@@ -116,7 +116,7 @@ class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
               if (_targetPrice == 0)
                 Center(
                   child: Text(
-                    "Please enter valid values to calculate affordability.",
+                    "Please enter valid numbers in all fields", // Updated to match test expectation
                     style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                   ),
                 ),
@@ -200,6 +200,7 @@ class _AffordabilityCalculatorState extends State<AffordabilityCalculator> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextField(
+        key: Key(label.replaceAll(' ', '') + 'Field'), // Added unique key for each field
         controller: controller,
         keyboardType: TextInputType.text,
         decoration: InputDecoration(

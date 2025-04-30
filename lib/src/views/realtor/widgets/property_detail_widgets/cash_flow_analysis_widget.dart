@@ -23,6 +23,12 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
   String? realtorId;
   Map<String, dynamic> cashflowData = {};
   Map<String, dynamic> cashFlowDefaults = {}; // ✅ should be here
+  Map<String, dynamic>? previousValuesUsed;
+  Map<String, dynamic> baselineData = {};
+  Map<String, dynamic> personalData = {};
+  bool _showPersonalEstimate = true;
+  Map<String, dynamic> fromRealtorValues = {};
+
 
 
   @override
@@ -32,30 +38,51 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
   }
 
 
+  Future<Map<String, dynamic>> _getInvestorLoanDefaults() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return {};
+
+    final doc = await FirebaseFirestore.instance.collection('investors').doc(userId).get();
+    final defaults = doc.data()?['cashFlowDefaults'] ?? {};
+
+    return {
+      'downPayment': defaults['downPayment'] ?? 0.2,
+      'interestRate': defaults['interestRate'] ?? 0.06,
+      'loanTerm': defaults['loanTerm'] ?? 30,
+    };
+  }
+
+  Map<String, double> _getExpenseBreakdown(Map<String, dynamic> data) {
+    return {
+      'Principal': (data['principal'] ?? 0).toDouble(),
+      'Interest': (data['interest'] ?? 0).toDouble(),
+      'Property Tax': (data['tax'] ?? 0).toDouble(),
+      'Insurance': (data['insurance'] ?? 0).toDouble(),
+      'Maintenance': (data['maintenance'] ?? 0).toDouble(),
+      'HOA Fee': (data['hoaFee'] ?? 0).toDouble(),
+      'Vacancy Loss': (data['vacancy'] ?? 0).toDouble(),
+      'Management Fee': (data['managementFee'] ?? 0).toDouble(),
+      'Other Costs': (data['otherCosts'] ?? 0).toDouble(),
+    };
+  }
+
+
   Future<void> _fetchData() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
 
     if (widget.isRealtor) {
-      // Realtor accesses their own document
       realtorId = userId;
     } else {
-      // Investor – get their document to find assigned realtor
-      final investorDoc = await FirebaseFirestore.instance
-          .collection('investors')
-          .doc(userId)
-          .get();
-
+      final investorDoc = await FirebaseFirestore.instance.collection('investors').doc(userId).get();
       final investorData = investorDoc.data();
       realtorId = investorData?['realtorId'];
-
       if (realtorId == null) {
         debugPrint('❌ Could not find assigned realtor for investor $userId');
         return;
       }
     }
 
-    // Now fetch the correct cashflow_analysis doc
     final doc = await FirebaseFirestore.instance
         .collection('realtors')
         .doc(realtorId)
@@ -63,14 +90,77 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
         .doc(widget.listingId)
         .get();
 
-    if (doc.exists) {
-      setState(() {
-        cashflowData = doc.data()!;
-        _isLoading = false;
-      });
-    } else {
+    if (!doc.exists) {
       debugPrint('❌ Cash flow document not found for listing ${widget.listingId}');
+      return;
     }
+
+    final raw = doc.data()!;
+    baselineData = Map<String, dynamic>.from(raw);
+    cashflowData = Map<String, dynamic>.from(raw); // default to baseline
+
+    if (!widget.isRealtor) {
+      final investorDefaults = await _getInvestorLoanDefaults();
+      final purchasePrice = (raw['purchasePrice'] ?? 0).toDouble();
+      final rent = (raw['rent'] ?? 0).toDouble();
+      final dp = investorDefaults['downPayment'];
+      final ir = investorDefaults['interestRate'];
+      final term = investorDefaults['loanTerm'];
+
+      final downPayment = dp * purchasePrice;
+      final loanAmount = purchasePrice - downPayment;
+      final monthlyInterest = ir / 12;
+      final months = term * 12;
+      final principal = loanAmount / months;
+      final monthlyPayment = loanAmount * monthlyInterest / (1 - (1 / pow(1 + monthlyInterest, months)));
+      final interest = monthlyPayment - principal;
+
+      final hoaFee = (raw['hoaFee'] ?? 0).toDouble();
+      final tax = (raw['tax'] ?? 0).toDouble();
+      final insurance = (raw['insurance'] ?? 0).toDouble();
+      final maintenance = (raw['maintenance'] ?? 0).toDouble();
+      final otherCosts = (raw['otherCosts'] ?? 0).toDouble();
+      final vacancy = (raw['vacancy'] ?? 0).toDouble();
+      final managementFee = (raw['managementFee'] ?? 0).toDouble();
+
+      final expenses = monthlyPayment + tax + insurance + maintenance + otherCosts + hoaFee + vacancy + managementFee;
+      final noi = rent - expenses;
+
+      personalData = {
+        ...raw,
+        'downPayment': downPayment,
+        'loanAmount': loanAmount,
+        'monthlyInterest': monthlyInterest,
+        'monthlyPayment': monthlyPayment,
+        'principal': principal,
+        'interest': interest,
+        'months': months,
+        'netOperatingIncome': noi,
+        'valuesUsed': {
+          ...?raw['valuesUsed'],
+          'downPayment': dp,
+          'interestRate': ir,
+          'loanTerm': term,
+        },
+      };
+
+      final originalValues = Map<String, dynamic>.from(raw['valuesUsed'] ?? {});
+      originalValues.removeWhere((key, _) =>
+      key == 'downPayment' || key == 'interestRate' || key == 'loanTerm');
+
+      originalValues['customIncome'] = rent;
+
+      fromRealtorValues= originalValues;
+
+      // Apply toggle
+      if (_showPersonalEstimate) {
+        cashflowData = Map<String, dynamic>.from(personalData);
+      }
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override
@@ -91,23 +181,14 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
 
     final isPositive = cashFlow >= 0;
 
-    final breakdown = {
-      'Principal': cashflowData['principal'] ?? 0,
-      'Interest': cashflowData['interest'] ?? 0,
-      'Property Tax': cashflowData['tax'] ?? 0,
-      'Insurance': cashflowData['insurance'] ?? 0,
-      'Maintenance': cashflowData['maintenance'] ?? 0,
-      'HOA Fee': cashflowData['hoaFee'] ?? 0,
-      'Vacancy Loss': cashflowData['vacancy'] ?? 0,
-      'Management Fee': 0.0, // optional
-      'Other Costs': cashflowData['otherCosts'] ?? 0,
-    };
+    final breakdown = _getExpenseBreakdown(cashflowData);
+
 
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.05),
+        color: theme.colorScheme.onSurface.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
             color: isPositive ? Colors.green : Colors.red, width: 1),
@@ -115,6 +196,24 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (!widget.isRealtor)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("Baseline"),
+                Switch(
+                  value: _showPersonalEstimate,
+                  onChanged: (value) {
+                    setState(() {
+                      _showPersonalEstimate = value;
+                      cashflowData = value ? personalData : baselineData;
+                    });
+                  },
+                ),
+                const Text("Personalized"),
+              ],
+            ),
+
           // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -141,23 +240,34 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
           Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 600),
-              // Adjust as needed
               child: Wrap(
                 spacing: 12,
                 runSpacing: 12,
                 alignment: WrapAlignment.center,
                 children: [
                   _valueCard(
-                      "Income", cashflowData['rent']!, Colors.green, currency),
-                  _valueCard("Expenses",
-                      cashflowData['rent'] - cashflowData['netOperatingIncome'],
-                      Colors.red, currency),
-                  _valueCard("Cash Flow", cashflowData['netOperatingIncome']!,
-                      isPositive ? Colors.green : Colors.red, currency),
+                    "Income",
+                    (cashflowData['rent'] as num).toDouble(),
+                    Colors.green,
+                    currency,
+                  ),
+                  _valueCard(
+                    "Expenses",
+                    ((cashflowData['rent'] as num) - (cashflowData['netOperatingIncome'] as num)).toDouble(),
+                    Colors.red,
+                    currency,
+                  ),
+                  _valueCard(
+                    "Cash Flow",
+                    (cashflowData['netOperatingIncome'] as num).toDouble(),
+                    isPositive ? Colors.green : Colors.red,
+                    currency,
+                  ),
                 ],
               ),
             ),
           ),
+
 
           const SizedBox(height: 10),
           // Breakdown section
@@ -166,12 +276,8 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
               style: theme.textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-
-// Pie chart
           _buildExpenseBar(breakdown),
           const SizedBox(height: 20),
-
-
           Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
@@ -181,11 +287,178 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
               ),
             ),
           ),
+          const SizedBox(height: 10),
 
-
+          if (!widget.isRealtor)
+            Center(
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.send, color: Colors.white), // explicitly white icon
+                label: const Text("Suggest Change to Realtor"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: _showSuggestionReviewDialog,
+              ),
+            )
         ],
       ),
     );
+  }
+
+  void _showSuggestionReviewDialog() {
+    final usedValues = fromRealtorValues;
+    final newValues = cashFlowDefaults;
+    final differences = <String, dynamic>{};
+
+    print("From realtor: $usedValues");
+    print("Updated: $newValues");
+
+    for (final key in newValues.keys) {
+      final newVal = newValues[key];
+
+      // Special case: customIncome comparison
+      if (key == 'customIncome') {
+        final oldVal = usedValues.containsKey('customIncome')
+            ? usedValues['customIncome']
+            : cashflowData['rent'];
+
+        if (oldVal is num && newVal is num && (oldVal - newVal).abs() < 0.1) {
+          continue; // skip if values are same
+        }
+        if (oldVal != newVal) {
+          differences[key] = newVal;
+        }
+        continue;
+      }
+
+      final oldVal = usedValues[key];
+      if (oldVal == null && newVal == null) continue;
+
+      if (oldVal is num && newVal is num) {
+        if ((oldVal - newVal).abs() > 0.1) {
+          differences[key] = newVal;
+        }
+      } else if (oldVal != newVal) {
+        differences[key] = newVal;
+      }
+    }
+
+
+    final noteController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600), // ✅ Proper max width
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Confirm Suggestion",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  "Changes You Made",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: differences.isNotEmpty
+                      ? Column(
+                    children: differences.entries.map((entry) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                entry.key,
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                            Text(
+                              entry.value.toString(),
+                              style: const TextStyle(
+                                color: Colors.deepPurple,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  )
+                      : const Text("You made no changes"),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: noteController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: "Add a note for your realtor (optional)",
+                    hintText: "e.g. I think this HOA is too high",
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Cancel"),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final investorId = FirebaseAuth.instance.currentUser?.uid;
+                        if (investorId != null && realtorId != null) {
+                          await FirebaseFirestore.instance
+                              .collection('realtors')
+                              .doc(realtorId)
+                              .collection('cashflow_suggestions')
+                              .add({
+                            'investorId': investorId,
+                            'listingId': widget.listingId,
+                            'suggestedValues': differences,
+                            'note': noteController.text.trim(),
+                            'timestamp': FieldValue.serverTimestamp(),
+                          });
+
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Suggestion sent to your realtor.")),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text("Send Suggestion"),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
   }
 
   List<Widget> _buildBreakdownList(Map<String, dynamic> rawBreakdown,
@@ -246,7 +519,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
 
   Widget _buildExpenseBar(Map<String, dynamic> breakdown) {
     final total = breakdown.values.fold(
-        0.0, (sum, v) => sum + (v as num).toDouble());
+        0.0, (double sum, v) => sum + ((v as num?)?.toDouble() ?? 0.0));
 
     final colors = {
       'Principal': Colors.blue,
@@ -341,14 +614,17 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
       'maintenance': usedValues['maintenance'] ?? 0.01,
       'managementFee': usedValues['managementFee'] ?? 0.0,
       'vacancyRate': usedValues['vacancyRate'] ?? 0.05,
-      'defaultHOA': usedValues['hoaFee'] ?? 0.0,
+      'hoaFee': usedValues['hoaFee'] ?? 0.0,
       'otherCosts': usedValues['otherCosts'] ?? 0.0,
-      'customIncome': (cashflowData['rent'] ?? 0).toDouble(),
-    };
+      'customIncome': (cashFlowDefaults['customIncome'] ??
+          usedValues['customIncome'] ??
+          cashflowData['rent'] ?? 0).toDouble(),
 
+    };
     showDialog(
       context: context,
       builder: (context) => CashFlowEditDialog(
+        isRealtor: widget.isRealtor,
         initialDefaults: initialDefaults,
         purchasePrice: (cashflowData['purchasePrice'] ?? 0).toDouble(),
         grossMonthlyRent: (cashflowData['rent'] ?? 0).toDouble(),
@@ -359,12 +635,15 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
               cashFlowDefaults = newDefaults;
             });
 
-            final double purchasePrice = cashflowData['purchasePrice'];
-            final rent = (newDefaults['customIncome'] ?? 0).toDouble();
-            final double downPayment = newDefaults['downPayment'] * purchasePrice;
+
+            final double purchasePrice = (cashflowData['purchasePrice'] ?? 0).toDouble();
+            final used = cashflowData['valuesUsed'] ?? {};
+
+            final double rent = (newDefaults['customIncome'] ?? 0).toDouble();
+            final double downPayment = ((used['downPayment'] ?? 0) as num).toDouble() * purchasePrice;
             final double loanAmount = purchasePrice - downPayment;
-            final double interestRate = newDefaults['interestRate'];
-            final int loanTerm = newDefaults['loanTerm'];
+            final double interestRate = ((used['interestRate'] ?? 0) as num).toDouble();
+            final int loanTerm = ((used['loanTerm'] ?? 0) as num).toInt();
             final double monthlyInterest = interestRate / 12;
             final int months = loanTerm * 12;
 
@@ -372,13 +651,14 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
             final double monthlyPayment = loanAmount * monthlyInterest / (1 - (1 / pow(1 + monthlyInterest, months)));
             final double interest = monthlyPayment - principal;
 
-            final double hoaFee = newDefaults['hoaFee'];
-            final double propertyTax = newDefaults['propertyTax'] * purchasePrice / 12;
-            final double vacancy = newDefaults['vacancyRate'] * rent;
-            final double insurance = newDefaults['insurance'] * purchasePrice / 12;
-            final double maintenance = newDefaults['maintenance'] * purchasePrice / 12;
-            final double otherCosts = newDefaults['otherCosts'] / 12;
-            final double managementFee = newDefaults['managementFee'] * rent;
+            final double hoaFee = ((newDefaults['hoaFee'] ?? 0) as num).toDouble();
+            final double propertyTax = ((newDefaults['propertyTax'] ?? 0) as num).toDouble() * purchasePrice / 12;
+            final double vacancy = ((newDefaults['vacancyRate'] ?? 0) as num).toDouble() * rent;
+            final double insurance = ((newDefaults['insurance'] ?? 0) as num).toDouble() * purchasePrice / 12;
+            final double maintenance = ((newDefaults['maintenance'] ?? 0) as num).toDouble() * purchasePrice / 12;
+            final double otherCosts = ((newDefaults['otherCosts'] ?? 0) as num).toDouble() / 12;
+            final double managementFee = ((newDefaults['managementFee'] ?? 0) as num).toDouble() * rent;
+
 
             final expenses = monthlyPayment + vacancy + propertyTax + insurance + maintenance + otherCosts + hoaFee + managementFee;
             final double netOperatingIncome = rent - expenses;
@@ -406,25 +686,37 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
               'valuesUsed': newDefaults,
             };
 
+
             if (widget.isRealtor) {
-              // Only save to Firestore if they’re a realtor
-              print ("Saving data to Firestore: $data");
+              // Save to Firestore if realtor
               await FirebaseFirestore.instance
                   .collection('realtors')
                   .doc(realtorId)
                   .collection('cashflow_analysis')
                   .doc(widget.listingId)
                   .set(data);
+
+              await _fetchData(); // refresh
             } else {
-              // Just update locally for preview
-              print("Updating local state only: $data");
+              print("We should not be here");
+              // Save edits locally for investors
+              previousValuesUsed = Map<String, dynamic>.from(cashflowData['valuesUsed'] ?? {});
               setState(() {
-                cashflowData = data;
+                personalData = data;
+                if (_showPersonalEstimate) {
+                  cashflowData = Map<String, dynamic>.from(personalData);
+                }
+                // ✅ persist new valuesUsed locally
+                cashflowData['valuesUsed'] = {
+                  ...used,
+                  ...newDefaults,
+                };
               });
             }
-
-            await _fetchData();
           }
       ),
     );
+
+
+
   }}

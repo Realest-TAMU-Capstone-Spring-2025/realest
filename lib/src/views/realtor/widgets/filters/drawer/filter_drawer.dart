@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../../main.dart';
 import '../../../../../models/property_filter.dart';
 import 'min_max_selector.dart';
 import 'min_max_text_input_selector.dart';
@@ -23,7 +24,6 @@ void showFilterDrawer({
             topLeft: Radius.circular(16),
             bottomLeft: Radius.circular(16),
           ),
-          color: Colors.white,
           child: FilterDrawerContent(
             filters: filters,
             onApply: onApply,
@@ -77,6 +77,7 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
   bool? isNewConstruction;
   int? tempMaxFloors;
   int? tempMaxDaysOnMarket;
+  int? tempMaxHOAFee;
 
   @override
   void initState() {
@@ -96,12 +97,16 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
     isNewConstruction = f.isNewConstruction;
     tempMaxFloors = f.maxFloors;
     tempMaxDaysOnMarket = f.maxDaysOnMarket;
+    tempMaxHOAFee = f.maxHOAFee;
   }
 
   final Set<String> hoveredStatus = {};
 
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       width: 400,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
@@ -173,7 +178,6 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
                       });
                     },
                   ),
-
                   const SizedBox(height: 16),
                   MinMaxSelector(
                     label: "Lot Size",
@@ -189,7 +193,6 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
                       });
                     },
                   ),
-
                   const SizedBox(height: 16),
                   MinMaxYearInput(
                     minYear: tempMinYearBuilt,
@@ -240,14 +243,14 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
                               color: isSelected
                                   ? Colors.deepPurple.shade100
                                   : isHovered
-                                  ? Colors.grey.shade300
-                                  : Colors.grey.shade200,
+                                  ? theme.colorScheme.onTertiary
+                                  : theme.colorScheme.onTertiaryFixedVariant,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               entry.value,
                               style: TextStyle(
-                                color: isSelected ? Colors.deepPurple : Colors.black87,
+                                color: isSelected ? Colors.deepPurple : themeModeNotifier.value == ThemeMode.dark ? Colors.white : Colors.black,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -279,6 +282,29 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
                     )),
                   ),
                   const SizedBox(height: 16),
+                  const Text("Max HOA Fee", style: TextStyle(fontWeight: FontWeight.bold)),
+                  DropdownButtonFormField<int>(
+                    value: tempMaxHOAFee,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    hint: const Text("Any"),
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text("Any")),
+                      DropdownMenuItem(value: 20, child: Text("\$20")),
+                      DropdownMenuItem(value: 50, child: Text("\$50")),
+                      DropdownMenuItem(value: 100, child: Text("\$100")),
+                      DropdownMenuItem(value: 200, child: Text("\$200")),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        tempMaxHOAFee = val;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
                   const Text("Days on MLS", style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<int>(
@@ -307,9 +333,7 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
               ),
             ),
           ),
-
           const SizedBox(height: 16),
-
           // Bottom fixed Apply/Cancel button row
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -338,6 +362,7 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
                       isNewConstruction: isNewConstruction,
                       maxFloors: tempMaxFloors,
                       maxDaysOnMarket: tempMaxDaysOnMarket,
+                      maxHOAFee: tempMaxHOAFee,
                     ),
                   );
                 },
@@ -353,20 +378,6 @@ class _FilterDrawerContentState extends State<FilterDrawerContent> {
       ),
     );
   }
-
-  Widget _buildDaysChip({required String label, required int value}) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: tempMaxDaysOnMarket == value,
-      selectedColor: Colors.deepPurple.shade100,
-      onSelected: (_) {
-        setState(() {
-          tempMaxDaysOnMarket = value;
-        });
-      },
-    );
-  }
-
 }
 
 

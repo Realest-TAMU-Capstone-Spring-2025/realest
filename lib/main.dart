@@ -1,10 +1,13 @@
+import 'dart:io' show Platform; // For platform detection
+import 'package:flutter/foundation.dart' show kIsWeb; // For web detection
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:realest/firebase_options.dart';
-import 'package:realest/src/views/home/overview/overview_page.dart';
+import 'package:realest/src/views/home/desktop/home_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Views related to the investor
@@ -26,25 +29,37 @@ import 'package:realest/src/views/realtor/realtor_settings.dart';
 // Common views
 import 'package:realest/src/views/custom_login_page.dart';
 import 'package:realest/src/views/navbar.dart'; // Sidebar navigation
+import 'package:realest/src/views/home/mobile_home_page.dart';
 
 // Provider and user-related imports
-import 'user_provider.dart';
+import 'package:realest/user_provider.dart';
 
-final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.light);
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.dark);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase with platform-specific options
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Load environment variables from .env file
   await dotenv.load(fileName: ".env");
-  await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+
+  // Set Firebase Auth persistence only on web platforms
+  if (kIsWeb) {
+    await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+  }
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (context) => UserProvider()..initializeUser(),
+          create: (context) => UserProvider(
+            auth: FirebaseAuth.instance,
+            firestore: FirebaseFirestore.instance,
+          )..initializeUser(),
         ),
       ],
       child: const MyApp(),
@@ -67,17 +82,14 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     userProvider = Provider.of<UserProvider>(context, listen: false);
-    _router = _createRouter(
-      () {
-        setState(() {
-          themeModeNotifier.value = themeModeNotifier.value == ThemeMode.light
-              ? ThemeMode.dark
-              : ThemeMode.light;
-        });
-      },
-      themeModeNotifier.value,
-    );
+    _router = _createRouter(_toggleTheme);
   }
+
+  void _toggleTheme() {
+    themeModeNotifier.value =
+    themeModeNotifier.value == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +106,7 @@ class _MyAppState extends State<MyApp> {
       },
     );
   }
+
   void _showAccessDenied(BuildContext context, String message) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -102,26 +115,32 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  GoRouter _createRouter(VoidCallback toggleTheme, ThemeMode themeMode) {
+
+  GoRouter _createRouter(VoidCallback toggleTheme) {
+
+    String initialRoute = '/';
+    if (!kIsWeb) {
+      if (Platform.isAndroid || Platform.isIOS) {
+        initialRoute = '/mobileHome';
+      }
+    }
+
     return GoRouter(
-      initialLocation: '/',
+      initialLocation: initialRoute,
       redirect: (context, state) {
-        if(userProvider.isLoading) return null;
+        if (userProvider.isLoading) return null;
         final isLoggedIn = userProvider.userRole != null;
         final currentPath = state.uri.path;
 
         if (currentPath == '/') return null;
 
-        // Redirect logic for '/login'
-        if (currentPath == '/login' && isLoggedIn){
+        if (currentPath == '/login' && isLoggedIn) {
           _showAccessDenied(context, "You are already logged in");
           return '/home';
         }
 
-        // Protected routes logic
         final protectedRoutes = [
           '/home',
-          '/setup',
           '/settings',
           '/calculators',
           '/saved',
@@ -134,10 +153,9 @@ class _MyAppState extends State<MyApp> {
         if (protectedRoutes.contains(currentPath)) {
           if (!isLoggedIn) {
             _showAccessDenied(context, "You need to log in to access this page");
-            return '/login'; // Redirect unauthenticated users to login
+            return '/login';
           }
 
-          // Role-specific route protection
           if (currentPath == '/saved' && userProvider.userRole != 'investor') {
             _showAccessDenied(context, 'Saved properties only available to investors');
             return '/home';
@@ -155,7 +173,7 @@ class _MyAppState extends State<MyApp> {
             return '/home';
           }
         }
-        return null; // No redirection needed
+        return null;
       },
       routes: [
         GoRoute(
@@ -163,13 +181,26 @@ class _MyAppState extends State<MyApp> {
           builder: (context, state) => const HomePage(),
         ),
         GoRoute(
+          path: '/mobileHome',
+          builder: (context, state) => const MobileHomePage(),
+        ),
+        GoRoute(
           path: '/login',
           builder: (context, state) => const CustomLoginPage(),
+        ),
+        GoRoute(
+          path: '/setup',
+          builder: (context, state) {
+            final userProvider = Provider.of<UserProvider>(context);
+            return userProvider.userRole == 'investor'
+                ? const InvestorSetupPage()
+                : const RealtorSetupPage();
+          },
         ),
         ShellRoute(
           builder: (context, state, child) => MainLayout(
             toggleTheme: toggleTheme,
-            themeMode: themeMode,
+            themeMode: themeModeNotifier.value,
             child: child,
           ),
           routes: [
@@ -180,18 +211,9 @@ class _MyAppState extends State<MyApp> {
                 return userProvider.userRole == 'investor'
                     ? const PropertySwipingView()
                     : RealtorDashboard(
-                        toggleTheme: toggleTheme,
-                        isDarkMode: themeMode == ThemeMode.dark,
-                      );
-              },
-            ),
-            GoRoute(
-              path: '/setup',
-              builder: (context, state) {
-                final userProvider = Provider.of<UserProvider>(context);
-                return userProvider.userRole == 'investor'
-                    ? const InvestorSetupPage()
-                    : const RealtorSetupPage();
+                  toggleTheme: toggleTheme,
+                  isDarkMode: themeModeNotifier.value == ThemeMode.dark,
+                );
               },
             ),
             GoRoute(
@@ -200,13 +222,13 @@ class _MyAppState extends State<MyApp> {
                 final userProvider = Provider.of<UserProvider>(context);
                 return userProvider.userRole == 'investor'
                     ? InvestorSettings(
-                        toggleTheme: toggleTheme,
-                        isDarkMode: themeMode == ThemeMode.dark,
-                      )
+                  toggleTheme: toggleTheme,
+                  isDarkMode: themeModeNotifier.value == ThemeMode.dark,
+                )
                     : RealtorSettings(
-                        toggleTheme: toggleTheme,
-                        isDarkMode: themeMode == ThemeMode.dark,
-                      );
+                  toggleTheme: toggleTheme,
+                  isDarkMode: themeModeNotifier.value == ThemeMode.dark,
+                );
               },
             ),
             GoRoute(
@@ -222,9 +244,9 @@ class _MyAppState extends State<MyApp> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Saved properties only available to investors')),
                     );
-                    context.go('/home'); // Redirect back to home
+                    context.go('/home');
                   });
-                  return const SizedBox.shrink(); // Temporary empty widget
+                  return const SizedBox.shrink();
                 }
                 return SavedProperties();
               },
@@ -238,9 +260,9 @@ class _MyAppState extends State<MyApp> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Disliked properties only available to investors')),
                     );
-                    context.go('/home'); // Redirect back to home
+                    context.go('/home');
                   });
-                  return const SizedBox.shrink(); // Temporary empty widget
+                  return const SizedBox.shrink();
                 }
                 return DislikedProperties();
               },
@@ -254,9 +276,9 @@ class _MyAppState extends State<MyApp> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Client management only available to realtors')),
                     );
-                    context.go('/home'); // Redirect back to home
+                    context.go('/home');
                   });
-                  return const SizedBox.shrink(); // Temporary empty widget
+                  return const SizedBox.shrink();
                 }
                 return const RealtorClients();
               },
@@ -287,6 +309,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
+
 class MainLayout extends StatelessWidget {
   final Widget child;
   final VoidCallback toggleTheme;
@@ -323,9 +346,12 @@ class MainLayout extends StatelessWidget {
       body: Row(
         children: [
           if (!isSmallScreen)
-            NavBar(
-              toggleTheme: toggleTheme,
-              isDarkMode: themeMode == ThemeMode.dark,
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
+              child: NavBar(
+                toggleTheme: toggleTheme,
+                isDarkMode: themeMode == ThemeMode.dark,
+              ),
             ),
           Expanded(child: child),
         ],
@@ -339,47 +365,24 @@ ThemeData _lightTheme() {
     primaryColor: Colors.black,
     scaffoldBackgroundColor: Colors.white24,
     cardColor: Colors.grey[200],
-    colorScheme: const ColorScheme.light(
+    colorScheme: ColorScheme.light(
       primary: Colors.deepPurple,
       secondary: Colors.black87,
       surface: Colors.white,
       surfaceVariant: Colors.black,
       onSurface: Colors.black,
-      onTertiary: Colors.white38,
+      onTertiary: Colors.grey[100],
+      onTertiaryFixedVariant: Colors.grey[200],
     ),
+    cardTheme: CardTheme( color: Colors.grey[200]),
     textTheme: const TextTheme(
+      headlineSmall: TextStyle(color: Colors.black),
+      headlineLarge: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+      headlineMedium: TextStyle(color: Colors.black87),
+      titleLarge: TextStyle(color: Colors.black),
+      titleMedium: TextStyle(color: Colors.black87),
       bodyLarge: TextStyle(color: Colors.black),
       bodyMedium: TextStyle(color: Colors.black87),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: Colors.grey.shade100,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      hintStyle: TextStyle(color: Colors.grey[500]),
-      labelStyle: const TextStyle(fontWeight: FontWeight.normal),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    ),
-  );
-}
-
-ThemeData _darkTheme() {
-  return ThemeData(
-    primaryColor: Colors.white,
-    scaffoldBackgroundColor: Colors.black54,
-    cardColor: Colors.grey[900],
-    colorScheme: const ColorScheme.dark(
-      primary: Colors.deepPurpleAccent,
-      secondary: Colors.white70,
-      surfaceVariant: Colors.black,
-      surface: Colors.black,
-      onSurface: Colors.white,
-    ),
-    textTheme: const TextTheme(
-      bodyLarge: TextStyle(color: Colors.white),
-      bodyMedium: TextStyle(color: Colors.white70),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -396,8 +399,91 @@ ThemeData _darkTheme() {
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.deepPurpleAccent,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.deepPurpleAccent,
+        backgroundColor: Colors.grey[100],
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        side: const BorderSide(color: Colors.deepPurpleAccent),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Colors.deepPurpleAccent),
+        ),
+      ),
+    ),
+    //expansion panel theme border round
+    expansionTileTheme: ExpansionTileThemeData(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+    ),
+    ),
+
+  );
+
+}
+
+ThemeData _darkTheme() {
+  return ThemeData(
+    primaryColor: Colors.white,
+    scaffoldBackgroundColor: const Color(0xFF1E1E1E),
+    cardColor: const Color(0xFF2C2C2C),
+    colorScheme: const ColorScheme.dark(
+      primary: const Color(0xFFCA93FF),
+      secondary: Colors.white70,
+      surface: Color(0xFF2C2C2C),
+      surfaceVariant: Color(0xFF121212),
+      onSurface: Colors.white,
+      onTertiary:  Color(0xFF3C3C3C),
+      onTertiaryFixedVariant: Color(0xFF494949),
+
+    ),
+    cardTheme: const CardTheme(color: Color(0xFF2C2C2C)),
+    textTheme: const TextTheme(
+      headlineSmall: TextStyle(color: Colors.white),
+      headlineLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      headlineMedium: TextStyle(color: Colors.white70),
+      titleLarge: TextStyle(color: Colors.white),
+      titleMedium: TextStyle(color: Colors.white70),
+      bodyLarge: TextStyle(color: Colors.white),
+      bodyMedium: TextStyle(color: Colors.white70),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: const Color(0xFF333333),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      hintStyle: TextStyle(color: Colors.grey[400]),
+      labelStyle: const TextStyle(fontWeight: FontWeight.normal, color: Colors.white),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.deepPurpleAccent,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.deepPurpleAccent,
+        backgroundColor: const Color(0xFF2C2C2C),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        side: const BorderSide(color: Colors.deepPurpleAccent),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Colors.deepPurpleAccent),
+        ),
       ),
     ),
   );

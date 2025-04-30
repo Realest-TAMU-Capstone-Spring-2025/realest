@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 class PropertyFilter {
   int? minPrice;
   int? maxPrice;
@@ -16,6 +15,7 @@ class PropertyFilter {
   bool? isNewConstruction;
   int? maxFloors;
   int? maxDaysOnMarket;
+  int? maxHOAFee;
 
   PropertyFilter({
     this.minPrice,
@@ -34,6 +34,7 @@ class PropertyFilter {
     this.isNewConstruction,
     this.maxFloors,
     this.maxDaysOnMarket,
+    this.maxHOAFee,
   });
 
   Map<String, dynamic> toMap() {
@@ -54,6 +55,7 @@ class PropertyFilter {
       'isNewConstruction': isNewConstruction,
       'maxFloors': maxFloors,
       'maxDaysOnMarket': maxDaysOnMarket,
+      'maxHOAFee': maxHOAFee,
     };
   }
 
@@ -74,6 +76,7 @@ class PropertyFilter {
     bool? isNewConstruction,
     int? maxFloors,
     int? maxDaysOnMarket,
+    int? maxHOAFee,
   }) {
     return PropertyFilter(
       minPrice: minPrice ?? this.minPrice,
@@ -92,6 +95,7 @@ class PropertyFilter {
       isNewConstruction: isNewConstruction ?? this.isNewConstruction,
       maxFloors: maxFloors ?? this.maxFloors,
       maxDaysOnMarket: maxDaysOnMarket ?? this.maxDaysOnMarket,
+      maxHOAFee: maxHOAFee ?? this.maxHOAFee,
     );
   }
 }

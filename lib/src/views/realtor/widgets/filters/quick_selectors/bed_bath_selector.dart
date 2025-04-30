@@ -25,17 +25,12 @@ class BedBathSelector extends StatelessWidget {
       link: link,
       child: SizedBox(
         width: 160,
-        child: ElevatedButton(
+        child: OutlinedButton(
           onPressed: () => _showOverlay(context),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.deepPurple,
             elevation: 2,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 22),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Colors.deepPurple),
-            ),
+            side: BorderSide.none, // Remove the border
           ),
           child: Row(
             children: [
@@ -93,7 +88,6 @@ class BedBathSelector extends StatelessWidget {
                   builder: (context, setState) => Container(
                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.deepPurple.withOpacity(0.3)),
                     ),
@@ -107,11 +101,6 @@ class BedBathSelector extends StatelessWidget {
                           isSelected: [1, 2, 3, 4, 5].map((b) => tempBeds == b).toList(),
                           onPressed: (index) => setState(() => tempBeds = [1, 2, 3, 4, 5][index]),
                           borderRadius: BorderRadius.circular(8),
-                          selectedColor: Colors.white,
-                          fillColor: Colors.deepPurple[300],
-                          color: Colors.black87,
-                          selectedBorderColor: Colors.deepPurple,
-                          borderColor: Colors.grey.shade300,
                           constraints: const BoxConstraints(minWidth: 44, minHeight: 40),
                           children: [1, 2, 3, 4, 5].map((b) => Text('$b+')).toList(),
                         ),
@@ -122,11 +111,6 @@ class BedBathSelector extends StatelessWidget {
                           isSelected: [1.0, 1.5, 2.0, 3.0, 4.0].map((b) => tempBaths == b).toList(),
                           onPressed: (index) => setState(() => tempBaths = [1.0, 1.5, 2.0, 3.0, 4.0][index]),
                           borderRadius: BorderRadius.circular(8),
-                          selectedColor: Colors.white,
-                          fillColor: Colors.deepPurple[300],
-                          color: Colors.black87,
-                          selectedBorderColor: Colors.deepPurple,
-                          borderColor: Colors.grey.shade300,
                           constraints: const BoxConstraints(minWidth: 44, minHeight: 40),
                           children: [1.0, 1.5, 2.0, 3.0, 4.0]
                               .map((b) => Text('${b.toString().replaceAll('.0', '')}+'))

@@ -44,7 +44,6 @@ Query<Map<String, dynamic>> buildFilteredQuery(PropertyFilter filters) {
   if (filters.selectedStatuses != null && filters.selectedStatuses!.isNotEmpty) {
     query = query.where('status', whereIn: filters.selectedStatuses);
   }
-  print('Selected statuses: ${filters.selectedStatuses}');
   if (filters.isNewConstruction != null) {
     query = query.where('new_construction', isEqualTo: filters.isNewConstruction);
   }
@@ -53,6 +52,9 @@ Query<Map<String, dynamic>> buildFilteredQuery(PropertyFilter filters) {
   }
   if (filters.maxDaysOnMarket != null) {
     query = query.where('days_on_mls', isLessThanOrEqualTo: filters.maxDaysOnMarket);
+  }
+  if (filters.maxHOAFee != null) {
+    query = query.where('hoa_fee', isLessThanOrEqualTo: filters.maxHOAFee);
   }
 
   return query.orderBy('days_on_mls');

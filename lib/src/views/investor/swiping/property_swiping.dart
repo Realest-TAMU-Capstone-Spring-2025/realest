@@ -1,16 +1,18 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
+import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:realest/src/views/realtor/widgets/property_card/cashflow_badge.dart';
 import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
 
 import '../../../../util/property_fetch_helpers.dart';
+import 'package:realest/user_provider.dart';
 
 class PropertySwipingView extends StatefulWidget {
   const PropertySwipingView({super.key});
@@ -21,7 +23,8 @@ class PropertySwipingView extends StatefulWidget {
 
 class _PropertySwipingViewState extends State<PropertySwipingView> {
   final CardSwiperController _controller = CardSwiperController();
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  late final FirebaseFirestore _db;
+  late final FirebaseAuth _auth;
   List<Property> _properties = [];
   List<Property> _swipedProperties = [];
   DateTime? _cardViewStartTime;
@@ -31,12 +34,17 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   bool _noMoreProperties = false;
   bool _noRealtorAssigned = true;
   bool _useRealtorDecisions = false;
+  int _realtorPropertyCount = 0;
 
   @override
   void initState() {
     super.initState();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    _auth = userProvider.auth;
+    _db = userProvider.firestore;
     _loadProperties();
   }
+
   void _startCardViewTracking(String propertyId) {
     _cardViewStartTime = DateTime.now();
     _currentPropertyId = propertyId;
@@ -48,7 +56,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     final duration = DateTime.now().difference(_cardViewStartTime!);
     if (duration.inSeconds < _longActivityThreshold) return;
 
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = _auth.currentUser?.uid;
     if (userId == null) return;
 
     try {
@@ -81,11 +89,33 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
       await _loadRealtorProperties();
     } else {
       await _loadNormalProperties();
+      await _loadRealtorPropertiesCount();
+    }
+  }
+
+  Future<void> _loadRealtorPropertiesCount() async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return;
+    try {
+      final investorDoc = await _db.collection('investors').doc(userId).get();
+      final realtorId = investorDoc.data()?['realtorId'] as String?;
+      if (realtorId == null) return;
+      final propertyCountSnapshot = await _db
+          .collection('investors')
+          .doc(userId)
+          .collection('property_interactions')
+          .where('status', isEqualTo: 'sent')
+          .get();
+      setState(() {
+        _realtorPropertyCount = propertyCountSnapshot.docs.length;
+      });
+    } catch (e) {
+      print('Error loading realtor property count: $e');
     }
   }
 
   Future<void> _loadRealtorProperties() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = _auth.currentUser?.uid;
     if (userId == null) {
       setState(() {
         _noMoreProperties = true;
@@ -117,13 +147,14 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           .map((doc) => doc['propertyId'] as String)
           .toSet();
 
-      // Try loading sent properties first
       final sentSnapshot =
           await interactionsRef.where('status', isEqualTo: 'sent').get();
       List<String> propertyIds = sentSnapshot.docs
           .where((doc) => !excludedIds.contains(doc['propertyId']))
           .map((doc) => doc['propertyId'] as String)
           .toList();
+
+      _realtorPropertyCount = propertyIds.length;
 
       if (propertyIds.isEmpty) {
         setState(() {
@@ -144,6 +175,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
       setState(() {
         _properties = properties;
+        _realtorPropertyCount = propertyIds.length;
         _noRealtorAssigned = false;
         _noMoreProperties = false;
       });
@@ -157,11 +189,10 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
   }
 
   Future<void> _loadNormalProperties() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = _auth.currentUser?.uid;
     if (userId == null) return;
 
     try {
-      // Step 1: Fetch excluded property IDs from interactions
       final interactionsSnapshot = await _db
           .collection('investors')
           .doc(userId)
@@ -172,24 +203,28 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           .map((doc) => doc['propertyId'] as String)
           .toSet();
 
-      // Step 2: Fetch recommended properties
       final listingsSnapshot = await _db
           .collection('listings')
           .where('status', isEqualTo: 'FOR_SALE')
-          .limit(50) // fetch more since you'll filter some out
+          .limit(100)
           .get();
 
       final allProperties = listingsSnapshot.docs
-          .where((doc) => !excludedIds.contains(doc.id)) // filter out excluded
+          .where((doc) => !excludedIds.contains(doc.id))
           .map((doc) => Property.fromFirestore(doc))
           .toList();
+
+      if (allProperties.isEmpty) {
+        setState(() {
+          _noMoreProperties = true;
+        });
+      }
 
       setState(() {
         _properties = allProperties;
         _noMoreProperties = allProperties.isEmpty;
       });
     } catch (e) {
-      debugPrint('Error loading recommended properties: $e');
       setState(() {
         _properties = [];
         _noMoreProperties = true;
@@ -204,8 +239,8 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     final bool isRightSwipe = direction == CardSwiperDirection.right;
     final double startX = isRightSwipe
         ? screenSize.width * 0.75
-        : screenSize.width * 0.15; // Start from the side
-    final double startY = screenSize.height * 0.8; // Start from the bottom area
+        : screenSize.width * 0.15;
+    final double startY = screenSize.height * 0.8;
 
     final overlayEntry = OverlayEntry(
       builder: (context) {
@@ -215,22 +250,22 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           builder: (context, value, child) {
             return Positioned(
               left: startX,
-              top: startY - (value * 100), // Move up by 100 pixels
+              top: startY - (value * 100),
               child: Transform.scale(
                 scale: value < 0.7
                     ? value * 1.5
-                    : (1.5 - (value - 0.7) * 4), // Bubble up and explode
+                    : (1.5 - (value - 0.7) * 4),
                 child: AnimatedOpacity(
                   opacity: value < 0.8
                       ? 1
-                      : (1 - (value - 0.8) * 5), // Fade out at the end
+                      : (1 - (value - 0.8) * 5),
                   duration: const Duration(milliseconds: 200),
                   child: isRightSwipe
                       ? const Icon(Icons.favorite,
                           color: Colors.red,
-                          size: 100) // ❤️ Heart for right swipe
+                          size: 100)
                       : Image.network(
-                          'https://emojicdn.elk.sh/❌️', //there were issues with the background of certain emojis
+                          'https://emojicdn.elk.sh/❌️',
                           width: 80,
                           height: 80,
                         ),
@@ -254,7 +289,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     await _checkAndRecordLongActivity();
 
     final property = _properties[previousIndex];
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = _auth.currentUser?.uid;
 
     if (userId == null) return false;
 
@@ -288,7 +323,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
         'realtorId': realtorId,
         'status': isLiked ? 'liked' : 'disliked',
         'timestamp': FieldValue.serverTimestamp(),
-        'sentByRealtor': (_useRealtorDecisions)? true : false,
+        'sentByRealtor': (_useRealtorDecisions) ? true : false,
         'propertyData': {
           'price': property.price,
           'address': property.address,
@@ -305,28 +340,18 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
     if (mounted) {
       setState(() {
         _swipedProperties.add(property);
-        _properties.removeAt(previousIndex); // ✅ Remove swiped property
+        _properties.removeAt(previousIndex);
         if (_properties.isEmpty) {
           _noMoreProperties = true;
+        }
+        if (_useRealtorDecisions) {
+          _realtorPropertyCount--;
         }
       });
     }
     _showSwipeAnimation(direction);
 
     return true;
-  }
-
-  Future<bool> _wasPropertyPreviouslyLiked(String propertyId) async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return false;
-
-    final doc = await _db
-        .collection('users')
-        .doc(userId)
-        .collection('decisions')
-        .doc(propertyId)
-        .get();
-    return doc.exists && doc.data()?['liked'] == true;
   }
 
   @override
@@ -338,6 +363,7 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: ToggleButtons(
@@ -353,12 +379,43 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
           borderRadius: BorderRadius.circular(8),
           constraints: const BoxConstraints(minHeight: 36, minWidth: 120),
           selectedColor: Colors.white,
-          color: Colors.deepPurple,
+          color: theme.colorScheme.primary,
           fillColor: Colors.deepPurple,
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
-          children: const [
-            Text("From Realtor"),
-            Text("Recommended"),
+          children: [
+            Row(
+              spacing: 0,
+              children: [
+                if (_realtorPropertyCount > 0)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 20,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$_realtorPropertyCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text("From Realtor"),
+                ),
+              ],
+            ),
+            const Text("Recommended"),
           ],
         ),
         actions: [
@@ -373,16 +430,18 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
       body: _properties.isEmpty
           ? Center(
               child: _noMoreProperties
-                  ? (_noRealtorAssigned && _useRealtorDecisions
-                      ? Text('No realtor assigned. Please contact support.')
-                      : Text(
-                          'No more properties available. Your realtor is busy finding properties that you like.'))
+                  ? _useRealtorDecisions
+                      ? (_noRealtorAssigned
+                          ? Text('No realtor assigned. Please contact support.')
+                          : Text(
+                              'No more properties available. Your realtor is busy finding properties that you like.'))
+                      : Text('No more recommended properties.')
                   : CircularProgressIndicator(),
             )
           : CardSwiper(
               controller: _controller,
               cardsCount: _properties.length,
-              numberOfCardsDisplayed: 1, // Ensure valid card count
+              numberOfCardsDisplayed: 1,
               backCardOffset: const Offset(0, 40),
               scale: 0.9,
               padding: const EdgeInsets.all(24),
@@ -396,19 +455,16 @@ class _PropertySwipingViewState extends State<PropertySwipingView> {
                   _noMoreProperties = true;
                 });
               },
-              cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
+              cardBuilder:
+                  (context, index, percentThresholdX, percentThresholdY) {
                 if (index >= _properties.length) {
-                  return const SizedBox.shrink(); // Safeguard
+                  return const SizedBox.shrink();
                 }
 
                 final property = _properties[index];
                 if (index == 0) {
                   _startCardViewTracking(property.id);
                 }
-
-                // Determine if this was a "sent" property
-                final wasSent =
-                    _useRealtorDecisions; // You could refine this further
 
                 return PropertySwipeCard(
                   property: property,
@@ -443,7 +499,7 @@ class PropertySwipeCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: isDarkMode ? Colors.black : Colors.white,
+            color: theme.colorScheme.onTertiary,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
@@ -456,17 +512,19 @@ class PropertySwipeCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 👇 image section that takes remaining space
               Expanded(
                 child: Stack(
                   children: [
                     ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                      borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16)),
                       child: ImageFiltered(
                         imageFilter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                         child: CachedNetworkImage(
                           imageUrl: property.image != null
-                              ? (kDebugMode ? 'http://localhost:8080/${property.image}' : property.image!)
+                              ? (kDebugMode
+                                  ? 'http://localhost:8080/${property.image}'
+                                  : property.image!)
                               : 'https://placehold.co/600x400',
                           fit: BoxFit.cover,
                           width: double.infinity,
@@ -479,22 +537,25 @@ class PropertySwipeCard extends StatelessWidget {
                       child: ClipRRect(
                         child: CachedNetworkImage(
                           imageUrl: property.image != null
-                              ? (kDebugMode ? 'http://localhost:8080/${property.image}' : property.image!)
+                              ? (kDebugMode
+                                  ? 'http://localhost:8080/${property.image}'
+                                  : property.image!)
                               : 'https://placehold.co/600x400',
-                          width: double.infinity, // 👈 full width
+                          width: double.infinity,
                           fit: BoxFit.fill,
-                          placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-                          errorWidget: (context, url, error) => const Icon(Icons.error),
+                          placeholder: (context, url) =>
+                              const Center(child: CircularProgressIndicator()),
+                          errorWidget: (context, url, error) =>
+                              const Icon(Icons.error),
                         ),
                       ),
                     ),
-
-
                     Positioned(
                       left: 10,
                       bottom: 60,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
@@ -518,13 +579,11 @@ class PropertySwipeCard extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     Positioned(
                       right: 10,
                       bottom: 60,
                       child: CashFlowBadge(propertyId: property.id),
                     ),
-
                     Positioned(
                       left: 0,
                       bottom: 0,
@@ -533,7 +592,8 @@ class PropertySwipeCard extends StatelessWidget {
                         child: BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
                             color: Colors.black.withOpacity(0.4),
                             child: Text(
                               property.address ?? "Unknown Address",
@@ -549,7 +609,6 @@ class PropertySwipeCard extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     Positioned(
                       top: 12,
                       right: 12,
@@ -576,17 +635,16 @@ class PropertySwipeCard extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // 👇 Bottom Section - height based on content
               Padding(
                 padding: EdgeInsets.all(isMobile ? 12 : 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.black54.withOpacity(0.05),
+                        color: theme.colorScheme.onSurface.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -619,16 +677,22 @@ class PropertySwipeCard extends StatelessWidget {
                         children: [
                           _buildSwipeButton(
                             icon: Icons.thumb_down,
-                            color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                            color: isDarkMode
+                                ? Colors.grey[800]!
+                                : Colors.grey[300]!,
                             tooltip: "Dislike",
-                            onPressed: () => controller.swipe(CardSwiperDirection.left),
+                            onPressed: () =>
+                                controller.swipe(CardSwiperDirection.left),
                             isMobile: isMobile,
                           ),
                           _buildSwipeButton(
                             icon: Icons.favorite,
-                            color: isDarkMode ? Colors.red[400]! : Colors.red[200]!,
+                            color: isDarkMode
+                                ? Colors.red[400]!
+                                : Colors.red[200]!,
                             tooltip: "Like",
-                            onPressed: () => controller.swipe(CardSwiperDirection.right),
+                            onPressed: () =>
+                                controller.swipe(CardSwiperDirection.right),
                             isMobile: isMobile,
                           ),
                         ],
@@ -642,7 +706,6 @@ class PropertySwipeCard extends StatelessWidget {
       ),
     );
   }
-
 
   Widget _verticalDivider() => Container(
         width: 1,
@@ -698,7 +761,6 @@ class PropertySwipeCard extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => PropertyDetailSheet(property: propertyData),
-      //disable swipe to close
       enableDrag: false,
     );
   }
@@ -748,7 +810,6 @@ class Property {
     return 'Property{id: $id, image: $image, price: $price, beds: $beds, baths: $baths, address: $address, sqft: $sqft, tax: $tax, status: $status}';
   }
 
-  // to Map<String, dynamic>
   Map<String, dynamic> toMap() {
     return {
       'id': id,

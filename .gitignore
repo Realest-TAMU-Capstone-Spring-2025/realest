@@ -10,6 +10,10 @@
 .history
 .svn/
 
+# Testing related
+# **/mocks/firebase_mocks.mocks.dart
+**/Runner/GoogleService-Info.plist
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -33,7 +37,6 @@
 **/pubspec.lock
 # https://melos.invertase.dev/configuration/overview#commandbootstrapusepubspecoverrides
 **/pubspec_overrides.yaml
-**/doc/api/
 .dart_tool/
 **/.flutter-plugins
 **/.flutter-plugins-dependencies
@@ -154,3 +157,8 @@ server/npm-debug.log
 server/yarn-error.log
 server/*.log
 server/.env
+
+#chromedriver
+chromedriver
+.metadata
+LICENSE.chromedriver

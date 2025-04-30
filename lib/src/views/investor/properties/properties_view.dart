@@ -3,6 +3,8 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:realest/user_provider.dart';
 
 class PropertiesView extends StatefulWidget {
   final String propertyId;
@@ -16,7 +18,9 @@ class PropertiesView extends StatefulWidget {
 }
 
 class _PropertiesViewState extends State<PropertiesView> {
-  late final User? _user = FirebaseAuth.instance.currentUser;
+  late final User? _user;
+  late final FirebaseAuth _auth;
+  late final FirebaseFirestore _firestore;
   bool _isSaved = false;
   late final Future<DocumentSnapshot> _propertyData;
   final NumberFormat currencyFormat = NumberFormat('#,##0', 'en_US');
@@ -25,14 +29,18 @@ class _PropertiesViewState extends State<PropertiesView> {
   @override
   void initState() {
     super.initState();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    _auth = userProvider.auth;
+    _firestore = userProvider.firestore;
+    _user = _auth.currentUser;
+
     _propertyData = _fetchPropertyData();
     _checkSavedStatus();
     _checkRealtorStatus();
-
   }
 
   Future<DocumentSnapshot> _fetchPropertyData() async {
-    return FirebaseFirestore.instance
+    return _firestore
         .collection('listings')
         .doc(widget.propertyId)
         .get();
@@ -41,7 +49,7 @@ class _PropertiesViewState extends State<PropertiesView> {
   Future<void> _addToCuratedList() async {
     if (_user == null || !_isRealtor) return;
 
-    final curatedListRef = FirebaseFirestore.instance
+    final curatedListRef = _firestore
         .collection('users')
         .doc(_user!.uid)
         .collection('curated_listings');
@@ -57,12 +65,12 @@ class _PropertiesViewState extends State<PropertiesView> {
 
   Future<bool> _isUserRealtor() async {
     if (_user == null) return false;
-    
-    final userDoc = await FirebaseFirestore.instance
+
+    final userDoc = await _firestore
         .collection('users')
         .doc(_user!.uid)
         .get();
-    
+
     return userDoc.data()?['role'] == 'realtor';
   }
 
@@ -76,7 +84,7 @@ class _PropertiesViewState extends State<PropertiesView> {
   Future<void> _checkSavedStatus() async {
     if (_user == null) return;
 
-    final doc = await FirebaseFirestore.instance
+    final doc = await _firestore
         .collection('users')
         .doc(_user?.uid)
         .collection('decisions')
@@ -91,7 +99,7 @@ class _PropertiesViewState extends State<PropertiesView> {
   Future<void> _toggleSave() async {
     if (_user == null) return;
 
-    final collectionRef = FirebaseFirestore.instance
+    final collectionRef = _firestore
         .collection('users')
         .doc(_user?.uid)
         .collection('decisions');
