@@ -37,7 +37,6 @@
 **/pubspec.lock
 # https://melos.invertase.dev/configuration/overview#commandbootstrapusepubspecoverrides
 **/pubspec_overrides.yaml
-**/doc/api/
 .dart_tool/
 **/.flutter-plugins
 **/.flutter-plugins-dependencies
