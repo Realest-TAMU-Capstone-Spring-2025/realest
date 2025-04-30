@@ -94,6 +94,18 @@ class MockFirebaseUtil {
       });
     }
 
+    // Ensure listings have the 'status' field set to 'FOR_SALE'
+    for (int i = 1; i <= 5; i++) {
+      final propertyId = 'property_$i';
+      await firestore.collection('listings').doc(propertyId).set({
+        'id': propertyId,
+        'address': 'Property $i',
+        'price': 100000 * i,
+        'location': 'Location $i',
+        'status': 'FOR_SALE', // Ensure all listings have a status field
+      });
+    }
+
     // Add disliked properties for tests
     for (int i = 1; i <= 3; i++) {
       final propertyId = 'property_$i';
@@ -109,6 +121,28 @@ class MockFirebaseUtil {
         'address': 'Property $i',
         'price': 100000 * i,
         'location': 'Location $i',
+        'status': 'FOR_SALE', // Ensure all listings have a status field
+      });
+    }
+
+    // Create dummy properties for swiping queue
+    for (int i = 7; i <= 9; i++) {
+      final propertyId = 'property_$i';
+      await firestore.collection('listings').doc(propertyId).set({
+        'id': propertyId,
+        'street': 'Street $i',
+        'city': 'City $i',
+        'state': 'State $i',
+        'zip_code': '0000$i',
+        'neighborhoods': 'Neighborhood $i',
+        'list_price': 100000 + (i * 5000),
+        'beds': i % 3 + 1,
+        'full_baths': i % 2 + 1,
+        'half_baths': i % 2,
+        'sqft': 1000 + (i * 100),
+        'alt_photos': 'photo$i.jpg, photo${i + 1}.jpg',
+        'text': 'Description for property $i',
+        'status': 'FOR_SALE', // Ensure all listings have a status field
       });
     }
 
@@ -196,6 +230,7 @@ class MockFirebaseUtil {
           'sqft': 1000 + (i * 100),
           'alt_photos': 'photo$i.jpg, photo${i + 1}.jpg',
           'text': 'Description for property $i',
+          'status': 'FOR_SALE', // Ensure all listings have a status field
         });
 
         if (i <= 3) {
@@ -224,8 +259,7 @@ class MockFirebaseUtil {
             'sentByRealtor': false,
             'timestamp': FieldValue.serverTimestamp(),
           });
-        }
-        // Leave the last 3 properties untouched
+        } // Leave the last 3 properties untouched
       }
     }
     print("Current User ID: ${auth.currentUser?.uid}");
