@@ -42,6 +42,20 @@ jobs:
       - name: Run Tests
         run: flutter test
 
+      # === Integration Test for Flutter Web ===
+      - name: Install Chromedriver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-chromedriver
+          chromedriver --version
+
+      - name: Start Chromedriver
+        run: chromedriver --port=4444 &
+
+      - name: Run Flutter Web Integration Test
+        run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart -d web-server
+      # === End Integration/System Test Section ===
+
       # Conditionally Build APK Based on Branch
       # Build APK for feature branches (REAL-###)
       - name: Build APK for Feature Branches
@@ -91,4 +105,3 @@ jobs:
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
           channelId: live
           projectId: "realest-3a0d2"
-

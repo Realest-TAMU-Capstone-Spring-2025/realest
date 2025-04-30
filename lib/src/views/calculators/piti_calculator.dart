@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 class PitiCalculator extends StatefulWidget {
   const PitiCalculator({Key? key}) : super(key: key);
 
-
   @override
   State<PitiCalculator> createState() => _PitiCalculatorState();
 }
@@ -18,7 +17,6 @@ class _PitiCalculatorState extends State<PitiCalculator> {
   final propertyTaxController = TextEditingController();
   final insuranceController = TextEditingController();
   final homePriceController = TextEditingController();
-
 
   double _monthlyPayment = 0.0;
 

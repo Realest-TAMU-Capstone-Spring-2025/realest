@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:algolia_helper_flutter/algolia_helper_flutter.dart' as algolia;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:realest/user_provider.dart';
 import 'package:realest/src/views/realtor/clients/client_details_drawer.dart';
 import 'dart:convert';
@@ -23,9 +23,10 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
     apiKey: '5341f6a026fbb648426f933b6e3cead7',
     indexName: 'investors',
   );
-  final DefaultCacheManager _cacheManager = DefaultCacheManager();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  late FirebaseAuth auth;
+  late FirebaseFirestore firestore;
 
   List<DocumentReference> _pinnedClients = [];
   bool _isLoading = true;
@@ -36,27 +37,17 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
   @override
   void initState() {
     super.initState();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    auth = userProvider.auth;
+    firestore = userProvider.firestore;
     _loadClients();
   }
 
   Future<void> _loadClients() async {
-    await _loadCachedClients();
     await _loadFirestoreClients();
     setState(() {
       _isLoading = false;
     });
-  }
-
-  Future<void> _loadCachedClients() async {
-    final cachedFile = await _cacheManager.getFileFromCache('pinnedClients');
-    if (cachedFile != null) {
-      final cachedData = await cachedFile.file.readAsString();
-      setState(() {
-        _pinnedClients = (jsonDecode(cachedData) as List)
-            .map((ref) => FirebaseFirestore.instance.doc(ref))
-            .toList();
-      });
-    }
   }
 
   void _removeClientFromPin(DocumentReference clientRef) async {
@@ -65,7 +56,6 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
     });
 
     // Update both cache and Firestore
-    await _cacheClients(_pinnedClients);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     await FirebaseFirestore.instance
         .collection('realtors')
@@ -86,7 +76,6 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
       if (doc.exists) {
         final clients = (doc.data()?['pinnedClients'] as List? ?? [])
             .cast<DocumentReference>();
-        await _cacheClients(clients);
         setState(() {
           _pinnedClients = clients;
         });
@@ -94,13 +83,6 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
     } catch (e) {
       _showErrorSnackBar('Error loading clients: ${e.toString()}');
     }
-  }
-
-  Future<void> _cacheClients(List<DocumentReference> clients) async {
-    await _cacheManager.putFile(
-      'pinnedClients',
-      utf8.encode(jsonEncode(clients.map((e) => e.path).toList())),
-    );
   }
 
   void _scheduleBatchUpdate() {
@@ -116,7 +98,6 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
         .doc(userProvider.uid);
     batch.update(userRef, {'pinnedClients': _pinnedClients});
     await batch.commit();
-    await _cacheClients(_pinnedClients);
   }
 
   void _showClientDetails(DocumentReference clientRef) {
@@ -218,7 +199,6 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
                   });
 
                   // Update both cache and Firestore with the new order
-                  _cacheClients(_pinnedClients);
                   _scheduleBatchUpdate();
                 },
                 itemCount: _pinnedClients.length,
@@ -363,7 +343,6 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
         _pinnedClients.add(clientRef);
       });
 
-      await _cacheClients(_pinnedClients);
       await FirebaseFirestore.instance
           .collection('realtors')
           .doc(userProvider.uid)

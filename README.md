@@ -1,59 +1,158 @@
-# RealEst: Property Swiping \& Client Matching Software
+# RealEst: Property Swiping & Client Matching Software
 
-RealEst is a Flutter application that helps users and realtors effectively communicate their preferences.
+RealEst is a cross-platform Flutter application that enables realtors and investors to connect efficiently through intelligent property matching, personalized dashboards, and secure authentication.
 
-## Getting Started
+---
 
-https://firebase.google.com/docs/flutter/setup?platform=web
+## 📁 Project Structure
 
-This is a good guide for setting up
+```bash
+lib/
+├── data/
+│   └── db/
+│       └── entity/
+│           ├── listing.dart           # Listing model for property data
+│           ├── settings.dart          # User preferences/settings model
+│           ├── swipe.dart             # Model for tracking swipes
+│           └── user.dart              # Core user model (investor/realtor)
+│
+├── services/
+│   ├── auth_service.dart              # Handles sign up, login, logout, update
+│   ├── calculator_service.dart        # Contains affordability, PITI, ROI calculators
+│   └── realtor_settings_service.dart  # Manages realtor filter and settings
+│
+├── src/
+│   ├── config/                        # Constants and environment-specific setup
+│   ├── models/                        # Business logic models (e.g., PropertyFilter)
+│   └── views/
+│       ├── calculators/               # UI for affordability and rental tools
+│       ├── home/
+│       │   └── overview/              # Landing page, about section, hero panels
+│       ├── investor/
+│       │   ├── swipe_view.dart        # Main investor swiping interface
+│       │   ├── saved.dart             # Saved listings view
+│       │   └── disliked.dart          # Disliked properties view
+│       └── realtor/
+│           ├── dashboard/             # Realtor analytics and activity tracking
+│           ├── clients/               # Panels for managing clients/leads
+│           ├── helpers/               # Firebase query helpers, card builders, etc.
+│           └── widgets/               # Reusable UI components like buttons, cards
+│
+├── util/
+│   ├── firebase_options.dart          # Firebase config (auto-generated)
+│   ├── theme_provider.dart            # Theme management (dark/light mode)
+│   └── property_fetch_helpers.dart    # API integration with HomeHarvest
+│
+├── user_provider.dart                 # Global provider for current user info
+├── main.dart                          # App entry point, routes, and initialization
+```
 
-### Prerequisites
+### Class Models
 
-Before setting up the project, ensure you have the following installed:
+- **User**: Represents app users (realtors, investors); includes `email`, `role`, `completedSetup`, `createdAt`
+- **Listing**: Stores property metadata such as location, price, images, and tags
+- **Swipe**: Tracks swipe direction, timestamp, and user-listing interactions
+- **Settings**: Manages investor/realtor preferences (e.g., budget, location filters)
 
-- Flutter SDK (latest stable version)
-- Dart SDK
-- Git
-- Firebase CLI
-- FlutterFire CLI
+### Filter & Logic Models (`src/models/`)
 
+- **PropertyFilter**: Stores dynamic filters applied by investors (e.g., price range, radius, type)
 
-### Clone the Repository
+### Service Classes (`services/`)
 
+- **AuthService**: Handles login, signup, sign out, and user updates
+- **CalculatorService**: Affordability, mortgage (PITI), and ROI calculators
+- **RealtorSettingsService**: Saves and loads realtor preferences from Firestore
+
+### State Management
+
+- **UserProvider**: Global state for the current user
+- **ThemeProvider**: Manages app-wide light/dark theme
+
+### Views & Widgets (`src/views/`)
+
+- Investor and Realtor views are separated by role
+- Each screen is a `StatefulWidget` or `StatelessWidget`
+- Reusable UI components are found in `widgets/`
+- Logic is abstracted into `helpers/` for separation of concerns
+
+All models support `fromJson()` and `toJson()` for Firestore integration.
+
+---
+
+## ⚙️ API Specification
+
+### 🔐 Firebase Authentication
+
+Implemented via `auth_service.dart`:
+
+- `createUserWithEmailAndPassword(email, password)`
+- `signInWithEmailAndPassword(email, password)`
+- `signOut()`
+- `updateEmail(newEmail)`
+- `updatePassword(newPassword)`
+- `sendPasswordResetEmail(email)`
+
+### ⚡ Firebase Cloud Function: `promoteQualifiedLead`
+
+A secure callable function that allows realtors to promote a user to a qualified investor.
+
+**Functionality**:
+- Verifies that the caller is a realtor
+- Creates a Firebase Auth user
+- Sets up a Firestore profile under `/users`
+- Updates `/investors` status to `qualified-lead`
+- Sends a welcome email via SendGrid with a temporary password
+
+**Returns**:
+- `success: true`
+- `uid`
+- `password`
+
+### 🌍 External APIs
+
+#### Algolia
+
+- Real-time property and user search
+- Uses `ALGOLIA_APP_ID` and `ALGOLIA_API_KEY`
+
+#### Google Maps
+
+- Interactive property mapping and distance filtering
+- API key is manually added in code
+
+#### HomeHarvest
+
+- Provides property listing data (price, location, attributes)
+- Accessed via `property_fetch_helpers.dart`
+
+---
+
+## 🛠 Setup Guide
+
+### Step 1: Install Required Command Line Tools
+
+- [Flutter SDK](https://docs.flutter.dev/get-started/install)
+- Dart SDK (included with Flutter)
+- [Git](https://git-scm.com/downloads)
+- [Node.js](https://nodejs.org/en)
+- Firebase CLI:
+```bash
+  npm install -g firebase-tools
+```
+- FlutterFire CLI:
+```bash
+dart pub global activate flutterfire_cli
+```
+- Clone the Repository
 ```bash
 git clone https://github.com/Realest-TAMU-Capstone-Spring-2025.git
 cd Realest-TAMU-Capstone-Spring-2025
 ```
-
-
-### Install Dependencies
-
-Run the following command to install all required dependencies:
-
+- Install Dependencies
 ```bash
 flutter pub get
 ```
-
-
-## Firebase Setup
-
-### Step 1: Install Required Command Line Tools
-
-If you haven't already, install the Firebase CLI and log in:
-
-```bash
-npm install -g firebase-tools
-firebase login
-```
-
-Install the FlutterFire CLI:
-
-```bash
-dart pub global activate flutterfire_cli
-```
-
-
 ### Step 2: Configure Firebase
 
 From your project directory, run:
@@ -163,8 +262,8 @@ If you encounter issues with Firebase configuration:
 
 1. Ensure all required files (`firebase_options.dart`, `firebase.json`, etc.) are present
 2. Verify that you've added the correct Google Services files:
-    - `google-services.json` in the `android/app` directory
-    - `GoogleService-Info.plist` in the `ios/Runner` directory
+   - `google-services.json` in the `android/app` directory
+   - `GoogleService-Info.plist` in the `ios/Runner` directory
 3. Make sure all environment variables and API keys are properly configured
 
 ## Contributing

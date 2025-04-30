@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // For Firestore
+import 'package:firebase_auth/firebase_auth.dart'; // For FirebaseAuth
 import 'package:realest/user_provider.dart';
 import 'client_details_drawer.dart';
 import 'mouse_region_provider.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:algolia_helper_flutter/algolia_helper_flutter.dart' as algolia;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -24,6 +24,8 @@ class _RealtorClientsState extends State<RealtorClients> {
   bool _isLoading = false;
   String? _errorMessage;
   String? _selectedClientUid;
+  late FirebaseAuth auth;
+  late FirebaseFirestore firestore;
 
   final algolia.HitsSearcher _searcher = algolia.HitsSearcher(
     applicationID: dotenv.env['ALGOLIA_APP_ID']!,
@@ -38,6 +40,8 @@ class _RealtorClientsState extends State<RealtorClients> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
+      auth = userProvider.auth;
+      firestore = userProvider.firestore;
       await userProvider.fetchUserData(); // ensure data is loaded
       if (!mounted) return; // ✅ Prevent setState on disposed widget
       _fetchClients();

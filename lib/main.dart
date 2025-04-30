@@ -3,10 +3,11 @@ import 'package:flutter/foundation.dart' show kIsWeb; // For web detection
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:realest/firebase_options.dart';
-import 'package:realest/src/views/home/overview/overview_page.dart';
+import 'package:realest/src/views/home/desktop/home_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Views related to the investor
@@ -28,10 +29,10 @@ import 'package:realest/src/views/realtor/realtor_settings.dart';
 // Common views
 import 'package:realest/src/views/custom_login_page.dart';
 import 'package:realest/src/views/navbar.dart'; // Sidebar navigation
-import 'package:realest/src/views/mobile_home_page.dart';
+import 'package:realest/src/views/home/mobile_home_page.dart';
 
 // Provider and user-related imports
-import 'user_provider.dart';
+import 'package:realest/user_provider.dart';
 
 final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.dark);
 
@@ -55,7 +56,10 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (context) => UserProvider()..initializeUser(),
+          create: (context) => UserProvider(
+            auth: FirebaseAuth.instance,
+            firestore: FirebaseFirestore.instance,
+          )..initializeUser(),
         ),
       ],
       child: const MyApp(),
@@ -342,9 +346,12 @@ class MainLayout extends StatelessWidget {
       body: Row(
         children: [
           if (!isSmallScreen)
-            NavBar(
-              toggleTheme: toggleTheme,
-              isDarkMode: themeMode == ThemeMode.dark,
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
+              child: NavBar(
+                toggleTheme: toggleTheme,
+                isDarkMode: themeMode == ThemeMode.dark,
+              ),
             ),
           Expanded(child: child),
         ],

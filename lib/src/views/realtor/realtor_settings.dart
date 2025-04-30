@@ -2,9 +2,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:realest/services/realtor_settings_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:provider/provider.dart';
+import 'package:realest/user_provider.dart';
 
 class RealtorSettings extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -21,8 +22,8 @@ class RealtorSettings extends StatefulWidget {
 }
 
 class _RealtorSettingsState extends State<RealtorSettings> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  late FirebaseAuth _auth;
+  late FirebaseFirestore _firestore;
 
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
@@ -112,6 +113,9 @@ class _RealtorSettingsState extends State<RealtorSettings> {
   @override
   void initState() {
     super.initState();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    _auth = userProvider.auth;
+    _firestore = userProvider.firestore;
     _loadUserData();
 
     // Add listeners for real-time validation
