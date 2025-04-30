@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// A page where realtors complete their initial profile setup during onboarding.
 class RealtorSetupPage extends StatefulWidget {
   const RealtorSetupPage({Key? key}) : super(key: key);
 
@@ -14,6 +15,7 @@ class RealtorSetupPage extends StatefulWidget {
   _RealtorSetupPageState createState() => _RealtorSetupPageState();
 }
 
+/// State class for RealtorSetupPage. Handles form validation, profile picture upload, and saving user data to Firestore.
 class _RealtorSetupPageState extends State<RealtorSetupPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -41,6 +43,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
 
   static const Color neonPurple = Color(0xFFa78cde);
 
+  /// Initializes the form with the current user's email and sets up validation listeners.
   @override
   void initState() {
     super.initState();
@@ -59,6 +62,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     _addressController.addListener(_validateAddress);
   }
 
+  /// Disposes controllers and removes listeners to prevent memory leaks.
   @override
   void dispose() {
     // Remove listeners
@@ -81,6 +85,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     super.dispose();
   }
 
+  /// Validates the first name field.
   void _validateFirstName() {
     final value = _firstNameController.text.trim();
     setState(() {
@@ -92,6 +97,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     });
   }
 
+  /// Validates the last name field.
   void _validateLastName() {
     final value = _lastNameController.text.trim();
     setState(() {
@@ -103,6 +109,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     });
   }
 
+  /// Validates the agency name field.
   void _validateAgencyName() {
     final value = _agencyNameController.text.trim();
     setState(() {
@@ -116,6 +123,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     });
   }
 
+  /// Validates the license number field.
   void _validateLicenseNumber() {
     final value = _licenseNumberController.text.trim();
     setState(() {
@@ -131,6 +139,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     });
   }
 
+  /// Validates the contact email field.
   void _validateContactEmail() {
     final value = _contactEmailController.text.trim();
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
@@ -145,6 +154,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     });
   }
 
+  /// Validates the contact phone field.
   void _validateContactPhone() {
     final value = _contactPhoneController.text.trim();
     // Normalize phone number by removing non-digits
@@ -160,6 +170,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     });
   }
 
+  /// Validates the address field.
   void _validateAddress() {
     final value = _addressController.text.trim();
     setState(() {
@@ -173,6 +184,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     });
   }
 
+  /// Runs all field validations and collects error messages.
   List<String> _validateFields() {
     List<String> errors = [];
     _validateFirstName();
@@ -194,6 +206,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     return errors;
   }
 
+  /// Opens the image picker to allow user to select a profile picture.
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -204,6 +217,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     }
   }
 
+  /// Saves the realtor's setup data to Firestore, including uploading the profile picture if provided.
   void _saveRealtorData() async {
     List<String> errors = _validateFields();
     if (errors.isNotEmpty) {
@@ -316,6 +330,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     }
   }
 
+  /// Builds a custom text field widget with error styling and responsive width.
   Widget _buildTextField(
       TextEditingController controller,
       String label, {
@@ -381,6 +396,7 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     );
   }
 
+  /// Builds the overall page layout depending on screen size.
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -413,7 +429,8 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     );
   }
 
-  // Mobile layout with left-aligned logo in scrolling content
+
+  /// Builds the mobile layout with scrolling form.
   Widget _buildMobileLayout(bool isMobile) {
     return Container(
       color: const Color(0xFF1f1e25),
@@ -461,7 +478,8 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     );
   }
 
-  // Desktop layout with left-aligned logo in scrolling content
+
+  /// Builds the desktop layout with side-by-side image and form.
   Widget _buildFormColumn(bool isMobile) {
     return Container(
       color: const Color(0xFF1f1e25),
@@ -509,7 +527,8 @@ class _RealtorSetupPageState extends State<RealtorSetupPage> {
     );
   }
 
-  // Form children (without logo)
+
+  /// Builds the list of form fields and the submit button.
   List<Widget> _buildFormChildren(bool isMobile) {
     return [
       Center(

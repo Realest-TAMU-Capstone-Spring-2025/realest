@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+/// A widget for inputting minimum and maximum year values.
+/// Used for filtering properties by "Year Built" or similar fields.
 class MinMaxYearInput extends StatefulWidget {
-  final int? minYear;
-  final int? maxYear;
-  final void Function(int?, int?) onChanged;
+  final int? minYear; // Currently selected minimum year
+  final int? maxYear; // Currently selected maximum year
+  final void Function(int?, int?) onChanged; // Callback when values change
 
   const MinMaxYearInput({
     super.key,
@@ -25,10 +27,12 @@ class _MinMaxYearInputState extends State<MinMaxYearInput> {
   @override
   void initState() {
     super.initState();
+    // Initialize controllers with prefilled min and max year if available
     _minController = TextEditingController(text: widget.minYear?.toString() ?? '');
     _maxController = TextEditingController(text: widget.maxYear?.toString() ?? '');
   }
 
+  /// Validates the inputs and updates parent widget via callback
   void _validate() {
     final minText = _minController.text;
     final maxText = _maxController.text;
@@ -47,6 +51,7 @@ class _MinMaxYearInputState extends State<MinMaxYearInput> {
     );
   }
 
+  /// Builds input decoration with dynamic color based on validation state
   InputDecoration _inputDecoration(String hint, bool isValid) {
     return InputDecoration(
       hintText: hint,
@@ -71,8 +76,10 @@ class _MinMaxYearInputState extends State<MinMaxYearInput> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Title
         const Text("Year Built", style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
+        // Min and Max input fields
         Row(
           children: [
             Expanded(

@@ -5,6 +5,10 @@ import '../../../../../models/property_filter.dart';
 import 'min_max_selector.dart';
 import 'min_max_text_input_selector.dart';
 
+/// Displays a filter drawer as a slide-in side panel.
+///
+/// [filters] - current property filter settings.
+/// [onApply] - callback function to apply selected filters.
 void showFilterDrawer({
   required BuildContext context,
   required PropertyFilter filters,
@@ -41,6 +45,7 @@ void showFilterDrawer({
   );
 }
 
+/// Stateful widget containing the full UI and logic for property filter settings.
 class FilterDrawerContent extends StatefulWidget {
   final PropertyFilter filters;
   final void Function(PropertyFilter) onApply;
@@ -57,6 +62,7 @@ class FilterDrawerContent extends StatefulWidget {
   State<FilterDrawerContent> createState() => _FilterDrawerContentState();
 }
 
+/// State class for managing and applying property filters inside the drawer.
 class _FilterDrawerContentState extends State<FilterDrawerContent> {
   late double tempMinPrice;
   late double tempMaxPrice;

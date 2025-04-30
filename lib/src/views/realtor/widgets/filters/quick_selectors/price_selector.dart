@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../../../../models/property_filter.dart'; // Property filter model
 
-import '../../../../../models/property_filter.dart';
-
+/// A widget that allows selecting a price range using an overlay popup.
 class PriceSelector extends StatelessWidget {
-  final LayerLink link;
-  final PropertyFilter filters;
-  final void Function(int minPrice, int maxPrice) onChanged;
-  final OverlayEntry? overlayEntry;
-  final void Function(OverlayEntry?) onEntryUpdate;
+  final LayerLink link; // Link for overlay positioning
+  final PropertyFilter filters; // Current selected filters
+  final void Function(int minPrice, int maxPrice) onChanged; // Callback when prices are applied
+  final OverlayEntry? overlayEntry; // Current overlay entry (nullable)
+  final void Function(OverlayEntry?) onEntryUpdate; // Callback to update overlay entry
 
   const PriceSelector({
     Key? key,
@@ -35,9 +35,8 @@ class PriceSelector extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 22),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Colors.deepPurple),
             ),
-            side: BorderSide.none, // Remove the border
+            side: BorderSide.none, // Remove border
           ),
           child: Row(
             children: [
@@ -57,6 +56,7 @@ class PriceSelector extends StatelessWidget {
     );
   }
 
+  /// Displays the price range selection overlay.
   void _showOverlay(BuildContext context) {
     if (overlayEntry != null) {
       overlayEntry!.remove();
@@ -68,9 +68,11 @@ class PriceSelector extends StatelessWidget {
     double tempMax = filters.maxPrice?.toDouble() ?? 5000000;
 
     late OverlayEntry entry;
+
     entry = OverlayEntry(
       builder: (context) => Stack(
         children: [
+          // Tapping the background will close the overlay
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -81,6 +83,7 @@ class PriceSelector extends StatelessWidget {
               child: Container(color: Colors.black.withOpacity(0.2)),
             ),
           ),
+          // Price range slider popup
           Positioned(
             width: 280,
             child: CompositedTransformFollower(
@@ -110,6 +113,7 @@ class PriceSelector extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 10),
+                        // Range slider to adjust price
                         RangeSlider(
                           values: RangeValues(tempMin, tempMax),
                           min: 50000,
@@ -126,6 +130,7 @@ class PriceSelector extends StatelessWidget {
                           inactiveColor: Colors.deepPurple.shade100,
                         ),
                         const SizedBox(height: 16),
+                        // Cancel and Apply buttons
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [

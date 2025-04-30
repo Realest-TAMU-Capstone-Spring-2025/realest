@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+/// An expandable panel to show additional property metadata like
+/// baths, last sold date, builder, location, garage, and other details.
 class PropertyExtraDetailsPanel extends StatefulWidget {
   final Map<String, dynamic> property;
 
@@ -32,7 +34,7 @@ class _PropertyExtraDetailsPanelState extends State<PropertyExtraDetailsPanel> {
       "ZIP Code": "${widget.property["zip_code"] ?? "-"}",
       "Builder": widget.property["builder_name"] ?? "-",
       "Latitude": "${widget.property["latitude"] ?? "-"}",
-      "Longitude": "${widget.property["longitude"] ?? "-"}"
+      "Longitude": "${widget.property["longitude"] ?? "-"}",
     };
 
     return ExpansionPanelList(
@@ -48,7 +50,7 @@ class _PropertyExtraDetailsPanelState extends State<PropertyExtraDetailsPanel> {
             title: Text("Additional Property Details", style: theme.textTheme.titleMedium),
           ),
           body: ListView.builder(
-            shrinkWrap: false,
+            shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: items.length,
             itemBuilder: (context, index) {

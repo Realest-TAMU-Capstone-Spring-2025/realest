@@ -6,6 +6,7 @@ import 'package:realest/services/realtor_settings_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+/// A settings page where realtors can update their profile, cash flow defaults, and toggle dark mode.
 class RealtorSettings extends StatefulWidget {
   final VoidCallback toggleTheme;
   final bool isDarkMode;
@@ -20,6 +21,7 @@ class RealtorSettings extends StatefulWidget {
   _RealtorSettingsState createState() => _RealtorSettingsState();
 }
 
+/// State class for RealtorSettings. Handles profile updates, image upload, and validation.
 class _RealtorSettingsState extends State<RealtorSettings> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -153,6 +155,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     super.dispose();
   }
 
+  /// Loads the user's current profile data and cash flow defaults from Firestore.
   Future<void> _loadUserData() async {
     setState(() => _isLoading = true);
 
@@ -193,6 +196,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     setState(() => _isLoading = false);
   }
 
+  /// Validates the first name field.
   void _validateFirstName() {
     final value = _firstNameController.text.trim();
     setState(() {
@@ -204,6 +208,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     });
   }
 
+  /// Validates the last name field.
   void _validateLastName() {
     final value = _lastNameController.text.trim();
     setState(() {
@@ -215,6 +220,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     });
   }
 
+  /// Validates the agency name field.
   void _validateAgencyName() {
     final value = _agencyNameController.text.trim();
     setState(() {
@@ -230,6 +236,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     });
   }
 
+  /// Validates the license number field.
   void _validateLicenseNumber() {
     final value = _licenseNumberController.text.trim();
     setState(() {
@@ -245,6 +252,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     });
   }
 
+  /// Validates the contact email field.
   void _validateContactEmail() {
     final value = _contactEmailController.text.trim();
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
@@ -259,6 +267,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     });
   }
 
+  /// Validates the contact phone field.
   void _validateContactPhone() {
     final value = _contactPhoneController.text.trim();
     final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
@@ -273,6 +282,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     });
   }
 
+  /// Validates the address field.
   void _validateAddress() {
     final value = _addressController.text.trim();
     setState(() {
@@ -288,6 +298,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     });
   }
 
+  /// Validates a specific cash flow field by key.
   void _validateCashFlowField(String key) {
     final controller = _cashFlowControllers[key];
     final value = controller!.text.trim();
@@ -337,6 +348,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     });
   }
 
+  /// Runs all field validations and collects error messages.
   List<String> _validateFields() {
     List<String> errors = [];
     _validateFirstName();
@@ -362,6 +374,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     return errors;
   }
 
+  /// Opens the image picker to select a new profile picture.
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -372,6 +385,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     }
   }
 
+  /// Updates the realtor's profile data in Firestore, including uploading a new profile picture if selected.
   Future<void> _updateRealtorData() async {
     List<String> errors = _validateFields();
     if (errors.isNotEmpty) {
@@ -444,6 +458,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     setState(() => _isLoading = false);
   }
 
+  /// Saves the cash flow default values to Firestore after validation.
   Future<void> _saveCashFlowDefaults() async {
     List<String> errors = [];
     _cashFlowControllers.keys.forEach(_validateCashFlowField);
@@ -502,6 +517,7 @@ class _RealtorSettingsState extends State<RealtorSettings> {
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -699,12 +715,14 @@ class _RealtorSettingsState extends State<RealtorSettings> {
     );
   }
 
+  /// Formats a cash flow field key into a human-readable label.
   String _formatCashFlowLabel(String key) {
     return key.replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (match) {
       return '${match.group(1)} ${match.group(2)}';
     }).replaceFirstMapped(RegExp(r'^.'), (m) => m.group(0)!.toUpperCase());
   }
 
+  /// Builds a reusable labeled text field widget with error handling.
   Widget _buildTextField(
       String label,
       TextEditingController controller,

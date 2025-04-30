@@ -4,8 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:realest/user_provider.dart';
 
+/// A dialog widget for editing an existing tag's name, color, and associated clients.
 class EditTagWidget extends StatefulWidget {
+  /// The tag data to edit.
   final Map<String, dynamic> tag;
+
+  /// The Firestore document ID of the tag.
   final String tagId;
 
   const EditTagWidget({Key? key, required this.tag, required this.tagId})
@@ -15,9 +19,15 @@ class EditTagWidget extends StatefulWidget {
   _EditTagWidgetState createState() => _EditTagWidgetState();
 }
 
+/// State for [EditTagWidget]. Manages tag editing and client selection.
 class _EditTagWidgetState extends State<EditTagWidget> {
+  /// Controller for the tag name input field.
   late TextEditingController _tagNameController;
+
+  /// The currently selected color for the tag.
   late Color _selectedColor;
+
+  /// List of selected client IDs for the tag.
   late List<String> _selectedInvestorIds;
 
   @override
@@ -39,6 +49,7 @@ class _EditTagWidgetState extends State<EditTagWidget> {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final clients = userProvider.clients;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SingleChildScrollView(
@@ -49,11 +60,13 @@ class _EditTagWidgetState extends State<EditTagWidget> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text("Edit Tag",
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyLarge
-                        ?.copyWith(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(
+                  "Edit Tag",
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _tagNameController,
@@ -74,10 +87,10 @@ class _EditTagWidgetState extends State<EditTagWidget> {
                 ),
                 const SizedBox(height: 16),
                 const Text("Select Clients for this Tag:"),
-                // Wrap the client list in a container with a max height constraint.
                 Container(
                   constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.5),
+                    maxHeight: MediaQuery.of(context).size.height * 0.5,
+                  ),
                   child: ListView.builder(
                     shrinkWrap: true,
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -93,9 +106,10 @@ class _EditTagWidgetState extends State<EditTagWidget> {
                               : null,
                           child: client['profilePicUrl'] == null
                               ? Text(
-                              client['name'] != null && client['name'].isNotEmpty
-                                  ? client['name'][0].toUpperCase()
-                                  : 'C')
+                            client['name'] != null && client['name'].isNotEmpty
+                                ? client['name'][0].toUpperCase()
+                                : 'C',
+                          )
                               : null,
                         ),
                         title: Text(client['name'] ?? 'Unnamed Client'),
@@ -156,6 +170,7 @@ class _EditTagWidgetState extends State<EditTagWidget> {
     );
   }
 
+  /// Shows a color picker dialog to select a tag color.
   void _showColorPicker() {
     showDialog(
       context: context,
@@ -196,6 +211,7 @@ class _EditTagWidgetState extends State<EditTagWidget> {
     );
   }
 
+  /// Updates the tag in Firestore and refreshes user data.
   Future<void> _editTag() async {
     final tagName = _tagNameController.text.trim();
     if (tagName.isEmpty) {
@@ -204,6 +220,7 @@ class _EditTagWidgetState extends State<EditTagWidget> {
       );
       return;
     }
+
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final realtorId = userProvider.uid;
     if (realtorId == null) {
@@ -212,6 +229,7 @@ class _EditTagWidgetState extends State<EditTagWidget> {
       );
       return;
     }
+
     await FirebaseFirestore.instance
         .collection('realtors')
         .doc(realtorId)
@@ -222,9 +240,11 @@ class _EditTagWidgetState extends State<EditTagWidget> {
       'color': _selectedColor.value,
       'investors': _selectedInvestorIds,
     });
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Tag updated successfully.")),
     );
+
     await userProvider.fetchUserData();
     Navigator.pop(context);
   }

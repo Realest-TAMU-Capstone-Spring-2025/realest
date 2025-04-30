@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+/// A panel widget that shows agent, office, and broker information.
+/// Expands/collapses on tap to show contact details, MLS IDs, and emails.
 class AgentInfoPanel extends StatefulWidget {
-  final Map<String, dynamic> property;
+  final Map<String, dynamic> property; // Property map containing agent info
 
   const AgentInfoPanel({super.key, required this.property});
 
@@ -11,12 +13,12 @@ class AgentInfoPanel extends StatefulWidget {
 }
 
 class _AgentInfoPanelState extends State<AgentInfoPanel> {
-  bool _isExpanded = false;
+  bool _isExpanded = false; // Expansion state for the panel
 
   @override
   Widget build(BuildContext context) {
+    // Extract agent, office, and broker information
     final agent = widget.property;
-
     final agentName = agent["agent_name"] ?? "N/A";
     final agentEmail = agent["agent_email"];
     final agentPhones = List<Map<String, dynamic>>.from(agent["agent_phones"] ?? []);
@@ -51,7 +53,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
                 if (agentEmail != null) _linkTile("Email", agentEmail, "mailto:$agentEmail"),
                 _infoTile("MLS ID", agentMLS),
                 _infoTile("NRDS ID", agentNRDS),
-                ..._phoneList(agentPhones),
+                ..._phoneList(agentPhones), // Add agent phone numbers
 
                 const SizedBox(height: 16),
                 _sectionTitle("Office"),
@@ -59,7 +61,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
                 if (officeEmail != null) _linkTile("Email", officeEmail, "mailto:$officeEmail"),
                 _infoTile("MLS ID", officeMLS),
                 _infoTile("Office ID", officeId),
-                ..._phoneList(officePhones),
+                ..._phoneList(officePhones), // Add office phone numbers
 
                 const SizedBox(height: 16),
                 _sectionTitle("Broker"),
@@ -72,6 +74,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     );
   }
 
+  /// Helper to render section titles ("Agent", "Office", "Broker")
   Widget _sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 8),
@@ -82,6 +85,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     );
   }
 
+  /// Helper to render a label-value pair without links
   Widget _infoTile(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -94,6 +98,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     );
   }
 
+  /// Helper to render a clickable email or phone number
   Widget _linkTile(String label, String value, String url) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -105,7 +110,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
               onTap: () async {
                 final uri = Uri.parse(url);
                 if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri);
+                  await launchUrl(uri); // Launch email or phone app
                 }
               },
               child: Text(
@@ -123,6 +128,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     );
   }
 
+  /// Helper to generate a list of phone number tiles
   List<Widget> _phoneList(List<Map<String, dynamic>> phones) {
     return phones.map((p) {
       final number = p["number"];

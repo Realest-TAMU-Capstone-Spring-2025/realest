@@ -1,7 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../models/property_filter.dart';
 
-/// Build filtered Firestore query from filter model
+/// Builds a Firestore query based on the provided [filters].
+///
+/// [filters] is a [PropertyFilter] object containing filtering criteria.
+/// Returns a [Query] object with applied filters, ordered by 'days_on_mls'.
 Query<Map<String, dynamic>> buildFilteredQuery(PropertyFilter filters) {
   Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('listings');
 
@@ -60,7 +63,10 @@ Query<Map<String, dynamic>> buildFilteredQuery(PropertyFilter filters) {
   return query.orderBy('days_on_mls');
 }
 
-/// Fetch all filtered properties (used for both list and map)
+/// Fetches filtered properties for map or list display.
+///
+/// [filters] is a [PropertyFilter] object containing filtering criteria.
+/// Returns a list of maps with property data including ID, location, and key details.
 Future<List<Map<String, dynamic>>> fetchPropertiesForMap(PropertyFilter filters) async {
   final snapshot = await buildFilteredQuery(filters).get();
 

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
 import '../../../../util/property_fetch_helpers.dart';
 
+/// Displays a list of recent client activities for the logged-in realtor.
 class InvestorActivitySection extends StatelessWidget {
   const InvestorActivitySection({Key? key}) : super(key: key);
 
@@ -38,47 +39,37 @@ class InvestorActivitySection extends StatelessWidget {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
-              
               if (snapshot.hasError) {
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
-              
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return const Center(child: Text('No client activity available'));
               }
-              
               return ListView.builder(
                 itemCount: snapshot.data!.docs.length,
                 itemBuilder: (context, index) {
                   final activityDoc = snapshot.data!.docs[index];
                   final activityData = activityDoc.data() as Map<String, dynamic>;
-                  
                   return FutureBuilder<Map<String, dynamic>>(
                     future: _getClientDetails(activityData['clientId']),
                     builder: (context, clientSnapshot) {
                       if (clientSnapshot.connectionState == ConnectionState.waiting) {
                         return const ClientActivitySkeletonCard();
                       }
-                      
                       final clientData = clientSnapshot.data ?? {};
                       final hasName = clientData['firstName'] != null && clientData['lastName'] != null;
-                      final name = hasName 
+                      final name = hasName
                           ? '${clientData['firstName']} ${clientData['lastName']}'
                           : 'Unknown Client';
                       final email = clientData['contactEmail'] ?? 'No email';
                       final phone = clientData['contactPhone'];
                       final hasPhone = phone != null && phone.toString().isNotEmpty;
-                      
-                      // Format timestamp
                       final timestamp = activityData['timestamp'] as Timestamp?;
                       final formattedDate = timestamp != null
                           ? DateFormat('MMM d, yyyy • h:mm a').format(timestamp.toDate())
                           : 'Unknown date';
-                      
-                      // Calculate duration
                       final duration = activityData['duration'] ?? 0;
                       final formattedDuration = _formatDuration(duration);
-                      
                       return ClientActivityCard(
                         name: name,
                         email: email,
@@ -87,10 +78,7 @@ class InvestorActivitySection extends StatelessWidget {
                         timestamp: formattedDate,
                         duration: formattedDuration,
                         onPropertyTap: () => _showPropertyDetails(context, activityData['propertyId']),
-                        profilePicUrl: clientData['profilePicUrl'] != null ?
-                        clientData['profilePicUrl']!
-                        :  'assets/images/profile.png',
-
+                        profilePicUrl: clientData['profilePicUrl'] ?? 'assets/images/profile.png',
                       );
                     },
                   );
@@ -103,13 +91,15 @@ class InvestorActivitySection extends StatelessWidget {
     );
   }
 
+  /// Fetches client details from Firestore for a given [investorId].
+  ///
+  /// Returns a map of client data or an empty map if not found or on error.
   Future<Map<String, dynamic>> _getClientDetails(String? investorId) async {
     try {
       final doc = await FirebaseFirestore.instance
           .collection('investors')
           .doc(investorId)
           .get();
-      
       if (doc.exists) {
         return doc.data() ?? {};
       }
@@ -120,6 +110,10 @@ class InvestorActivitySection extends StatelessWidget {
     }
   }
 
+  /// Formats a duration in seconds into a human-readable string.
+  ///
+  /// [seconds] is the duration to format.
+  /// Returns a string like '5 sec', '10 min', or '2 hr 30 min'.
   String _formatDuration(int seconds) {
     if (seconds < 60) {
       return '$seconds sec';
@@ -132,9 +126,12 @@ class InvestorActivitySection extends StatelessWidget {
     }
   }
 
+  /// Shows a bottom sheet with property details for the given [propertyId].
+  ///
+  /// [context] is the build context.
+  /// Does nothing if [propertyId] is null.
   void _showPropertyDetails(BuildContext context, String? propertyId) {
     if (propertyId == null) return;
-    // Show property detail sheet
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -170,15 +167,31 @@ class InvestorActivitySection extends StatelessWidget {
   }
 }
 
+/// Displays a card with details of a single client activity.
 class ClientActivityCard extends StatelessWidget {
+  /// Client's full name.
   final String name;
+
+  /// Client's email address.
   final String email;
+
+  /// Client's phone number, if available.
   final String? phone;
+
+  /// ID of the property associated with the activity.
   final String propertyId;
+
+  /// Formatted timestamp of the activity.
   final String timestamp;
+
+  /// Formatted duration of the activity.
   final String duration;
+
+  /// Callback when the property icon is tapped.
   final VoidCallback onPropertyTap;
-  final String? profilePicUrl;
+
+  /// URL or path to the client's profile picture.
+  final String profilePicUrl;
 
   const ClientActivityCard({
     Key? key,
@@ -198,7 +211,7 @@ class ClientActivityCard extends StatelessWidget {
     final hasPhone = phone != null;
 
     return Card(
-      color:  Theme.of(context).colorScheme.onTertiary,
+      color: theme.colorScheme.onTertiary,
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -209,10 +222,8 @@ class ClientActivityCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                  backgroundImage: profilePicUrl != null ?
-                       NetworkImage(profilePicUrl!)
-                      : const AssetImage('assets/images/profile.png') as ImageProvider,
-                    ),
+                  backgroundImage: NetworkImage(profilePicUrl),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -244,9 +255,7 @@ class ClientActivityCard extends StatelessWidget {
                 IconButton(
                   icon: Icon(
                     Icons.phone,
-                    color: hasPhone 
-                        ? theme.colorScheme.primary 
-                        : theme.disabledColor,
+                    color: hasPhone ? theme.colorScheme.primary : theme.disabledColor,
                   ),
                   onPressed: hasPhone ? () => _launchPhone(phone!) : null,
                 ),
@@ -293,29 +302,24 @@ class ClientActivityCard extends StatelessWidget {
     );
   }
 
+  /// Launches an email client with the specified [email] address.
   void _launchEmail(String email) async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: email,
-    );
-    
+    final Uri emailUri = Uri(scheme: 'mailto', path: email);
     if (await canLaunchUrl(emailUri)) {
       await launchUrl(emailUri);
     }
   }
 
+  /// Launches a phone dialer with the specified [phone] number.
   void _launchPhone(String phone) async {
-    final Uri phoneUri = Uri(
-      scheme: 'tel',
-      path: phone,
-    );
-    
+    final Uri phoneUri = Uri(scheme: 'tel', path: phone);
     if (await canLaunchUrl(phoneUri)) {
       await launchUrl(phoneUri);
     }
   }
 }
 
+/// Displays a skeleton loading card for client activity while data is being fetched.
 class ClientActivitySkeletonCard extends StatelessWidget {
   const ClientActivitySkeletonCard({Key? key}) : super(key: key);
 
@@ -362,11 +366,14 @@ class ClientActivitySkeletonCard extends StatelessWidget {
   }
 }
 
-// Skeleton widgets for loading state
+/// Displays a skeleton line placeholder for loading states.
 class SkeletonLine extends StatelessWidget {
+  /// Width of the skeleton line.
   final double width;
+
+  /// Height of the skeleton line.
   final double height;
-  
+
   const SkeletonLine({
     Key? key,
     required this.width,
@@ -386,9 +393,11 @@ class SkeletonLine extends StatelessWidget {
   }
 }
 
+/// Displays a skeleton circle placeholder for loading states.
 class SkeletonCircle extends StatelessWidget {
+  /// Size (diameter) of the skeleton circle.
   final double size;
-  
+
   const SkeletonCircle({
     Key? key,
     required this.size,

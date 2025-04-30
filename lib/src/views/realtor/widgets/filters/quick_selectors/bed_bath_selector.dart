@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:realest/src/models/property_filter.dart'; // ✅ Make sure this path is correct
+import 'package:realest/src/models/property_filter.dart'; // Model for managing property filters
 
+/// Widget for selecting minimum bedrooms and bathrooms with a popup overlay.
 class BedBathSelector extends StatelessWidget {
-  final LayerLink link;
-  final PropertyFilter filters;
-  final void Function(int beds, double baths) onChanged;
-  final OverlayEntry? overlayEntry;
-  final void Function(OverlayEntry?) onEntryUpdate; // ✅ make nullable
+  final LayerLink link; // For positioning the overlay
+  final PropertyFilter filters; // Current selected filters
+  final void Function(int beds, double baths) onChanged; // Callback when user applies
+  final OverlayEntry? overlayEntry; // Current overlay entry (nullable)
+  final void Function(OverlayEntry?) onEntryUpdate; // Updates overlay state
 
   const BedBathSelector({
     Key? key,
@@ -19,7 +20,7 @@ class BedBathSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = '${filters.minBeds ?? 1}+ bd / ${filters.minBaths ?? 1}+ ba';
+    final label = '${filters.minBeds ?? 1}+ bd / ${filters.minBaths ?? 1}+ ba'; // Button label text
 
     return CompositedTransformTarget(
       link: link,
@@ -30,7 +31,7 @@ class BedBathSelector extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             elevation: 2,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 22),
-            side: BorderSide.none, // Remove the border
+            side: BorderSide.none,
           ),
           child: Row(
             children: [
@@ -50,6 +51,7 @@ class BedBathSelector extends StatelessWidget {
     );
   }
 
+  /// Opens or closes the overlay for selecting bed/bath values
   void _showOverlay(BuildContext context) {
     if (overlayEntry != null) {
       overlayEntry!.remove();
@@ -60,11 +62,13 @@ class BedBathSelector extends StatelessWidget {
     int tempBeds = filters.minBeds ?? 1;
     double tempBaths = filters.minBaths ?? 1.0;
 
-    late final OverlayEntry entry; // ✅ Fix "referenced before declaration"
+    late final OverlayEntry entry;
 
+    // Creating the overlay content
     entry = OverlayEntry(
       builder: (context) => Stack(
         children: [
+          // Background overlay that closes on tap
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -75,6 +79,7 @@ class BedBathSelector extends StatelessWidget {
               child: Container(color: Colors.black.withOpacity(0.2)),
             ),
           ),
+          // Popup card with bed/bath selectors
           Positioned(
             width: 280,
             child: CompositedTransformFollower(
@@ -95,6 +100,7 @@ class BedBathSelector extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Bedroom selection
                         Text("Bedrooms", style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
                         ToggleButtons(
@@ -105,6 +111,7 @@ class BedBathSelector extends StatelessWidget {
                           children: [1, 2, 3, 4, 5].map((b) => Text('$b+')).toList(),
                         ),
                         const SizedBox(height: 20),
+                        // Bathroom selection
                         Text("Bathrooms", style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
                         ToggleButtons(
@@ -117,6 +124,7 @@ class BedBathSelector extends StatelessWidget {
                               .toList(),
                         ),
                         const SizedBox(height: 20),
+                        // Action buttons
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [

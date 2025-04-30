@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 
+/// A futuristic glassmorphic panel displaying AI-generated property overview.
 class IntelligentOverviewWidget extends StatefulWidget {
   final String overview;
 
-  const IntelligentOverviewWidget({Key? key, required this.overview})
-      : super(key: key);
+  const IntelligentOverviewWidget({Key? key, required this.overview}) : super(key: key);
 
   @override
-  _IntelligentOverviewWidgetState createState() =>
-      _IntelligentOverviewWidgetState();
+  _IntelligentOverviewWidgetState createState() => _IntelligentOverviewWidgetState();
 }
 
 class _IntelligentOverviewWidgetState extends State<IntelligentOverviewWidget> {
@@ -44,10 +43,10 @@ class _IntelligentOverviewWidgetState extends State<IntelligentOverviewWidget> {
                 canTapOnHeader: true,
                 headerBuilder: (BuildContext context, bool isExpanded) {
                   return ListTile(
-                    leading: Icon(Icons.insights, color: Colors.cyanAccent), // Futuristic icon
-                    title: Text(
+                    leading: const Icon(Icons.insights, color: Colors.cyanAccent), // Futuristic icon
+                    title: const Text(
                       "AI-Generated Overview",
-
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   );
                 },

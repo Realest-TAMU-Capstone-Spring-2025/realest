@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// The main landing page for mobile users, displaying a welcome screen with login and signup options.
 class MobileHomePage extends StatefulWidget {
   const MobileHomePage({Key? key}) : super(key: key);
 
@@ -11,26 +12,42 @@ class MobileHomePage extends StatefulWidget {
   _MobileHomePageState createState() => _MobileHomePageState();
 }
 
+/// State for [MobileHomePage], handling animations and authentication status.
 class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStateMixin {
+  /// Controller for logo animation.
   late AnimationController _logoController;
+
+  /// Controller for welcome text animation.
   late AnimationController _welcomeController;
+
+  /// Controller for subtext animation.
   late AnimationController _subtextController;
+
+  /// Controller for buttons animation.
   late AnimationController _buttonsController;
+
+  /// Animation for sliding the logo into view.
   late Animation<Offset> _logoAnimation;
+
+  /// Animation for sliding the welcome text into view.
   late Animation<Offset> _welcomeAnimation;
+
+  /// Animation for sliding the subtext into view.
   late Animation<Offset> _subtextAnimation;
+
+  /// Animation for sliding the buttons into view.
   late Animation<Offset> _buttonsAnimation;
 
   @override
   void initState() {
     super.initState();
 
-    // Check if user is already logged in
+    // Check authentication status after the frame is rendered.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthStatus();
     });
 
-    // Initialize animation controllers
+    // Initialize animation controllers with a 1000ms duration.
     _logoController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -48,7 +65,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
       vsync: this,
     );
 
-    // Define slide animations (from top to original position)
+    // Define slide animations from top to original position using easeInOut curve.
     _logoAnimation = Tween<Offset>(
       begin: const Offset(0, -1.0),
       end: Offset.zero,
@@ -74,7 +91,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
       CurvedAnimation(parent: _buttonsController, curve: Curves.easeInOut),
     );
 
-    // Start animations with staggered delays
+    // Start animations with staggered delays for a smooth effect.
     Future.delayed(Duration.zero, () {
       _logoController.forward();
     });
@@ -89,10 +106,11 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
     });
   }
 
+  /// Checks if a user is logged in and navigates accordingly.
   Future<void> _checkAuthStatus() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null && mounted) {
-      // User is logged in, fetch user data from Firestore
+      // User is logged in, fetch user data from Firestore.
       try {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection('users')
@@ -103,25 +121,25 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
           String role = userDoc['role'];
           bool completedSetup = userDoc['completedSetup'] ?? false;
 
-          // Navigate based on role and setup status
+          // Navigate based on role and setup status.
           if (role == 'realtor' || role == 'investor') {
             context.go(completedSetup ? '/home' : '/setup');
           } else {
-            // Handle invalid role (optional: show error or sign out)
+            // Handle invalid role by signing out and showing an error.
             await FirebaseAuth.instance.signOut();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Invalid user role. Please contact support.')),
             );
           }
         } else {
-          // User document doesn't exist, sign out and show error
+          // User document doesn't exist, sign out and show error.
           await FirebaseAuth.instance.signOut();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('User data not found. Please sign in again.')),
           );
         }
       } catch (e) {
-        // Handle Firestore errors
+        // Handle Firestore errors with a user-friendly message.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error checking user status: $e')),
         );
@@ -131,6 +149,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
 
   @override
   void dispose() {
+    // Dispose animation controllers to free resources.
     _logoController.dispose();
     _welcomeController.dispose();
     _subtextController.dispose();
@@ -141,13 +160,13 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1f1e25),
+      backgroundColor: const Color(0xFF1f1e25), // Dark background color.
       body: SafeArea(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(height: MediaQuery.of(context).size.height * 0.15),
-            // Logo with animation
+            SizedBox(height: MediaQuery.of(context).size.height * 0.15), // Top spacing.
+            // Animated logo icon sliding into view.
             SlideTransition(
               position: _logoAnimation,
               child: const Icon(
@@ -157,7 +176,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
               ),
             ),
             const SizedBox(height: 24),
-            // Welcome text with animation
+            // Animated welcome text sliding into view.
             SlideTransition(
               position: _welcomeAnimation,
               child: Text(
@@ -170,7 +189,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
               ),
             ),
             const SizedBox(height: 8),
-            // Subtext with animation
+            // Animated subtext sliding into view.
             SlideTransition(
               position: _subtextAnimation,
               child: Text(
@@ -183,14 +202,15 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
                 textAlign: TextAlign.center,
               ),
             ),
-            const Spacer(),
-            // Buttons with animation
+            const Spacer(), // Pushes buttons to the bottom.
+            // Animated buttons sliding into view.
             SlideTransition(
               position: _buttonsAnimation,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Column(
                   children: [
+                    // Log In button.
                     SizedBox(
                       width: double.infinity,
                       height: 60,
@@ -199,7 +219,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
                           context.go('/login');
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFa78cde),
+                          backgroundColor: const Color(0xFFa78cde), // Purple button color.
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(15),
@@ -215,6 +235,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
                       ),
                     ),
                     const SizedBox(height: 16),
+                    // Sign Up button.
                     SizedBox(
                       width: double.infinity,
                       height: 60,
@@ -243,7 +264,7 @@ class _MobileHomePageState extends State<MobileHomePage> with TickerProviderStat
                 ),
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 40), // Bottom spacing.
           ],
         ),
       ),

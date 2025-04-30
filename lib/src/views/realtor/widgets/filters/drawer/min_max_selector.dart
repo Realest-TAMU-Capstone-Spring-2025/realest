@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
+/// A widget that displays two dropdowns for selecting minimum and maximum values.
+/// Useful for filtering properties by ranges like price, square footage, etc.
 class MinMaxSelector extends StatelessWidget {
-  final String label;
-  final int? minValue;
-  final int? maxValue;
-  final int min;
-  final int max;
-  final int step;
-  final void Function(int?, int?) onChanged;
+  final String label; // Label for the selector
+  final int? minValue; // Currently selected minimum value
+  final int? maxValue; // Currently selected maximum value
+  final int min; // Minimum allowed value in the dropdown
+  final int max; // Maximum allowed value in the dropdown
+  final int step; // Step size between dropdown options
+  final void Function(int?, int?) onChanged; // Callback when selection changes
 
   const MinMaxSelector({
     super.key,
@@ -22,6 +24,7 @@ class MinMaxSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Generate dropdown options from min to max with given step
     final List<int> options = [
       for (int i = min; i <= max; i += step) i
     ];
@@ -29,10 +32,13 @@ class MinMaxSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Label at the top
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
+        // Row containing Min and Max dropdowns
         Row(
           children: [
+            // Min dropdown
             Expanded(
               child: DropdownButtonFormField<int>(
                 value: minValue,
@@ -52,6 +58,7 @@ class MinMaxSelector extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
+            // Max dropdown
             Expanded(
               child: DropdownButtonFormField<int>(
                 value: maxValue,

@@ -269,7 +269,7 @@ class _CustomLoginPageState extends State<CustomLoginPage>
             email: _emailController.text,
             password: _passwordController.text,
             confirmPassword: _confirmPasswordController.text,
-            role: _selectedRole);
+            role: 'realtor');
       } else {
         await authService.signInWithEmail(_emailController.text, _passwordController.text);
       }

@@ -1,9 +1,10 @@
-import 'dart:ui';
+import 'dart:ui'; // Needed for ImageFilter.blur
 import 'package:flutter/material.dart';
 
+/// A widget that displays a property's main image with an address label over a blurred background.
 class PropertyImage extends StatelessWidget {
-  final String? imageUrl;
-  final String address;
+  final String? imageUrl; // Property image URL (can be null)
+  final String address;   // Property address to display at the bottom
 
   const PropertyImage({
     super.key,
@@ -16,12 +17,12 @@ class PropertyImage extends StatelessWidget {
     final theme = Theme.of(context);
 
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), // Rounded top corners
       child: AspectRatio(
-        aspectRatio: 16 / 10,
+        aspectRatio: 16 / 10, // Enforce consistent image aspect ratio
         child: Stack(
           children: [
-            // Main Image
+            // Main property image
             Positioned.fill(
               child: Image.network(
                 imageUrl ?? '',
@@ -33,8 +34,7 @@ class PropertyImage extends StatelessWidget {
                 ),
               ),
             ),
-
-            // Bottom fade blur with address
+            // Blurred background bar at the bottom for address text
             Positioned(
               left: 0,
               right: 0,

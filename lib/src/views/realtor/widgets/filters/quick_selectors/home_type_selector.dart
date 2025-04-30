@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:realest/main.dart';
-import '../../../../../models/property_filter.dart';
+import 'package:realest/main.dart'; // Theme mode notifier
+import '../../../../../models/property_filter.dart'; // Property filter model
 
+/// Widget to select Home Types (e.g., Condo, Single Family) using a popup overlay.
 class HomeTypeSelector extends StatelessWidget {
-  final LayerLink link;
-  final PropertyFilter filters;
-  final void Function(List<String>) onChanged;
-  final OverlayEntry? overlayEntry;
-  final void Function(OverlayEntry?) onEntryUpdate;
+  final LayerLink link; // For overlay positioning
+  final PropertyFilter filters; // Current selected filters
+  final void Function(List<String>) onChanged; // Callback when user applies
+  final OverlayEntry? overlayEntry; // Current overlay entry (nullable)
+  final void Function(OverlayEntry?) onEntryUpdate; // Updates overlay state
 
   const HomeTypeSelector({
     super.key,
@@ -22,6 +23,7 @@ class HomeTypeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     String label;
 
+    // Determine button label based on selection
     if (filters.homeTypes == null || filters.homeTypes!.isEmpty) {
       label = "Home Type";
     } else if (filters.homeTypes!.length == 1) {
@@ -45,15 +47,15 @@ class HomeTypeSelector extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
             minimumSize: const Size(160, 50),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            side: BorderSide.none, // Remove the border
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            side: BorderSide.none, // No visible border
           ),
         ),
       ),
     );
   }
 
+  /// Opens or closes the home type selection overlay
   void _showOverlay(BuildContext context) {
     if (overlayEntry != null) {
       overlayEntry!.remove();
@@ -76,12 +78,13 @@ class HomeTypeSelector extends StatelessWidget {
     List<String> tempSelectedTypes = List<String>.from(filters.homeTypes ?? []);
 
     late final OverlayEntry entry;
-
     final theme = Theme.of(context);
 
+    // Building the overlay UI
     entry = OverlayEntry(
       builder: (context) => Stack(
         children: [
+          // Dimmed background that closes on tap
           Positioned.fill(
             child: GestureDetector(
               onTap: () {
@@ -92,6 +95,7 @@ class HomeTypeSelector extends StatelessWidget {
               child: Container(color: Colors.black.withAlpha(50)),
             ),
           ),
+          // Popup card
           Positioned(
             width: 280,
             child: CompositedTransformFollower(
@@ -103,20 +107,19 @@ class HomeTypeSelector extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 child: StatefulBuilder(
                   builder: (context, setState) => Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 20),
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      border:
-                          Border.all(color: Colors.deepPurple.withAlpha(75)),
+                      border: Border.all(color: Colors.deepPurple.withAlpha(75)),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Home Type",
-                            style: Theme.of(context).textTheme.titleMedium),
+                        // Title
+                        Text("Home Type", style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
+                        // Type options
                         Wrap(
                           spacing: 10,
                           runSpacing: 10,
@@ -134,8 +137,7 @@ class HomeTypeSelector extends StatelessWidget {
                                 });
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 10),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? Colors.deepPurple
@@ -152,7 +154,9 @@ class HomeTypeSelector extends StatelessWidget {
                                   style: TextStyle(
                                     color: isSelected
                                         ? Colors.white
-                                        : themeModeNotifier.value == ThemeMode.dark? Colors.white : Colors.black,
+                                        : themeModeNotifier.value == ThemeMode.dark
+                                        ? Colors.white
+                                        : Colors.black,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -161,6 +165,7 @@ class HomeTypeSelector extends StatelessWidget {
                           }).toList(),
                         ),
                         const SizedBox(height: 20),
+                        // Action buttons
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [

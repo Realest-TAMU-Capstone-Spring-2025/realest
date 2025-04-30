@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+/// Displays the property location on a small embedded Google Map with a marker.
 class PropertyLocationWidget extends StatelessWidget {
   final double latitude;
   final double longitude;
@@ -22,7 +23,7 @@ class PropertyLocationWidget extends StatelessWidget {
         SizedBox(
           height: 200,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(12), // Rounded corners for modern look
+            borderRadius: BorderRadius.circular(12), // Rounded corners for a modern look
             child: GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: LatLng(latitude, longitude),
@@ -34,6 +35,10 @@ class PropertyLocationWidget extends StatelessWidget {
                   position: LatLng(latitude, longitude),
                 ),
               },
+              zoomControlsEnabled: false,
+              myLocationButtonEnabled: false,
+              mapType: MapType.normal,
+              liteModeEnabled: true, // Optional: Lite mode for better performance in a widget
             ),
           ),
         ),

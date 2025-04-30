@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// A simple expandable panel to show property description.
 class PropertyDescriptionWidget extends StatefulWidget {
   final String description;
 
@@ -41,6 +42,7 @@ class _PropertyDescriptionWidgetState extends State<PropertyDescriptionWidget> {
                   widget.description.isNotEmpty
                       ? widget.description
                       : "No description available for this property.",
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
               isExpanded: _isExpanded,

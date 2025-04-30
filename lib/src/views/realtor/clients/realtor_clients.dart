@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // For Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:realest/user_provider.dart';
 import 'client_details_drawer.dart';
 import 'mouse_region_provider.dart';
@@ -10,6 +10,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:algolia_helper_flutter/algolia_helper_flutter.dart' as algolia;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+/// Displays and manages the list of clients, leads, and qualified leads for a realtor.
 class RealtorClients extends StatefulWidget {
   const RealtorClients({Key? key}) : super(key: key);
 
@@ -17,37 +18,55 @@ class RealtorClients extends StatefulWidget {
   _RealtorClientsState createState() => _RealtorClientsState();
 }
 
+/// State for [RealtorClients]. Manages client data fetching, searching, and UI interactions.
 class _RealtorClientsState extends State<RealtorClients> {
+  /// Tracks if the leads panel is expanded.
   bool _isLeadExpanded = false;
+
+  /// Tracks if the qualified leads panel is expanded.
   bool _isQualifiedLeadExpanded = false;
+
+  /// Tracks if the clients panel is expanded.
   bool _isClientExpanded = false;
+
+  /// Indicates if client data is being loaded.
   bool _isLoading = false;
+
+  /// Stores any error message during client operations.
   String? _errorMessage;
+
+  /// UID of the currently selected client for details view.
   String? _selectedClientUid;
 
+  /// Algolia search client for querying clients.
   final algolia.HitsSearcher _searcher = algolia.HitsSearcher(
     applicationID: dotenv.env['ALGOLIA_APP_ID']!,
     apiKey: dotenv.env['ALGOLIA_API_KEY']!,
     indexName: 'investors',
   );
+
+  /// Controller for the search input field.
   final TextEditingController _searchController = TextEditingController();
+
+  /// Focus node for the search input field.
   final FocusNode _searchFocusNode = FocusNode();
+
+  /// List of clients fetched from Firestore.
+  List<Map<String, dynamic>> _clients = [];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
-      await userProvider.fetchUserData(); // ensure data is loaded
-      if (!mounted) return; // ✅ Prevent setState on disposed widget
+      await userProvider.fetchUserData();
+      if (!mounted) return;
       _fetchClients();
     });
   }
 
-  List<Map<String, dynamic>> _clients = [];
-
+  /// Fetches client data from Firestore for the current realtor.
   Future<void> _fetchClients() async {
-    // print("Fetching clients...");
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -72,7 +91,7 @@ class _RealtorClientsState extends State<RealtorClients> {
 
       final List<Map<String, dynamic>> loadedClients = snapshot.docs.map((doc) {
         try {
-          final data = doc.data() as Map<String, dynamic>;
+          final data = doc.data();
           return {
             'uid': doc.id,
             'firstName': data['firstName'] ?? '',
@@ -82,15 +101,14 @@ class _RealtorClientsState extends State<RealtorClients> {
             'profilePicUrl': data['profilePicUrl'] ?? '',
             'status': data['status'] ?? '',
             'createdAt': (data['createdAt'] as Timestamp?)?.toDate(),
-            'notes': doc['notes'] ?? '', // ✅ Add this line
+            'notes': data['notes'] ?? '',
           };
         } catch (e) {
           print("Error mapping doc: $e");
-          return <String, dynamic>{}; // 🔁 Return an empty map of correct type
+          return <String, dynamic>{};
         }
       }).toList();
 
-      // print("Successfully fetched clients: ${loadedClients.length}");
       if (!mounted) return;
       setState(() {
         _clients = loadedClients;
@@ -105,6 +123,7 @@ class _RealtorClientsState extends State<RealtorClients> {
     }
   }
 
+  /// Opens a dialog to add a new lead to Firestore.
   Future<void> _addNewLeadDialog() async {
     final TextEditingController firstNameController = TextEditingController();
     final TextEditingController lastNameController = TextEditingController();
@@ -148,14 +167,14 @@ class _RealtorClientsState extends State<RealtorClients> {
             child: const Text("Add"),
             onPressed: () async {
               final userProvider =
-                  Provider.of<UserProvider>(context, listen: false);
+              Provider.of<UserProvider>(context, listen: false);
               final firstName = firstNameController.text.trim();
               final lastName = lastNameController.text.trim();
               final contact = emailController.text.trim();
               final phone = phoneController.text.trim();
 
               if (firstName.isNotEmpty && contact.isNotEmpty) {
-                final doc = await FirebaseFirestore.instance
+                await FirebaseFirestore.instance
                     .collection('investors')
                     .add({
                   'firstName': firstName,
@@ -171,15 +190,17 @@ class _RealtorClientsState extends State<RealtorClients> {
                 _fetchClients();
               }
             },
-          )
+          ),
         ],
       ),
     );
   }
 
-  //delete client
+  /// Deletes a client from Firestore and updates the local list.
+  ///
+  /// [uid] is the client's unique ID.
+  /// [name] is the client's full name for confirmation.
   Future<void> _deleteClient(String uid, String name) async {
-    // Show confirmation dialog
     showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -187,15 +208,17 @@ class _RealtorClientsState extends State<RealtorClients> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text("This action cannot be undone."),
-            Text("Are you sure you want to delete this lead?"),
+            const Text("This action cannot be undone."),
+            const Text("Are you sure you want to delete this lead?"),
             const SizedBox(height: 12),
-            // name of the lead
-            Text("${name}",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Colors.red)),
+            Text(
+              name,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                color: Colors.red,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -209,7 +232,6 @@ class _RealtorClientsState extends State<RealtorClients> {
                   .collection('investors')
                   .doc(uid)
                   .delete();
-              //updaate the client list without calling the fetch clients
               setState(() {
                 _clients.removeWhere((client) => client['uid'] == uid);
               });
@@ -222,7 +244,9 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
-  //client details dialog
+  /// Displays client details in a dialog or side panel based on screen width.
+  ///
+  /// [uid] is the client's unique ID.
   void _showClientDetails(String uid) {
     final isWide = MediaQuery.of(context).size.width >= 1000;
     if (isWide) {
@@ -244,6 +268,9 @@ class _RealtorClientsState extends State<RealtorClients> {
     }
   }
 
+  /// Builds a card UI for a new lead.
+  ///
+  /// [client] contains the client's data.
   Widget _buildNewLeadCard(Map<String, dynamic> client) {
     final theme = Theme.of(context);
     final uid = client['uid'];
@@ -258,7 +285,7 @@ class _RealtorClientsState extends State<RealtorClients> {
     return InkWell(
       onTap: () => _showClientDetails(uid),
       child: Card(
-        color: Theme.of(context).colorScheme.onTertiary,
+        color: theme.colorScheme.onTertiary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
         elevation: 2,
@@ -273,7 +300,8 @@ class _RealtorClientsState extends State<RealtorClients> {
                     radius: 22,
                     backgroundImage: client['profilePicUrl'].isNotEmpty
                         ? NetworkImage(client['profilePicUrl'])
-                        : const AssetImage('assets/images/profile.png') as ImageProvider,
+                        : const AssetImage('assets/images/profile.png')
+                    as ImageProvider,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -282,10 +310,7 @@ class _RealtorClientsState extends State<RealtorClients> {
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text(
-                          fullName,
-                          style: theme.textTheme.titleMedium,
-                        ),
+                        Text(fullName, style: theme.textTheme.titleMedium),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -293,7 +318,8 @@ class _RealtorClientsState extends State<RealtorClients> {
                             const SizedBox(width: 4),
                             Text(
                               email,
-                              style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: theme.hintColor),
                             ),
                           ],
                         ),
@@ -304,7 +330,8 @@ class _RealtorClientsState extends State<RealtorClients> {
                             const SizedBox(width: 4),
                             Text(
                               phone,
-                              style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: theme.hintColor),
                             ),
                           ],
                         ),
@@ -320,6 +347,9 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
+  /// Builds a card UI for a qualified lead.
+  ///
+  /// [client] contains the client's data.
   Widget _buildQualifiedLeadCard(Map<String, dynamic> client) {
     final theme = Theme.of(context);
     final uid = client['uid'];
@@ -344,7 +374,8 @@ class _RealtorClientsState extends State<RealtorClients> {
                 radius: 22,
                 backgroundImage: client['profilePicUrl'].isNotEmpty
                     ? NetworkImage(client['profilePicUrl'])
-                    : const AssetImage('assets/images/profile.png') as ImageProvider,
+                    : const AssetImage('assets/images/profile.png')
+                as ImageProvider,
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -359,7 +390,11 @@ class _RealtorClientsState extends State<RealtorClients> {
                       children: [
                         Icon(Icons.email, size: 16, color: theme.hintColor),
                         const SizedBox(width: 4),
-                        Text(email, style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
+                        Text(
+                          email,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: theme.hintColor),
+                        ),
                       ],
                     ),
                     Row(
@@ -367,7 +402,11 @@ class _RealtorClientsState extends State<RealtorClients> {
                       children: [
                         Icon(Icons.phone, size: 16, color: theme.hintColor),
                         const SizedBox(width: 4),
-                        Text(phone, style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
+                        Text(
+                          phone,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: theme.hintColor),
+                        ),
                       ],
                     ),
                   ],
@@ -381,6 +420,9 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
+  /// Builds a card UI for a client.
+  ///
+  /// [client] contains the client's data.
   Widget _buildClientCard(Map<String, dynamic> client) {
     final theme = Theme.of(context);
     final uid = client['uid'];
@@ -391,7 +433,7 @@ class _RealtorClientsState extends State<RealtorClients> {
         : 'No phone';
 
     return Card(
-      color:  Theme.of(context).colorScheme.onTertiary,
+      color: theme.colorScheme.onTertiary,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
       elevation: 2,
@@ -406,7 +448,8 @@ class _RealtorClientsState extends State<RealtorClients> {
                 radius: 22,
                 backgroundImage: client['profilePicUrl'].isNotEmpty
                     ? NetworkImage(client['profilePicUrl'])
-                    : const AssetImage('assets/images/profile.png') as ImageProvider,
+                    : const AssetImage('assets/images/profile.png')
+                as ImageProvider,
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -415,10 +458,7 @@ class _RealtorClientsState extends State<RealtorClients> {
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text(
-                      fullName,
-                      style: theme.textTheme.titleMedium,
-                    ),
+                    Text(fullName, style: theme.textTheme.titleMedium),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -426,7 +466,8 @@ class _RealtorClientsState extends State<RealtorClients> {
                         const SizedBox(width: 4),
                         Text(
                           email,
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: theme.hintColor),
                         ),
                       ],
                     ),
@@ -437,7 +478,8 @@ class _RealtorClientsState extends State<RealtorClients> {
                         const SizedBox(width: 4),
                         Text(
                           phone,
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: theme.hintColor),
                         ),
                       ],
                     ),
@@ -452,7 +494,7 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
-// Updated tags management dialog with color picker
+  /// Opens a dialog to manage tags, allowing creation and deletion with color selection.
   Future<void> _showTagsManagementDialog() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final realtorId = userProvider.uid;
@@ -469,7 +511,7 @@ class _RealtorClientsState extends State<RealtorClients> {
       context: context,
       builder: (context) {
         final TextEditingController tagController = TextEditingController();
-        Color selectedColor = Colors.blue; // default color
+        Color selectedColor = Colors.blue;
 
         return StatefulBuilder(builder: (context, setModalState) {
           return AlertDialog(
@@ -489,7 +531,7 @@ class _RealtorClientsState extends State<RealtorClients> {
                           ),
                           title: Text(doc['name']),
                           trailing: IconButton(
-                            icon: Icon(Icons.delete, color: Colors.red),
+                            icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () async {
                               await FirebaseFirestore.instance
                                   .collection('realtors')
@@ -581,6 +623,10 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
+  /// Searches for clients using Algolia based on the input text.
+  ///
+  /// [textEditingValue] contains the search query.
+  /// Returns a list of matching client data.
   Future<Iterable<Map<String, dynamic>>> _searchClients(
       TextEditingValue textEditingValue) async {
     if (textEditingValue.text.isEmpty) return const [];
@@ -589,26 +635,30 @@ class _RealtorClientsState extends State<RealtorClients> {
     final realtorId = userProvider.uid;
 
     _searcher.applyState((state) => state.copyWith(
-          filterGroups: {
-            algolia.FilterGroup.facet(
-              filters: {
-                algolia.Filter.facet('realtorId', realtorId),
-              }.toSet(),
-            ),
-          },
-          query: textEditingValue.text,
-        ));
+      filterGroups: {
+        algolia.FilterGroup.facet(
+          filters: {
+            algolia.Filter.facet('realtorId', realtorId),
+          }.toSet(),
+        ),
+      },
+      query: textEditingValue.text,
+    ));
 
     final snapshot = await _searcher.responses.first;
     return snapshot.hits.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
+  /// Builds the UI for search autocomplete options.
+  ///
+  /// [context] is the build context.
+  /// [onSelected] is the callback when an option is selected.
+  /// [options] is the list of search results.
   Widget _buildSearchOptions(
       BuildContext context,
       AutocompleteOnSelected<Map<String, dynamic>> onSelected,
       Iterable<Map<String, dynamic>> options) {
     final double availableWidth = 300;
-
     final double maxHeight = MediaQuery.of(context).size.height * 0.5;
 
     return Align(
@@ -620,38 +670,38 @@ class _RealtorClientsState extends State<RealtorClients> {
           constraints: BoxConstraints(maxHeight: maxHeight),
           child: options.isEmpty
               ? Container(
-                  padding: const EdgeInsets.all(16.0),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    "No results found",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                )
+            padding: const EdgeInsets.all(16.0),
+            alignment: Alignment.center,
+            child: const Text(
+              "No results found",
+              style: TextStyle(color: Colors.grey),
+            ),
+          )
               : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: options.length,
-                  itemBuilder: (context, index) {
-                    final option = options.elementAt(index);
-                    final isName = (option['firstName']?.isNotEmpty == true &&
-                        option['lastName']?.isNotEmpty == true);
-                    return ListTile(
-                      title: Text(
-                        (isName)
-                            ? '${option['firstName']} ${option['lastName']}'
-                            : option['contactEmail'] ?? 'Unknown Client',
-                      ),
-                      subtitle:
-                          (isName) ? Text(option['contactEmail'] ?? '') : null,
-                      onTap: () => onSelected(option),
-                    );
-                  },
+            shrinkWrap: true,
+            itemCount: options.length,
+            itemBuilder: (context, index) {
+              final option = options.elementAt(index);
+              final isName = (option['firstName']?.isNotEmpty == true &&
+                  option['lastName']?.isNotEmpty == true);
+              return ListTile(
+                title: Text(
+                  (isName)
+                      ? '${option['firstName']} ${option['lastName']}'
+                      : option['contactEmail'] ?? 'Unknown Client',
                 ),
+                subtitle:
+                (isName) ? Text(option['contactEmail'] ?? '') : null,
+                onTap: () => onSelected(option),
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  // 🟩 Search Bar
+  /// Builds the search bar with autocomplete functionality.
   Widget _buildSearchBar() {
     return Row(
       children: [
@@ -686,7 +736,7 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
-// 🟦 Leads Panel
+  /// Builds the expandable panel for new leads.
   Widget _buildLeadsPanel() {
     return ExpansionPanelList(
       expansionCallback: (int index, bool isExpanded) {
@@ -701,30 +751,31 @@ class _RealtorClientsState extends State<RealtorClients> {
               title: Row(
                 children: [
                   const Text("New Leads",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Spacer(),
                   IconButton(
-                      onPressed: _addNewLeadDialog, icon: const Icon(Icons.add))
+                      onPressed: _addNewLeadDialog, icon: const Icon(Icons.add)),
                 ],
               ),
             );
           },
           body: Builder(
             builder: (context) {
-              final leadClients = _clients
-                  .where((client) => client['status'] == 'lead')
-                  .toList();
+              final leadClients =
+              _clients.where((client) => client['status'] == 'lead').toList();
 
               return leadClients.isEmpty
                   ? const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.0),
-                child: Text('No leads available.',
-                    style: TextStyle(
-                        color: Colors.grey, fontStyle: FontStyle.italic)),
+                child: Text(
+                  'No leads available.',
+                  style: TextStyle(
+                      color: Colors.grey, fontStyle: FontStyle.italic),
+                ),
               )
                   : Column(
-                children:
-                leadClients.map<Widget>(_buildNewLeadCard).toList(),
+                children: leadClients.map<Widget>(_buildNewLeadCard).toList(),
               );
             },
           ),
@@ -735,7 +786,7 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
-// 🟧 Qualified Leads Panel
+  /// Builds the expandable panel for qualified leads.
   Widget _buildQualifiedLeadsPanel() {
     return ExpansionPanelList(
       expansionCallback: (int index, bool isExpanded) {
@@ -748,8 +799,7 @@ class _RealtorClientsState extends State<RealtorClients> {
           headerBuilder: (context, isExpanded) {
             return const ListTile(
               title: Text("Qualified Leads",
-                  style:
-                  TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             );
           },
           body: Builder(
@@ -761,9 +811,11 @@ class _RealtorClientsState extends State<RealtorClients> {
               return qualifiedClients.isEmpty
                   ? const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.0),
-                child: Text('No qualified leads available.',
-                    style: TextStyle(
-                        color: Colors.grey, fontStyle: FontStyle.italic)),
+                child: Text(
+                  'No qualified leads available.',
+                  style: TextStyle(
+                      color: Colors.grey, fontStyle: FontStyle.italic),
+                ),
               )
                   : Column(
                 children: qualifiedClients
@@ -779,7 +831,7 @@ class _RealtorClientsState extends State<RealtorClients> {
     );
   }
 
-// 🟨 Clients Panel
+  /// Builds the expandable panel for clients.
   Widget _buildClientsPanel() {
     return ExpansionPanelList(
       expansionCallback: (int index, bool isExpanded) {
@@ -807,20 +859,20 @@ class _RealtorClientsState extends State<RealtorClients> {
           },
           body: Builder(
             builder: (context) {
-              final clientList = _clients
-                  .where((client) => client['status'] == 'client')
-                  .toList();
+              final clientList =
+              _clients.where((client) => client['status'] == 'client').toList();
 
               return clientList.isEmpty
                   ? const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.0),
-                child: Text('No clients yet.',
-                    style: TextStyle(
-                        color: Colors.grey, fontStyle: FontStyle.italic)),
+                child: Text(
+                  'No clients yet.',
+                  style: TextStyle(
+                      color: Colors.grey, fontStyle: FontStyle.italic),
+                ),
               )
                   : Column(
-                children:
-                clientList.map<Widget>(_buildClientCard).toList(),
+                children: clientList.map<Widget>(_buildClientCard).toList(),
               );
             },
           ),
@@ -842,34 +894,33 @@ class _RealtorClientsState extends State<RealtorClients> {
       child: Scaffold(
         body: Row(
           children: [
-            // LEFT PANEL: Main content (Client management, panels, etc.)
             Expanded(
               flex: 3,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                 child: SingleChildScrollView(
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+                    constraints:
+                    BoxConstraints(minHeight: MediaQuery.of(context).size.height),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                      Text("Client Management",
-                          style: Theme.of(context).textTheme.headlineMedium),
-                      const SizedBox(height: 16),
-                      _buildSearchBar(),
-                      const SizedBox(height: 24),
-                      _buildLeadsPanel(),
-                      const SizedBox(height: 15),
-                      _buildQualifiedLeadsPanel(),
-                      const SizedBox(height: 15),
-                      _buildClientsPanel(),
-                    ],
+                        Text("Client Management",
+                            style: Theme.of(context).textTheme.headlineMedium),
+                        const SizedBox(height: 16),
+                        _buildSearchBar(),
+                        const SizedBox(height: 24),
+                        _buildLeadsPanel(),
+                        const SizedBox(height: 15),
+                        _buildQualifiedLeadsPanel(),
+                        const SizedBox(height: 15),
+                        _buildClientsPanel(),
+                      ],
+                    ),
                   ),
-                ),)
+                ),
               ),
             ),
-
-            // RIGHT PANEL: Client Details (only on wide screen)
             if (isWide && _selectedClientUid != null)
               Container(
                 width: 500,
@@ -886,9 +937,8 @@ class _RealtorClientsState extends State<RealtorClients> {
                         });
                       }
                     },
-                    onDelete: _deleteClient, // 👈 pass the parent’s method
+                    onDelete: _deleteClient,
                   ),
-
                 ),
               ),
           ],

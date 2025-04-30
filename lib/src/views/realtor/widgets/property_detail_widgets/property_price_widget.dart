@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+/// Displays the property's current price and listing status badge.
 class PropertyPriceWidget extends StatelessWidget {
   final num? price;
   final String status;
@@ -21,7 +22,7 @@ class PropertyPriceWidget extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Status Badge
+          // Status badge (e.g., For Sale, Pending)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -39,7 +40,7 @@ class PropertyPriceWidget extends StatelessWidget {
 
           const SizedBox(width: 16),
 
-          // Price
+          // Price display
           Text(
             price != null ? "\$${currencyFormat.format(price)}" : "Price Unavailable",
             style: theme.textTheme.headlineMedium?.copyWith(
@@ -52,6 +53,7 @@ class PropertyPriceWidget extends StatelessWidget {
     );
   }
 
+  /// Get a color based on the property status
   Color _getStatusColor(ThemeData theme) {
     switch (status) {
       case "FOR_SALE":
@@ -65,6 +67,7 @@ class PropertyPriceWidget extends StatelessWidget {
     }
   }
 
+  /// Format the status text (e.g., FOR_SALE -> For Sale)
   String _formatStatus(String status) {
     return status
         .replaceAll("_", " ")

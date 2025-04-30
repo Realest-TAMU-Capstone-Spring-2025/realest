@@ -5,18 +5,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:realest/main.dart';
 import '../../user_provider.dart';
 
+/// A widget displaying the user's profile picture with a dialog for profile options.
 class ProfilePic extends StatelessWidget {
+  /// Callback to toggle the theme (dark/light mode).
   final VoidCallback toggleTheme;
+
+  /// Callback to navigate to account settings.
   final VoidCallback onAccountSettings;
 
-
-   ProfilePic({
+  ProfilePic({
     Key? key,
     required this.toggleTheme,
     required this.onAccountSettings,
-   }) : super(key: key);
+  }) : super(key: key);
 
-
+  /// Shows a dialog with user profile details and options (settings, notifications, dark mode, logout).
   void _showProfileDialog(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final String fullName = '${userProvider.firstName ?? ''} ${userProvider.lastName ?? ''}'.trim();
@@ -25,7 +28,7 @@ class ProfilePic extends StatelessWidget {
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.5),
+      barrierColor: Colors.black.withOpacity(0.5), // Semi-transparent overlay.
       builder: (BuildContext context) {
         final theme = Theme.of(context);
         return Center(
@@ -43,6 +46,7 @@ class ProfilePic extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // User's profile picture.
                     CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.grey[300],
@@ -54,12 +58,14 @@ class ProfilePic extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 15),
+                    // User's full name.
                     Text(
                       fullName.isNotEmpty ? fullName : 'No Name',
                       style: theme.textTheme.bodyLarge?.copyWith(fontSize: 24),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 5),
+                    // User's contact email.
                     Text(
                       contactEmail.isNotEmpty ? contactEmail : 'No Email',
                       style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
@@ -67,6 +73,7 @@ class ProfilePic extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     const Divider(color: Colors.grey),
+                    // Account settings option.
                     ListTile(
                       leading: Icon(Icons.settings, color: theme.colorScheme.onSurface),
                       title: Text(
@@ -79,6 +86,7 @@ class ProfilePic extends StatelessWidget {
                       },
                     ),
                     const Divider(color: Colors.grey),
+                    // Notifications option (disabled, coming soon).
                     SwitchListTile(
                       secondary: Icon(Icons.notifications, color: theme.disabledColor),
                       title: Text(
@@ -94,25 +102,25 @@ class ProfilePic extends StatelessWidget {
                           color: theme.disabledColor,
                         ),
                       ),
-                      value: true, // or false depending on your default
-                      onChanged: null,
+                      value: true, // Placeholder value.
+                      onChanged: null, // Disabled.
                     ),
-
                     const Divider(color: Colors.grey),
+                    // Dark mode toggle.
                     SwitchListTile(
                       secondary: Icon(Icons.dark_mode, color: theme.colorScheme.onSurface),
                       title: Text(
                         "Dark Mode",
                         style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
                       ),
-                      value: themeModeNotifier.value == ThemeMode.dark, // ✅ use directly
+                      value: themeModeNotifier.value == ThemeMode.dark,
                       onChanged: (bool value) {
-                        toggleTheme(); // Flip between dark and light
+                        toggleTheme();
                       },
                     ),
-
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 10),
+                    // Logout option with confirmation dialog.
                     InkWell(
                       onTap: () async {
                         showDialog(
@@ -144,7 +152,7 @@ class ProfilePic extends StatelessWidget {
                                   onPressed: () async {
                                     Navigator.of(dialogContext).pop();
                                     await FirebaseAuth.instance.signOut();
-                                    //clear user data from provider
+                                    // Clear user data from provider.
                                     userProvider.clearUserData();
                                     context.go("/login");
                                   },
@@ -190,6 +198,8 @@ class ProfilePic extends StatelessWidget {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context, listen: true);
     final String profilePicUrl = userProvider.profilePicUrl ?? '';
+
+    // Gesture detector to trigger profile dialog on tap.
     return GestureDetector(
       onTap: () => _showProfileDialog(context),
       child: CircleAvatar(

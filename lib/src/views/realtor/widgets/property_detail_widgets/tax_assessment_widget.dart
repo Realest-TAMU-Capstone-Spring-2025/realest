@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+/// A widget that displays the property's tax assessment history
+/// using a line chart inside an expandable panel.
 class TaxAssessmentWidget extends StatefulWidget {
   final List<dynamic> taxHistory;
 
@@ -13,11 +15,12 @@ class TaxAssessmentWidget extends StatefulWidget {
 
 class _TaxAssessmentWidgetState extends State<TaxAssessmentWidget> {
   bool _isExpanded = false;
+
+  // Gradient colors used for line and area under the curve
   List<Color> gradientColors = [
     Colors.cyan,
     Colors.blue,
   ];
-
 
   @override
   Widget build(BuildContext context) {
@@ -26,25 +29,19 @@ class _TaxAssessmentWidgetState extends State<TaxAssessmentWidget> {
       children: [
         ExpansionPanelList(
           elevation: 1,
-          expansionCallback: (int index, bool _) { // Ignore `isExpanded`
+          expansionCallback: (_, __) {
             setState(() {
-              _isExpanded = !_isExpanded; // Toggle state manually
-              print("Panel expanded: $_isExpanded");
+              _isExpanded = !_isExpanded; // Toggle visibility
             });
           },
           children: [
             ExpansionPanel(
               canTapOnHeader: true,
-              headerBuilder: (BuildContext context, bool isExpanded) {
-                return ListTile(
-                  title: Text(
-                    "Tax History",
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                );
-              },
+              headerBuilder: (context, _) => ListTile(
+                title: Text("Tax History", style: Theme.of(context).textTheme.titleMedium),
+              ),
               body: _isExpanded ? _buildChart() : Container(),
-              isExpanded: _isExpanded, // Use state directly
+              isExpanded: _isExpanded,
             ),
           ],
         ),
@@ -52,7 +49,7 @@ class _TaxAssessmentWidgetState extends State<TaxAssessmentWidget> {
     );
   }
 
-  /// ✅ **Refactored Chart Widget**
+  /// Builds the line chart showing tax assessment data
   Widget _buildChart() {
     if (widget.taxHistory.isEmpty) {
       return const Padding(
@@ -70,21 +67,20 @@ class _TaxAssessmentWidgetState extends State<TaxAssessmentWidget> {
         height: 200,
         child: LineChart(
           LineChartData(
+            // Define axis label styles and title generation
             titlesData: FlTitlesData(
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
                   reservedSize: 80,
-                  getTitlesWidget: (value, meta) =>
-                      getLeftTitleWidget(value, widget.taxHistory),
+                  getTitlesWidget: (value, _) => getLeftTitleWidget(value, widget.taxHistory),
                 ),
               ),
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
                   reservedSize: 30,
-                  getTitlesWidget: (value, meta) =>
-                      getBottomTitleWidget(value, widget.taxHistory),
+                  getTitlesWidget: (value, _) => getBottomTitleWidget(value, widget.taxHistory),
                 ),
               ),
               rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -95,17 +91,14 @@ class _TaxAssessmentWidgetState extends State<TaxAssessmentWidget> {
               touchTooltipData: LineTouchTooltipData(
                 fitInsideHorizontally: true,
                 fitInsideVertically: true,
-                getTooltipItems: (List<LineBarSpot> touchedSpots) {
-                  return touchedSpots.map((spot) {
-                    final year = spot.x.toInt();
-                    final price = NumberFormat("#,##0").format(spot.y);
-
-                    return LineTooltipItem(
-                      "$year\nValue: \$$price",
-                      const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    );
-                  }).toList();
-                },
+                getTooltipItems: (spots) => spots.map((spot) {
+                  final year = spot.x.toInt();
+                  final value = NumberFormat("#,##0").format(spot.y);
+                  return LineTooltipItem(
+                    "$year\nValue: \$$value",
+                    const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  );
+                }).toList(),
               ),
             ),
             lineBarsData: [
@@ -116,9 +109,7 @@ class _TaxAssessmentWidgetState extends State<TaxAssessmentWidget> {
                 belowBarData: BarAreaData(
                   show: true,
                   gradient: LinearGradient(
-                    colors: gradientColors
-                        .map((color) => color.withOpacity(0.3))
-                        .toList(),
+                    colors: gradientColors.map((c) => c.withOpacity(0.3)).toList(),
                   ),
                 ),
                 dotData: FlDotData(show: true),
@@ -130,79 +121,56 @@ class _TaxAssessmentWidgetState extends State<TaxAssessmentWidget> {
     );
   }
 
-
-  /// ✅ **Fix: Ensure Tax Data is Not Null**
+  /// Converts tax history into FlSpot data points
   List<FlSpot> _buildTaxSpots(List<dynamic> taxHistory) {
     if (taxHistory.isEmpty) return [];
 
+    // Sort data chronologically by year
     taxHistory.sort((a, b) => (a["year"] as int).compareTo(b["year"] as int));
 
-    return taxHistory.map((e) {
-      final year = (e["year"] as int).toDouble();
-      final totalAssessment = (e["assessment"]?["total"] as num?)?.toDouble() ?? 0;
-      return FlSpot(year, totalAssessment);
+    return taxHistory.map((entry) {
+      final year = (entry["year"] as int).toDouble();
+      final value = (entry["assessment"]?["total"] as num?)?.toDouble() ?? 0;
+      return FlSpot(year, value);
     }).toList();
   }
 
+  /// Generates left Y-axis labels for property value
   Widget getLeftTitleWidget(double value, List<dynamic> taxHistory) {
-    // Determine min and max price from tax history (or use defaults)
-    final minValue = taxHistory.isNotEmpty
-        ? taxHistory.map((e) => e["assessment"]["total"] as num).reduce((a, b) => a < b ? a : b)
-        : 100000; // Default to $100K if no data
+    // Determine range of values to decide label interval
+    final values = taxHistory
+        .map((e) => (e["assessment"]?["total"] ?? 0) as num)
+        .toList();
 
-    final maxValue = taxHistory.isNotEmpty
-        ? taxHistory.map((e) => e["assessment"]["total"] as num).reduce((a, b) => a > b ? a : b)
-        : 1000000; // Default to $1M if no data
+    final min = values.isNotEmpty ? values.reduce((a, b) => a < b ? a : b) : 100000;
+    final max = values.isNotEmpty ? values.reduce((a, b) => a > b ? a : b) : 1000000;
+    final range = max - min;
 
-    final valueRange = maxValue - minValue;
-
-    // Dynamically adjust interval based on the price range
     double interval;
-    if (valueRange <= 200000) {
+    if (range <= 200000) {
       interval = 25000;
-    } else if (valueRange <= 500000) {
+    } else if (range <= 500000) {
       interval = 50000;
-    } else if (valueRange <= 1000000) {
+    } else if (range <= 1000000) {
       interval = 100000;
     } else {
       interval = 250000;
     }
 
-    if (value % interval == 0) {
-      return Text("\$${NumberFormat("#,##0").format(value)}");
-    }
-
-    return Container(); // Hide other titles
+    return value % interval == 0
+        ? Text("\$${NumberFormat("#,##0").format(value)}")
+        : Container();
   }
 
+  /// Generates bottom X-axis labels (years)
   Widget getBottomTitleWidget(double value, List<dynamic> taxHistory) {
-    // Determine min and max years from tax history (or use current year)
-    final minYear = taxHistory.isNotEmpty
-        ? taxHistory.first["year"] as int
-        : DateTime.now().year;
-
-    final maxYear = taxHistory.isNotEmpty
-        ? taxHistory.last["year"] as int
-        : DateTime.now().year;
-
+    final years = taxHistory.map((e) => e["year"] as int).toList();
+    final minYear = years.isNotEmpty ? years.first : DateTime.now().year;
+    final maxYear = years.isNotEmpty ? years.last : DateTime.now().year;
     final yearRange = maxYear - minYear;
 
-    // Dynamically adjust interval based on how old the house is
-    double interval;
-    if (yearRange <= 5) {
-      interval = 1; // Show every year if house is very new
-    } else if (yearRange <= 10) {
-      interval = 2; // Show every 2 years for newer houses
-    } else {
-      interval = 5; // Default to every 5 years
-    }
+    double interval = yearRange <= 5 ? 1 : yearRange <= 10 ? 2 : 5;
 
-    if (value % interval == 0) {
-      return Text(value.toInt().toString());
-    }
-
-    return Container(); // Hide other titles
+    return value % interval == 0 ? Text(value.toInt().toString()) : Container();
   }
-
-
 }

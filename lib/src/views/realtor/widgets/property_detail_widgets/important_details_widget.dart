@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+/// A widget displaying important property details like style, year built, lot size, HOA, and more.
 class ImportantDetailsWidget extends StatelessWidget {
   final Map<String, dynamic> property;
 
   const ImportantDetailsWidget({super.key, required this.property});
 
+  /// Converts raw property type keys into pretty readable format
   String formatPropertyType(String? rawType) {
     if (rawType == null) return "N/A";
 
@@ -33,11 +35,14 @@ class ImportantDetailsWidget extends StatelessWidget {
       "OTHER": "Other",
     };
 
-    return prettyLabels[rawType] ?? rawType.replaceAll('_', ' ').toLowerCase().split(' ').map((word) {
-      return word[0].toUpperCase() + word.substring(1);
-    }).join(' ');
+    return prettyLabels[rawType] ??
+        rawType
+            .replaceAll('_', ' ')
+            .toLowerCase()
+            .split(' ')
+            .map((word) => word[0].toUpperCase() + word.substring(1))
+            .join(' ');
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +88,7 @@ class ImportantDetailsWidget extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
+        // 🛠️ Additional Details
         Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -92,6 +98,7 @@ class ImportantDetailsWidget extends StatelessWidget {
     );
   }
 
+  /// Build quick stat like "Beds", "Baths", "Sqft"
   Widget _buildStat({required IconData icon, required String label, required ThemeData theme}) {
     return Row(
       children: [
@@ -105,6 +112,7 @@ class ImportantDetailsWidget extends StatelessWidget {
     );
   }
 
+  /// Vertical divider between stats
   Widget _verticalDivider() => Container(
     width: 1,
     height: 20,
@@ -112,6 +120,7 @@ class ImportantDetailsWidget extends StatelessWidget {
     margin: const EdgeInsets.symmetric(horizontal: 12),
   );
 
+  /// Build detailed cards like "HOA", "Lot Size", etc.
   Widget _buildDetailCard(Map<String, dynamic> detail, ThemeData theme) {
     return Container(
       width: 150,

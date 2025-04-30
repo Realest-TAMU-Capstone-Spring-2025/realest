@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:algolia_helper_flutter/algolia_helper_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+/// A reusable search bar widget that integrates with Algolia to provide
+/// property address autocomplete with real-time suggestions.
+/// Calls [onPropertySelected] when a property is chosen.
 class PropertySearchBar extends StatelessWidget {
   final TextEditingController controller;
   final HitsSearcher searcher;
@@ -19,17 +22,23 @@ class PropertySearchBar extends StatelessWidget {
     return RawAutocomplete<Map<String, dynamic>>(
       textEditingController: controller,
       focusNode: FocusNode(),
+
+      /// Query Algolia and return list of property options
       optionsBuilder: (TextEditingValue textEditingValue) async {
         if (textEditingValue.text.isEmpty) return const [];
 
-        searcher.query(textEditingValue.text);
+        searcher.query(textEditingValue.text); // Trigger Algolia search
         final snapshot = await searcher.responses.first;
 
         return snapshot.hits
             .map<Map<String, dynamic>>((hit) => Map<String, dynamic>.from(hit))
             .toList();
       },
+
+      /// Display string in field for selected option
       displayStringForOption: (option) => option['full_street_line'] ?? 'Unknown',
+
+      /// UI builder for autocomplete dropdown
       optionsViewBuilder: (context, onSelected, options) {
         return Align(
           alignment: Alignment.topLeft,
@@ -46,25 +55,29 @@ class PropertySearchBar extends StatelessWidget {
 
                 return ListTile(
                   title: Text(address),
-                  onTap: () => onSelected(option),
+                  onTap: () => onSelected(option), // Select this address
                 );
               },
             ),
           ),
         );
       },
+
+      /// Handle when user selects an address
       onSelected: (selectedOption) {
         final id = selectedOption['objectID'];
         final lat = selectedOption['latitude'];
         final lng = selectedOption['longitude'];
 
-        controller.clear();
+        controller.clear(); // Clear input field
 
         onPropertySelected(
           id,
           LatLng(lat?.toDouble() ?? 0.0, lng?.toDouble() ?? 0.0),
         );
       },
+
+      /// Build the text field for user input
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
         return TextField(
           controller: controller,

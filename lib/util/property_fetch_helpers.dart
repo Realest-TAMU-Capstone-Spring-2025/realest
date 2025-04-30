@@ -1,16 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
+/// Fetches detailed property data from Firestore for a given property ID.
+///
+/// [propertyId] is the unique identifier of the property.
+/// Returns a [Map] containing comprehensive property details.
+/// Throws an [Exception] if the property is not found.
 Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
+  // Reference to the property document in the 'listings' collection.
   final propertyRef = FirebaseFirestore.instance.collection('listings').doc(propertyId);
   final snapshot = await propertyRef.get();
 
+  // Check if the property exists.
   if (!snapshot.exists) {
     throw Exception('Property with ID $propertyId not found.');
   }
 
+  // Extract data from the snapshot, defaulting to an empty map if null.
   final data = snapshot.data() ?? {};
 
+  // Parse alternate photos, handling both string and list formats.
   List<String> altPhotos = [];
   if (data['alt_photos'] is String) {
     altPhotos = data['alt_photos'].split(', ');
@@ -18,7 +27,7 @@ Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
     altPhotos = List<String>.from(data['alt_photos']);
   }
 
-  // Conditionally apply CORS proxy in debug mode
+  // Apply CORS proxy for image URLs in debug mode.
   if (kDebugMode) {
     altPhotos = altPhotos.map((url) {
       if (url.startsWith('http')) {
@@ -28,10 +37,11 @@ Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
     }).toList();
   }
 
+  // Return a map with all relevant property details, providing defaults for missing fields.
   return {
     'id': propertyId,
-    'alt_photos': altPhotos,
-    'primary_photo': data['primary_photo'] ?? 'https://via.placeholder.com/400',
+    'alt_photos': altPhotos, // List of alternate photo URLs.
+    'primary_photo': data['primary_photo'] ?? 'https://via.placeholder.com/400', // Default placeholder image.
     'address': data['full_street_line'] ?? 'Address unavailable',
     'city': data['city'] ?? 'N/A',
     'state': data['state'] ?? 'N/A',
@@ -51,17 +61,17 @@ Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
     'agent_name': data['agent_name'] ?? 'N/A',
     'agent_email': data['agent_email'] ?? 'N/A',
     'agent_mls_set': data['agent_mls_set'] ?? 'N/A',
-    'agent_nrds_id' : data['agent_nrds_id'] ?? 'N/A',
+    'agent_nrds_id': data['agent_nrds_id'] ?? 'N/A',
     'agent_phones': data['agent_phones'] != null
-    ? List<Map<String, dynamic>>.from(data['agent_phones'])
-        : <Map<String, dynamic>>[],
+        ? List<Map<String, dynamic>>.from(data['agent_phones'])
+        : <Map<String, dynamic>>[], // List of agent phone details.
     'office_name': data['office_name'] ?? 'N/A',
     'office_email': data['office_email'] ?? 'N/A',
     'office_phones': data['office_phones'] != null
         ? List<Map<String, dynamic>>.from(data['office_phones'])
-        : <Map<String, dynamic>>[],
+        : <Map<String, dynamic>>[], // List of office phone details.
     'office_mls_set': data['office_mls_set'] ?? 'N/A',
-    'office_id' : data['office_id'] ??'N/A',
+    'office_id': data['office_id'] ?? 'N/A',
     'broker_name': data['broker_name'] ?? 'N/A',
     'county': data['county'] ?? 'N/A',
     'latitude': data['latitude'] ?? 0.0,
@@ -73,7 +83,7 @@ Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
     'new_construction': data['new_construction'] ?? false,
     'tax_history': data['tax_history'] != null
         ? List<Map<String, dynamic>>.from(data['tax_history'])
-        : <Map<String, dynamic>>[],
+        : <Map<String, dynamic>>[], // List of tax history records.
     'builder_name': data['builder_name'] ?? 'N/A',
     'builder_id': data['builder_id'] ?? 'N/A',
     'neighborhoods': data['neighborhoods'] ?? 'N/A',
@@ -88,7 +98,7 @@ Future<Map<String, dynamic>> fetchPropertyData(String propertyId) async {
     'text': data['text'] ?? 'No description available',
     'year_built': data['year_built'] ?? 0,
     'lot_sqft': data['lot_sqft'] ?? 0,
-    'mls' : data['mls'] ?? 'N/A',
-    'days_on_mls' : data['days_on_mls'] ?? 'N/A',
+    'mls': data['mls'] ?? 'N/A',
+    'days_on_mls': data['days_on_mls'] ?? 'N/A',
   };
 }

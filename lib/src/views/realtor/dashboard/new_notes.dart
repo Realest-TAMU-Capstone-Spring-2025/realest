@@ -5,9 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:realest/src/views/realtor/widgets/property_detail_sheet.dart';
-
 import '../../../../util/property_fetch_helpers.dart';
 
+/// Displays a list of recent notes for the logged-in realtor.
 class NewNotesSection extends StatelessWidget {
   const NewNotesSection({Key? key}) : super(key: key);
 
@@ -39,41 +39,33 @@ class NewNotesSection extends StatelessWidget {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
-              
               if (snapshot.hasError) {
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
-              
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return const Center(child: Text('No notes available'));
               }
-              
               return ListView.builder(
                 itemCount: snapshot.data!.docs.length,
                 itemBuilder: (context, index) {
                   final noteDoc = snapshot.data!.docs[index];
                   final noteData = noteDoc.data() as Map<String, dynamic>;
-                  
                   return FutureBuilder<Map<String, dynamic>>(
                     future: _getInvestorDetails(noteData['investorId']),
                     builder: (context, investorSnapshot) {
                       if (investorSnapshot.connectionState == ConnectionState.waiting) {
                         return const NoteSkeletonCard();
                       }
-                      
                       final investorData = investorSnapshot.data ?? {};
                       final hasName = investorData['firstName'] != null && investorData['lastName'] != null;
-                      final name = hasName 
+                      final name = hasName
                           ? '${investorData['firstName']} ${investorData['lastName']}'
                           : 'Unknown Investor';
                       final email = investorData['contactEmail'] ?? 'No email';
-                      
-                      // Format timestamp
                       final timestamp = noteData['timestamp'] as Timestamp?;
                       final formattedDate = timestamp != null
                           ? DateFormat('MMM d, yyyy • h:mm a').format(timestamp.toDate())
                           : 'Unknown date';
-
                       return NoteCard(
                         name: name,
                         email: email,
@@ -82,9 +74,7 @@ class NewNotesSection extends StatelessWidget {
                         read: noteData['read'] ?? false,
                         timestamp: formattedDate,
                         onPropertyTap: () => _showPropertyDetails(context, noteData['propertyId']),
-                        profilePicUrl: investorData['profilePicUrl'] != null
-                            ? investorData['profilePicUrl']!
-                            : 'assets/images/profile.png',
+                        profilePicUrl: investorData['profilePicUrl'] ?? 'assets/images/profile.png',
                         onDelete: () async {
                           final confirm = await showDialog<bool>(
                             context: context,
@@ -92,12 +82,15 @@ class NewNotesSection extends StatelessWidget {
                               title: const Text("Delete Note"),
                               content: const Text("Are you sure you want to delete this note?"),
                               actions: [
-                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
-                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Delete")),
+                                TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text("Cancel")),
+                                TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text("Delete")),
                               ],
                             ),
                           );
-
                           if (confirm == true) {
                             await FirebaseFirestore.instance
                                 .collection('realtors')
@@ -108,7 +101,6 @@ class NewNotesSection extends StatelessWidget {
                           }
                         },
                       );
-
                     },
                   );
                 },
@@ -120,13 +112,15 @@ class NewNotesSection extends StatelessWidget {
     );
   }
 
+  /// Fetches investor details from Firestore for a given [investorId].
+  ///
+  /// Returns a map of investor data or an empty map if not found or on error.
   Future<Map<String, dynamic>> _getInvestorDetails(String? investorId) async {
     try {
       final doc = await FirebaseFirestore.instance
           .collection('investors')
           .doc(investorId)
           .get();
-      
       if (doc.exists) {
         return doc.data() ?? {};
       }
@@ -137,24 +131,19 @@ class NewNotesSection extends StatelessWidget {
     }
   }
 
+  /// Shows a bottom sheet with property details for the given [propertyId].
+  ///
+  /// [context] is the build context.
+  /// Displays an error snackbar if fetching fails.
   Future<void> _showPropertyDetails(BuildContext context, String propertyId) async {
     try {
-      // Get the property from Firestore
       final propertyRef = FirebaseFirestore.instance.collection('listings').doc(propertyId);
       final snapshot = await propertyRef.get();
-
       if (!snapshot.exists) {
         print("Property not found");
         return;
       }
-
-      // Optional: set some state here if needed
-      // setState(() => _selectedPropertyId = propertyId);
-
-      // Fetch full property data
       final propertyData = await fetchPropertyData(propertyId);
-
-      // Show the modal bottom sheet
       await showModalBottomSheet(
         context: context,
         constraints: const BoxConstraints(maxWidth: 1000),
@@ -172,15 +161,33 @@ class NewNotesSection extends StatelessWidget {
   }
 }
 
+/// Displays a card with details of a single note.
 class NoteCard extends StatelessWidget {
+  /// Investor's full name.
   final String name;
+
+  /// Investor's email address.
   final String email;
+
+  /// Content of the note.
   final String note;
+
+  /// ID of the property associated with the note.
   final String propertyId;
+
+  /// Whether the note has been read.
   final bool read;
+
+  /// Formatted timestamp of the note.
   final String timestamp;
+
+  /// Callback when the property icon is tapped.
   final VoidCallback onPropertyTap;
-  final VoidCallback onDelete; // <- NEW
+
+  /// Callback when the delete icon is tapped.
+  final VoidCallback onDelete;
+
+  /// URL or path to the investor's profile picture.
   final String? profilePicUrl;
 
   const NoteCard({
@@ -192,7 +199,7 @@ class NoteCard extends StatelessWidget {
     required this.read,
     required this.timestamp,
     required this.onPropertyTap,
-    required this.onDelete, // <- NEW
+    required this.onDelete,
     this.profilePicUrl,
   }) : super(key: key);
 
@@ -201,7 +208,7 @@ class NoteCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      color:  Theme.of(context).colorScheme.onTertiary,
+      color: theme.colorScheme.onTertiary,
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -290,6 +297,7 @@ class NoteCard extends StatelessWidget {
     );
   }
 
+  /// Launches an email client with the specified [email] address.
   void _launchEmail(String email) async {
     final Uri emailUri = Uri(scheme: 'mailto', path: email);
     if (await canLaunchUrl(emailUri)) {
@@ -298,7 +306,7 @@ class NoteCard extends StatelessWidget {
   }
 }
 
-// Add NoteSkeletonCard similar to ClientActivitySkeletonCard
+/// Displays a skeleton loading card for a note while data is being fetched.
 class NoteSkeletonCard extends StatelessWidget {
   const NoteSkeletonCard({Key? key}) : super(key: key);
 

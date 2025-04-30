@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'status_badge.dart';
 
+/// Displays a compact list card view for a property.
+/// Shows address, price, and status badge.
 class PropertyListCard extends StatelessWidget {
-  final Map<String, dynamic> property;
-  final VoidCallback onTap;
-  final Color? color;
+  final Map<String, dynamic> property; // Property details
+  final VoidCallback onTap;             // Callback when card is tapped
+  final Color? color;                   // Optional background color
 
   const PropertyListCard({
     super.key,
@@ -21,7 +23,7 @@ class PropertyListCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        height: 80, // Reduced height
+        height: 80, // Compact height for list view
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
           color: color ?? theme.cardColor,
@@ -38,12 +40,13 @@ class PropertyListCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
-              // Info
+              // Property address and price info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    // Address text
                     Text(
                       property['address'] ?? 'No address',
                       style: theme.textTheme.bodyMedium?.copyWith(
@@ -54,6 +57,7 @@ class PropertyListCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
+                    // Price text
                     Text(
                       '\$${property['price']?.toStringAsFixed(0) ?? 'N/A'}',
                       style: theme.textTheme.bodyLarge?.copyWith(
@@ -68,7 +72,7 @@ class PropertyListCard extends StatelessWidget {
 
               const SizedBox(width: 8),
 
-              // Status badge
+              // Property listing status badge (For Sale, Pending, Sold)
               StatusBadge(listingType: property['status']),
             ],
           ),

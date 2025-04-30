@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:realest/src/views/realtor/widgets/property_detail_widgets/property_price_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+/// Widget showing the summary section of a property:
+/// includes price, status, address, and stats (beds, baths, sqft).
 class PropertySummaryWidget extends StatelessWidget {
   final Map<String, dynamic> property;
 
@@ -16,7 +18,6 @@ class PropertySummaryWidget extends StatelessWidget {
 
     final rawPrice = property["list_price"];
     final priceText = rawPrice != null ? "\$${currency.format(rawPrice)}" : "Price Unavailable";
-
     final address = property["address"] ?? "Address Unavailable";
     final beds = property["beds"] ?? "-";
     final baths = property["baths"] ?? "-";
@@ -29,7 +30,7 @@ class PropertySummaryWidget extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left: Price and address
+          // LEFT SECTION: Price, address, MLS info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,11 +43,9 @@ class PropertySummaryWidget extends StatelessWidget {
                   children: [
                     Text(
                       address,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    SizedBox(width: 4,),
+                    const SizedBox(width: 4),
                     IconButton(
                       icon: const Icon(Icons.copy, size: 18, color: Colors.grey),
                       tooltip: 'Copy address',
@@ -73,12 +72,11 @@ class PropertySummaryWidget extends StatelessWidget {
                   "MLS: ${property["mls"] ?? "N/A"} • Days on MLS: ${property["days_on_mls"] ?? "N/A"} • ID: ${property["mls_id"] ?? "N/A"}",
                   style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                 ),
-
               ],
             ),
           ),
 
-          // Right: Beds, Baths, Sqft
+          // RIGHT SECTION: Quick stats
           Container(
             margin: const EdgeInsets.only(left: 12),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -101,6 +99,7 @@ class PropertySummaryWidget extends StatelessWidget {
     );
   }
 
+  /// Reusable stats box (Beds / Baths / Sqft)
   Widget _stat(String value, String label, ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -111,6 +110,7 @@ class PropertySummaryWidget extends StatelessWidget {
     );
   }
 
+  /// Launch Google Maps with encoded address
   void _launchGoogleMaps(String address) async {
     final encoded = Uri.encodeComponent(address);
     final url = Uri.parse("https://www.google.com/maps/search/?api=1&query=$encoded");
@@ -119,9 +119,10 @@ class PropertySummaryWidget extends StatelessWidget {
     }
   }
 }
-
+/// Expansion panel widget for displaying detailed property information
 class PropertyExtraDetailsPanel extends StatefulWidget {
   final Map<String, dynamic> property;
+
   const PropertyExtraDetailsPanel({super.key, required this.property});
 
   @override
@@ -153,9 +154,7 @@ class _PropertyExtraDetailsPanelState extends State<PropertyExtraDetailsPanel> {
 
     return ExpansionPanelList(
       elevation: 1,
-      expansionCallback: (int index, bool _) {
-        setState(() => _isExpanded = !_isExpanded);
-      },
+      expansionCallback: (_, __) => setState(() => _isExpanded = !_isExpanded),
       children: [
         ExpansionPanel(
           canTapOnHeader: true,
@@ -176,6 +175,7 @@ class _PropertyExtraDetailsPanelState extends State<PropertyExtraDetailsPanel> {
     );
   }
 
+  /// Builds a compact label-value row for each detail item
   Widget _detailItem(String label, String value, ThemeData theme) {
     return SizedBox(
       width: 160,

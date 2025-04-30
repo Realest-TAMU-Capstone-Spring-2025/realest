@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:realest/user_provider.dart';
 
+/// A dialog widget for adding a new tag with a name, color, and associated clients.
 class AddTagWidget extends StatefulWidget {
   const AddTagWidget({Key? key}) : super(key: key);
 
@@ -11,15 +12,22 @@ class AddTagWidget extends StatefulWidget {
   _AddTagWidgetState createState() => _AddTagWidgetState();
 }
 
+/// State for [AddTagWidget]. Manages tag creation and client selection.
 class _AddTagWidgetState extends State<AddTagWidget> {
+  /// Controller for the tag name input field.
   final TextEditingController _tagNameController = TextEditingController();
+
+  /// The currently selected color for the tag.
   Color _selectedColor = Colors.blue;
+
+  /// List of selected client IDs for the tag.
   List<String> _selectedInvestorIds = [];
 
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final clients = userProvider.clients;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SingleChildScrollView(
@@ -30,9 +38,13 @@ class _AddTagWidgetState extends State<AddTagWidget> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text("Add New Tag",
-                    style: Theme.of(context).textTheme.bodyLarge
-                        ?.copyWith(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(
+                  "Add New Tag",
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _tagNameController,
@@ -53,28 +65,27 @@ class _AddTagWidgetState extends State<AddTagWidget> {
                 ),
                 const SizedBox(height: 16),
                 const Text("Select Clients for this Tag:"),
-                // Wrap the clients list in a container with maxHeight constraint.
                 Container(
                   constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.5),
+                    maxHeight: MediaQuery.of(context).size.height * 0.5,
+                  ),
                   child: ListView.builder(
-                    // Remove NeverScrollableScrollPhysics to allow scrolling.
                     itemCount: clients.length,
                     itemBuilder: (context, index) {
                       final client = clients[index];
                       final clientId = client['id'];
-                      final isSelected =
-                      _selectedInvestorIds.contains(clientId);
+                      final isSelected = _selectedInvestorIds.contains(clientId);
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundImage: client['profilePicUrl'] != null
                               ? NetworkImage(client['profilePicUrl'])
                               : null,
                           child: client['profilePicUrl'] == null
-                              ? Text(client['name'] != null &&
-                              client['name'].isNotEmpty
-                              ? client['name'][0].toUpperCase()
-                              : 'C')
+                              ? Text(
+                            client['name'] != null && client['name'].isNotEmpty
+                                ? client['name'][0].toUpperCase()
+                                : 'C',
+                          )
                               : null,
                         ),
                         title: Text(client['name'] ?? 'Unnamed Client'),
@@ -135,6 +146,7 @@ class _AddTagWidgetState extends State<AddTagWidget> {
     );
   }
 
+  /// Shows a color picker dialog to select a tag color.
   void _showColorPicker() {
     showDialog(
       context: context,
@@ -166,6 +178,7 @@ class _AddTagWidgetState extends State<AddTagWidget> {
     );
   }
 
+  /// Adds a new tag to Firestore and updates the user provider.
   Future<void> _addTag() async {
     final tagName = _tagNameController.text.trim();
     if (tagName.isEmpty) {
@@ -174,6 +187,7 @@ class _AddTagWidgetState extends State<AddTagWidget> {
       );
       return;
     }
+
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final realtorId = userProvider.uid;
     if (realtorId == null) {
@@ -182,6 +196,7 @@ class _AddTagWidgetState extends State<AddTagWidget> {
       );
       return;
     }
+
     await FirebaseFirestore.instance
         .collection('realtors')
         .doc(realtorId)
@@ -191,9 +206,11 @@ class _AddTagWidgetState extends State<AddTagWidget> {
       'color': _selectedColor.value,
       'investors': _selectedInvestorIds,
     });
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Tag added successfully.")),
     );
+
     await userProvider.fetchUserData();
     Navigator.pop(context);
   }

@@ -10,6 +10,7 @@ import '../dashboard/new_notes.dart';
 import '../widgets/property_card/property_list_card.dart';
 import '../widgets/property_detail_sheet.dart';
 
+/// A sliding drawer that displays client details, notes, tags, and property interactions.
 class ClientDetailsDrawer extends StatefulWidget {
   final String clientUid;
   final VoidCallback onClose;
@@ -29,6 +30,7 @@ class ClientDetailsDrawer extends StatefulWidget {
   _ClientDetailsDrawerState createState() => _ClientDetailsDrawerState();
 }
 
+/// State class for ClientDetailsDrawer.
 class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     with SingleTickerProviderStateMixin {
   Map<String, dynamic>? _clientData;
@@ -60,6 +62,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     _loadClientData();
   }
 
+  /// Loads client details, notes, tags, and property interactions from Firestore.
   Future<void> _loadClientData() async {
     try {
       final investorDoc = await FirebaseFirestore.instance
@@ -157,6 +160,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     super.dispose();
   }
 
+  /// Builds a list of property interactions (liked, disliked, sent, matched).
   Widget _buildInteractionList(String title, IconData icon, List<Map<String, dynamic>> items) {
     final theme = Theme.of(context);
 
@@ -209,6 +213,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     );
   }
 
+  /// Deletes the client and triggers the optional delete callback.
   Future<void> _deleteClient() async {
     final name = '${_clientData?['firstName'] ?? ''} ${_clientData?['lastName'] ?? ''}';
     widget.onDelete?.call(widget.clientUid, name);
@@ -216,6 +221,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     widget.onClose();
   }
 
+  /// Builds a list of assigned tags for the client.
   Widget _buildTagList() {
     final theme = Theme.of(context);
     final assignedTags = _assignedTags
@@ -244,6 +250,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     );
   }
 
+  /// Opens a dialog to edit client's general notes.
   void _showEditNotesDialog(TextEditingController notesController) {
     showDialog(
       context: context,
@@ -631,6 +638,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
         ])))));
   }
 
+  /// Opens property detail sheet for a specific property.
   Future<void> _openPropertyDetails(String propertyId) async {
     final doc = await FirebaseFirestore.instance.collection('listings').doc(propertyId).get();
 
@@ -653,7 +661,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     );
   }
 
-
+  /// Wraps an interaction list in a scrollable view for tab content.
   Widget _buildScrollableTabContent(
       String title, IconData icon, List<Map<String, dynamic>> items) {
     return SingleChildScrollView(
@@ -662,6 +670,7 @@ class _ClientDetailsDrawerState extends State<ClientDetailsDrawer>
     );
   }
 
+  /// Opens the manage tags dialog to assign or unassign tags to the client.
   void _showManageTagsDialog() async {
     final realtorId = FirebaseAuth.instance.currentUser?.uid;
     final clientUid = widget.clientUid;

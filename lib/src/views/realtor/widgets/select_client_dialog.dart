@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../home search/add_tag.dart';
 import '../home search/edit_tag.dart';
 
+/// Dialog for realtors to select and send properties to clients.
 class SelectClientDialog extends StatefulWidget {
   final Function(List<String>) onClientsSelected;
   final Map<String, dynamic> property;
@@ -261,6 +262,7 @@ class _SelectClientDialogState extends State<SelectClientDialog> {
     );
   }
 
+  /// Shows list of tags with buttons to edit each one
   void _showEditTagsDialog(UserProvider userProvider) {
     showDialog(
       context: context,
@@ -463,6 +465,7 @@ class _SelectClientDialogState extends State<SelectClientDialog> {
     });
   }
 
+  /// Automatically selects clients who match all selected tags
   void _updateSelectedClientsFromTags() {
     if (selectedTags.isEmpty) return;
 
@@ -484,7 +487,7 @@ class _SelectClientDialogState extends State<SelectClientDialog> {
     setState(() {});
   }
 
-
+  /// Deselects tags if selected clients no longer fully match them
   void _checkAndRemoveTags() {
     final tagsToCheck = List<Map<String, dynamic>>.from(selectedTags);
     for (var tag in tagsToCheck) {

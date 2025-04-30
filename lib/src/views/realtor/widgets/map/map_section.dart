@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import '../../../../../main.dart';
+import '../../../../../main.dart'; // Theme mode notifier for dynamic styling
 
+/// A Google Map widget that updates its style based on light/dark theme
+/// and shows property markers with tap functionality.
 class MapSection extends StatefulWidget {
-  final Set<Marker> markers;
-  final Function(GoogleMapController) onMapCreated;
-  final Function(String propertyId, LatLng location) onPropertyTap;
-
-
+  final Set<Marker> markers; // Set of map markers (properties)
+  final Function(GoogleMapController) onMapCreated; // Callback when the map is created
+  final Function(String propertyId, LatLng location) onPropertyTap; // Callback when a property is tapped
 
   const MapSection({
     Key? key,
@@ -23,8 +23,9 @@ class MapSection extends StatefulWidget {
 
 class _MapSectionState extends State<MapSection> {
   GoogleMapController? _controller;
-  ThemeMode? _lastThemeMode;
+  ThemeMode? _lastThemeMode; // Last known theme mode for optimization
 
+  // Custom dark mode map styling
   final String _darkMapStyle = '''[
     {
       "elementType": "geometry",
@@ -63,21 +64,22 @@ class _MapSectionState extends State<MapSection> {
   @override
   void initState() {
     super.initState();
-    themeModeNotifier.addListener(_updateMapStyle);
+    themeModeNotifier.addListener(_updateMapStyle); // Listen for theme changes
   }
 
   @override
   void dispose() {
-    themeModeNotifier.removeListener(_updateMapStyle);
+    themeModeNotifier.removeListener(_updateMapStyle); // Clean up
     super.dispose();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _updateMapStyle(); // ensure it's checked anytime dependencies change
+    _updateMapStyle(); // Update map style if dependencies change
   }
 
+  /// Updates the Google Map style based on the current theme mode
   void _updateMapStyle() {
     if (_controller == null) return;
 
@@ -92,7 +94,7 @@ class _MapSectionState extends State<MapSection> {
   Widget build(BuildContext context) {
     return GoogleMap(
       initialCameraPosition: const CameraPosition(
-        target: LatLng(30.575437, -96.294686),
+        target: LatLng(30.575437, -96.294686), // Default center position
         zoom: 13,
       ),
       onMapCreated: (controller) {

@@ -7,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'cashflow_edit_dialog.dart';
 
+/// Widget for displaying cash flow analysis of a property
+/// with baseline and personalized estimates, editing, and suggestions.
 class CashFlowAnalysisWidget extends StatefulWidget {
   final String listingId;
   final bool isRealtor;
@@ -37,7 +39,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
     _fetchData(); // realtorId will be resolved inside this method
   }
 
-
+  /// Fetch investor's default loan parameters
   Future<Map<String, dynamic>> _getInvestorLoanDefaults() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return {};
@@ -52,6 +54,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
     };
   }
 
+  /// Get breakdown of expense categories
   Map<String, double> _getExpenseBreakdown(Map<String, dynamic> data) {
     return {
       'Principal': (data['principal'] ?? 0).toDouble(),
@@ -66,7 +69,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
     };
   }
 
-
+  /// Fetch baseline data and personalize if investor
   Future<void> _fetchData() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
@@ -163,6 +166,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
     });
   }
 
+  /// Build the full UI
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -308,6 +312,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
     );
   }
 
+  /// Show dialog for the user to review and submit changes to the realtor
   void _showSuggestionReviewDialog() {
     final usedValues = fromRealtorValues;
     final newValues = cashFlowDefaults;
@@ -461,6 +466,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
 
   }
 
+  /// Title for Monthly Breakdown section
   List<Widget> _buildBreakdownList(Map<String, dynamic> rawBreakdown,
       ThemeData theme,
       NumberFormat currency,) {
@@ -516,7 +522,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
     }).toList();
   }
 
-
+  /// Summary Income/Expense/Net Cards
   Widget _buildExpenseBar(Map<String, dynamic> breakdown) {
     final total = breakdown.values.fold(
         0.0, (sum, v) => sum + (v as num).toDouble());
@@ -578,7 +584,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
     );
   }
 
-
+  /// Widget for a single financial summary card (Income / Expense / Net)
   Widget _valueCard(String label, double amount, Color color,
       NumberFormat currency) {
     return Container(
@@ -601,7 +607,7 @@ class _CashFlowAnalysisWidgetState extends State<CashFlowAnalysisWidget> {
 
 
   // Place this inside _CashFlowAnalysisWidgetState
-
+  /// Show dialog to edit cash flow assumptions (loan % down payment, property tax, insurance, etc.)
   void _showEditDialog() {
     final usedValues = cashflowData['valuesUsed'] ?? {};
 

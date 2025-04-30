@@ -25,6 +25,7 @@ import '../widgets/map/map_controller.dart';
 import '../widgets/map/map_section.dart';
 import '../widgets/marker/property_marker.dart';
 
+/// A screen for realtors to search and view properties on a map or list.
 class RealtorHomeSearch extends StatefulWidget {
   const RealtorHomeSearch({Key? key}) : super(key: key);
 
@@ -32,6 +33,7 @@ class RealtorHomeSearch extends StatefulWidget {
   _RealtorHomeSearchState createState() => _RealtorHomeSearchState();
 }
 
+/// State for [RealtorHomeSearch]. Manages map, filters, and property selection.
 class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
   late GoogleMapController _mapController;
   bool _isFilterOpen = false;
@@ -62,12 +64,14 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
 
   Future<Set<Marker>> _cachedMarkersFuture = Future.value({});
 
+  /// Refreshes map markers based on filtered properties.
   void _refreshMarkers() {
     _cachedMarkersFuture = _createMarkers();
   }
 
   bool _isLoading = true;
 
+  /// Loads saved filter preferences from SharedPreferences.
   Future<void> _loadFilters() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -93,8 +97,6 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
       );
     });
   }
-
-
 
 
   @override
@@ -153,12 +155,15 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     });
   }
 
-
+  /// Called when the Google Map is created.
   void _onMapCreated(GoogleMapController controller) async {
     _mapController = controller;
   }
 
-
+  /// Selects a property and shows its details in a bottom sheet.
+  ///
+  /// [propertyId] is the ID of the property.
+  /// [location] is the LatLng coordinates of the property.
   Future<void> _selectProperty(String propertyId, LatLng location) async {
 
     // get the property with this id from firestore
@@ -193,6 +198,9 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     );
   }
 
+  /// Creates map markers for filtered properties.
+  ///
+  /// Returns a set of [Marker] objects.
   Future<Set<Marker>> _createMarkers() async {
     final Set<Marker> markers = {};
 
@@ -217,6 +225,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     return markers;
   }
 
+  /// Saves current filters to SharedPreferences.
   Future<void> _saveFilters() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -230,8 +239,6 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     await prefs.setDouble('minBaths', _filters.minBaths ?? 0.0);
     await prefs.setStringList('homeTypes', _filters.homeTypes ?? []);
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -470,6 +477,10 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     );
   }
 
+  /// Determines the width of the listings panel based on screen width.
+  ///
+  /// [screenWidth] is the current screen width.
+  /// Returns the calculated width for the listings panel.
   double _getListingsPanelWidth(double screenWidth) {
     if (screenWidth >= 1700) return 1100; // 3 cards (360 * 3 + spacing)
     if (screenWidth >= 1200) return 740;  // 2 cards (350 * 2 + spacing)
@@ -477,7 +488,10 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     return screenWidth;                  // full width on mobile
   }
 
-  /// **Property Card**
+  /// Builds a property card for the property list.
+  ///
+  /// [property] is the property data.
+  /// Returns a [PropertyCard] widget.
   Widget _buildPropertyCard(Map<String, dynamic> property) {
     return PropertyCard(
       property: property,
@@ -491,6 +505,9 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     );
   }
 
+  /// Fetches filtered properties for map display.
+  ///
+  /// Updates [allFilteredPropertiesForMap] and refreshes markers.
   Future<void> _fetchAllFilteredPropertiesForMap() async {
     final snapshot = await buildFilteredQuery(_filters).get();
 
@@ -536,6 +553,7 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     }
   }
 
+  /// Updates the Firestore query with current filters.
   void _updateFilteredQuery() {
     // print('[FirestoreQuery] Updating filtered query...');
     final query = buildFilteredQuery(_filters);
@@ -545,6 +563,11 @@ class _RealtorHomeSearchState extends State<RealtorHomeSearch> {
     _fetchAllFilteredPropertiesForMap();
   }
 
+  /// Generates cash flow analysis for listings if missing.
+  ///
+  /// [realtorId] is the ID of the realtor.
+  /// [listings] is the list of properties to process.
+  /// [cashFlowDefaults] contains default values for cash flow calculations.
   Future<void> generateCashFlowIfMissing({
     required String realtorId,
     required List<Map<String, dynamic>> listings,

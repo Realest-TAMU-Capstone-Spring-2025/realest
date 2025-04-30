@@ -33,10 +33,8 @@ import 'package:realest/src/views/mobile_home_page.dart';
 // Provider and user-related imports
 import 'user_provider.dart';
 
-/// Notifies listeners when the app's theme mode changes.
 final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.dark);
 
-/// Initializes the app, sets up Firebase, and runs the main widget.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -65,7 +63,6 @@ void main() async {
   );
 }
 
-/// Root widget of the app, managing theme and routing.
 class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
 
@@ -73,12 +70,8 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-/// State for [MyApp], handling router initialization and theme toggling.
 class _MyAppState extends State<MyApp> {
-  /// Router for navigation.
   late final GoRouter _router;
-
-  /// Provider for user data.
   late final UserProvider userProvider;
 
   @override
@@ -88,11 +81,11 @@ class _MyAppState extends State<MyApp> {
     _router = _createRouter(_toggleTheme);
   }
 
-  /// Toggles between light and dark theme modes.
   void _toggleTheme() {
     themeModeNotifier.value =
     themeModeNotifier.value == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +103,6 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  /// Displays a snackbar with an access denied message.
   void _showAccessDenied(BuildContext context, String message) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -119,8 +111,9 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  /// Creates the app's routing configuration with role-based access control.
+
   GoRouter _createRouter(VoidCallback toggleTheme) {
+
     String initialRoute = '/';
     if (!kIsWeb) {
       if (Platform.isAndroid || Platform.isIOS) {
@@ -313,25 +306,14 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-/// Layout widget providing navigation and theme-aware scaffolding.
 class MainLayout extends StatelessWidget {
-  /// The main content widget.
   final Widget child;
-
-  /// Callback to toggle the theme.
   final VoidCallback toggleTheme;
-
-  /// Current theme mode (light or dark).
   final ThemeMode themeMode;
 
-  MainLayout({
-    required this.child,
-    required this.toggleTheme,
-    required this.themeMode,
-    Key? key,
-  }) : super(key: key);
+  MainLayout({required this.child, required this.toggleTheme, required this.themeMode, Key? key})
+      : super(key: key);
 
-  /// Scaffold key for controlling drawer state.
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -371,7 +353,6 @@ class MainLayout extends StatelessWidget {
   }
 }
 
-/// Defines the light theme for the app.
 ThemeData _lightTheme() {
   return ThemeData(
     primaryColor: Colors.black,
@@ -386,7 +367,7 @@ ThemeData _lightTheme() {
       onTertiary: Colors.grey[100],
       onTertiaryFixedVariant: Colors.grey[200],
     ),
-    cardTheme: CardTheme(color: Colors.grey[200]),
+    cardTheme: CardTheme( color: Colors.grey[200]),
     textTheme: const TextTheme(
       headlineSmall: TextStyle(color: Colors.black),
       headlineLarge: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
@@ -429,28 +410,31 @@ ThemeData _lightTheme() {
         ),
       ),
     ),
+    //expansion panel theme border round
     expansionTileTheme: ExpansionTileThemeData(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
     ),
+
   );
+
 }
 
-/// Defines the dark theme for the app.
 ThemeData _darkTheme() {
   return ThemeData(
     primaryColor: Colors.white,
     scaffoldBackgroundColor: const Color(0xFF1E1E1E),
     cardColor: const Color(0xFF2C2C2C),
     colorScheme: const ColorScheme.dark(
-      primary: Color(0xFFCA93FF),
+      primary: const Color(0xFFCA93FF),
       secondary: Colors.white70,
       surface: Color(0xFF2C2C2C),
       surfaceVariant: Color(0xFF121212),
       onSurface: Colors.white,
-      onTertiary: Color(0xFF3C3C3C),
+      onTertiary:  Color(0xFF3C3C3C),
       onTertiaryFixedVariant: Color(0xFF494949),
+
     ),
     cardTheme: const CardTheme(color: Color(0xFF2C2C2C)),
     textTheme: const TextTheme(

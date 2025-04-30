@@ -15,6 +15,11 @@ import 'package:realest/src/views/realtor/widgets/property_detail_widgets/proper
 import 'package:realest/src/views/realtor/widgets/property_detail_widgets/tax_assessment_widget.dart';
 import 'package:realest/src/views/realtor/widgets/select_client_dialog.dart';
 
+
+/// A full-screen modal that displays detailed information for a selected property.
+/// Includes images, pricing, location, cash flow, and agent info.
+/// If the user is a realtor, they can send the property to clients.
+/// If the user is an investor, they can send a note about the property.
 class PropertyDetailSheet extends StatelessWidget {
   final Map<String, dynamic> property;
 
@@ -133,6 +138,11 @@ class PropertyDetailSheet extends StatelessWidget {
     );
   }
 
+  /// Opens a dialog to select investors, then:
+  /// - Adds the property to each investor's 'property_interactions'
+  /// - Logs the interaction under the realtor's 'interactions'
+  /// - Sends minimal property metadata for display
+  /// Uses Firestore batch for atomic writes
   void _sendPropertyToClient(BuildContext context, String propertyId) async {
     await showDialog(
       context: context,
@@ -200,7 +210,11 @@ class PropertyDetailSheet extends StatelessWidget {
     );
   }
 
-
+  /// Prompts investor to type a note about the property
+  /// Retrieves their assigned realtor ID from Firestore
+  /// Sends the note to that realtor's 'notes' collection
+  /// Marks it unread and timestamps it
+  /// Handles errors if the investor or realtor ID is missing
   void _sendNoteToRealtor(BuildContext context, String propertyId, String investorId) async {
     TextEditingController noteController = TextEditingController();
     
