@@ -35,7 +35,7 @@ class MockFirebaseUtil {
       'firstName': 'John',
       'lastName': 'Doe',
       'contactPhone': '123-456-7890',
-      'profilePicUrl': 'https://github.com/shadcn.png',
+      'profilePicUrl': 'assets/images/profile.png',
       'agencyName': 'Doe Realty',
       'licenseNumber': 'AB123456',
       'address': '123 Main St, Springfield',
@@ -57,10 +57,22 @@ class MockFirebaseUtil {
       'lastName': 'Smith',
       'contactPhone': '987-654-3210',
       'contactEmail': 'investor@example.com',
-      'profilePicUrl': 'https://example.com/investor.jpg',
+      'profilePicUrl': 'assets/images/profile.png',
       'notes': 'Interested in high ROI properties.',
       'realtorId': realtor.user!.uid,
       'status': 'client',
+    });
+
+    await firestore.collection('investors').doc('test-client-uid').set({
+      'firstName': 'Test',
+      'lastName': 'Client',
+      'contactPhone': '123-456-7890',
+      'contactEmail': 'testclient@example.com',
+      'profilePicUrl': 'assets/images/profile.png',
+      'notes': 'Test client notes.',
+      'realtorId': 'realtor-uid-123',
+      'status': 'client',
+      'createdAt': FieldValue.serverTimestamp(),
     });
 
     await firestore.collection('users').doc(investor.user!.uid).set({
@@ -77,7 +89,7 @@ class MockFirebaseUtil {
         'lastName': 'Test',
         'contactPhone': '555-000-000$i',
         'contactEmail': 'client$i@example.com',
-        'profilePicUrl': '',
+        'profilePicUrl': 'assets/images/profile.png',
         'notes': 'Test client $i',
         'realtorId': realtor.user!.uid,
         'status': 'client',
@@ -96,13 +108,12 @@ class MockFirebaseUtil {
 
     // Ensure listings have the 'status' field set to 'FOR_SALE'
     for (int i = 1; i <= 5; i++) {
-      final propertyId = 'property_$i';
-      await firestore.collection('listings').doc(propertyId).set({
-        'id': propertyId,
-        'address': 'Property $i',
-        'price': 100000 * i,
+      await firestore.collection('listings').doc('property_$i').set({
+        'id': 'property_$i',
+        'address': 'Property $i, Springfield',
+        'price': 100000 + (i * 5000),
+        'status': 'FOR_SALE',
         'location': 'Location $i',
-        'status': 'FOR_SALE', // Ensure all listings have a status field
       });
     }
 
@@ -148,6 +159,9 @@ class MockFirebaseUtil {
 
     // Create 9 properties for testing
 
+    print('Final Firestore state after initializeMockFirebase:');
+    print(await firestore.dump());
+
     return {'firestore': firestore, 'auth': auth};
   }
 
@@ -169,7 +183,7 @@ class MockFirebaseUtil {
         'firstName': 'John',
         'lastName': 'Doe',
         'contactPhone': '123-456-7890',
-        'profilePicUrl': 'https://github.com/shadcn.png',
+        'profilePicUrl': 'assets/images/profile.png',
         'agencyName': 'Doe Realty',
         'licenseNumber': 'AB123456',
         'address': '123 Main St, Springfield',
@@ -186,12 +200,23 @@ class MockFirebaseUtil {
           'lastName': 'Test',
           'contactPhone': '555-000-000$i',
           'contactEmail': 'client$i@example.com',
-          'profilePicUrl': '',
+          'profilePicUrl': 'assets/images/profile.png',
           'notes': 'Test client $i',
           'realtorId': realtor.user!.uid,
           'status': 'client',
         });
       }
+      await firestore.collection('investors').doc('test-client-uid').set({
+        'firstName': 'Jane',
+        'lastName': 'Smith',
+        'contactPhone': '987-654-3210',
+        'contactEmail': 'investor@example.com',
+        'profilePicUrl': 'assets/images/profile.png',
+        'notes': 'Interested in high ROI properties.',
+        'realtorId': realtor.user!.uid,
+        'status': 'client',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     }else{
       final investor = await auth.createUserWithEmailAndPassword(
         email: 'investor@example.com',
@@ -202,7 +227,7 @@ class MockFirebaseUtil {
         'lastName': 'Smith',
         'contactPhone': '987-654-3210',
         'contactEmail': 'investor@example.com',
-        'profilePicUrl': 'https://example.com/investor.jpg',
+        'profilePicUrl': 'assets/images/profile.png',
         'notes': 'Interested in high ROI properties.',
         'realtorId': "realtor-uid-123",
         'status': 'client',
@@ -214,6 +239,11 @@ class MockFirebaseUtil {
         'firstName': 'Jane',
         'lastName': 'Smith',
       });
+
+      print('Populating listings collection with FOR_SALE status...');
+      final listingsSnapshot = await firestore.collection('listings').get();
+      print('Listings before population: ${listingsSnapshot.docs.map((doc) => doc.data()).toList()}');
+
       for (int i = 1; i <= 9; i++) {
         final propertyId = 'property_$i';
         await firestore.collection('listings').doc(propertyId).set({
@@ -261,8 +291,16 @@ class MockFirebaseUtil {
           });
         } // Leave the last 3 properties untouched
       }
+
+      print('Final Firestore state after populating listings:');
+      print(await firestore.dump());
+
+      final updatedListingsSnapshot = await firestore.collection('listings').get();
+      print('Listings after population: ${updatedListingsSnapshot.docs.map((doc) => doc.data()).toList()}');
     }
     print("Current User ID: ${auth.currentUser?.uid}");
+    print('Final Firestore state after initialization:');
+    print(await firestore.dump());
     //signout
     await auth.signOut();
     return {'firestore': firestore, 'auth': auth};

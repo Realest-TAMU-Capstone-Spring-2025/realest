@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:algolia_helper_flutter/algolia_helper_flutter.dart' as algolia;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:realest/user_provider.dart';
 import 'package:realest/src/views/realtor/clients/client_details_drawer.dart';
 import 'dart:convert';
@@ -24,6 +25,8 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
   );
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  late FirebaseAuth auth;
+  late FirebaseFirestore firestore;
 
   List<DocumentReference> _pinnedClients = [];
   bool _isLoading = true;
@@ -34,6 +37,9 @@ class PinnedClientsSectionState extends State<PinnedClientsSection> {
   @override
   void initState() {
     super.initState();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    auth = userProvider.auth;
+    firestore = userProvider.firestore;
     _loadClients();
   }
 

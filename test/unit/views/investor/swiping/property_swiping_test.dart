@@ -17,6 +17,21 @@ void main() {
     final mocks = await MockFirebaseUtil.initializeMockFirebaseRoled(false);
     mockAuth = mocks['auth'] as MockFirebaseAuth;
     mockFirestore = mocks['firestore'] as FakeFirebaseFirestore;
+
+    // Populate listings collection with test data
+    for (int i = 1; i <= 5; i++) {
+      await mockFirestore.collection('listings').doc('property_$i').set({
+        'id': 'property_$i',
+        'address': 'Property $i, Springfield',
+        'price': 100000 + (i * 5000),
+        'status': 'FOR_SALE',
+        'location': 'Location $i',
+      });
+    }
+
+    // Debug print for Firestore state after populating listings
+    print('Firestore state after populating listings in property_swiping_test:');
+    print(await mockFirestore.dump());
   });
 
   setUp(() async {
@@ -25,6 +40,27 @@ void main() {
       email: 'investor@example.com',
       password: 'password123',
     );
+
+    // Create unique listings for this test
+    for (int i = 1; i <= 5; i++) {
+      await mockFirestore.collection('listings').doc('property_$i').set({
+        'id': 'property_$i',
+        'address': 'Property $i, Springfield',
+        'price': 100000 + (i * 5000),
+        'status': 'FOR_SALE',
+        'location': 'Location $i',
+      });
+    }
+
+    // Debug print for Firestore state during setUp
+    print('Firestore state during setUp in property_swiping_test:');
+    print(await mockFirestore.dump());
+  });
+
+  tearDown(() async {
+    // Clear Firestore data after each test
+    await mockFirestore.clearPersistence();
+    mockFirestore = FakeFirebaseFirestore();
   });
 
   Widget createTestWidget() {

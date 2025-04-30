@@ -158,3 +158,8 @@ server/npm-debug.log
 server/yarn-error.log
 server/*.log
 server/.env
+
+#chromedriver
+chromedriver
+.metadata
+LICENSE.chromedriver
